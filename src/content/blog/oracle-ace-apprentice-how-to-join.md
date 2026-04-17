@@ -1,9 +1,14 @@
 ---
-title: "I just became an Oracle ACE Apprentice! Here's how you can join the club"
-description: "A personal note on joining the Oracle ACE program as an Apprentice and how the four-level path works for DBAs at any career stage."
+title: I just became an Oracle ACE Apprentice! Here's how you can join the club
+description: A personal note on joining the Oracle ACE program as an Apprentice and how the four-level path works for DBAs at any career stage.
 pubDate: 2026-01-24
+updatedDate: ''
 category: community
-tags: ['oracle-ace', 'career']
+tags:
+  - oracle-ace
+  - career
+cover: /images/blog/badge-ace-apprentice-2026-hx.png
+coverAlt: ''
 ---
 
 It has been a long time — years, actually — since I last posted here on OraDiscuss. Life, work, and everything in between took over. But I'm back, and I couldn't think of a better way to re-launch this journey than by sharing a major professional milestone: **I've officially joined the Oracle ACE program as an ACE Apprentice!**
@@ -25,7 +30,7 @@ I used to think you had to be a "wizard" with 30 years of experience to join, bu
 
 I'm sharing this because this blog — and you, the readers — are a huge part of why I want to give back. Whether you love writing, speaking, coding, or just answering questions on forums, there is a path for you in the ACE program.
 
-My goal for OraDiscuss moving forward is to share what I'm learning *as I learn it*. No more waiting until I'm an "expert" to hit publish. We're going to grow together.
+My goal for OraDiscuss moving forward is to share what I'm learning _as I learn it_. No more waiting until I'm an "expert" to hit publish. We're going to grow together.
 
 You can find my Oracle ACE profile at [ace.oracle.com/ords/ace/oapt/profile/madarwish](https://ace.oracle.com/ords/ace/oapt/profile/madarwish).
 
