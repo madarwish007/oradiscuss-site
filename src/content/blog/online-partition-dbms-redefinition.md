@@ -1,10 +1,15 @@
 ---
-title: "How to Partition a Large Table Online in Oracle Without Downtime (DBMS_REDEFINITION)"
-description: "Converting a 20TB monolithic table to range-interval partitioned IOT with LOB compression — online, using DBMS_REDEFINITION."
+title: How to Partition a Large Table Online in Oracle Without Downtime (DBMS_REDEFINITION)
+description: Converting a 20TB monolithic table to range-interval partitioned IOT with LOB compression — online, using DBMS_REDEFINITION.
 pubDate: 2026-01-25
+updatedDate: ''
 category: dba
-tags: ['partitioning', 'dbms-redefinition', 'online-operations']
-cover: /images/blog/online-partition-dbms-redefinition.svg
+tags:
+  - partitioning
+  - dbms-redefinition
+  - online-operations
+cover: ''
+coverAlt: ''
 ---
 
 ## Introduction: When Tables Get Too Big
@@ -16,7 +21,7 @@ We needed to implement a robust Data Lifecycle Management strategy — online, w
 ## Why This Approach for a 20TB Table?
 
 | Feature | Technical Benefit | Impact |
-|---|---|---|
+| --- | --- | --- |
 | Online Redefinition | Uses DBMS_REDEFINITION while original table stays fully accessible for DML | Zero Downtime — only brief lock at FINISH_REDEF_TABLE |
 | Range-Interval Partitioning | Partitions monthly on CREATION_TIMESTAMP | Enables Partition Pruning — queries scan only a fraction of data |
 | Advanced Compression | COMPRESS for historical, COMPRESS ADVANCED for older partitions | Significant storage cost reduction |
