@@ -4,6 +4,7 @@ description: "Converting a 20TB monolithic table to range-interval partitioned I
 pubDate: 2026-01-25
 category: dba
 tags: ['partitioning', 'dbms-redefinition', 'online-operations']
+cover: /images/blog/online-partition-dbms-redefinition.svg
 ---
 
 ## Introduction: When Tables Get Too Big

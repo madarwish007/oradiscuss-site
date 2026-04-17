@@ -4,6 +4,7 @@ description: "A RAC gc buffer busy acquired war story — how an application opt
 pubDate: 2026-04-03
 category: dba
 tags: ['rac', 'wait-events', 'performance', 'awr']
+cover: /images/blog/gc-buffer-busy-acquired-rac.svg
 ---
 
 If you've spent any meaningful time managing Oracle RAC, you've developed a personal relationship with `gc buffer busy acquired`. Not a *good* relationship. The kind where you see the name in an AWR report and reach for your coffee.

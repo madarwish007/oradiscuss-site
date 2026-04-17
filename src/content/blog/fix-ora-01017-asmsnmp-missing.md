@@ -4,6 +4,7 @@ description: "Why DBCA fails with ORA-01017 after an 11.2.0.4 Grid Infrastructur
 pubDate: 2014-08-24
 category: dba
 tags: ['asm', 'troubleshooting', 'ora-01017', 'grid-infrastructure']
+cover: /images/blog/fix-ora-01017-asmsnmp-missing.svg
 ---
 
 Recently, I was trying to install a single Oracle Database Enterprise Edition 11.2.0.4 with ASM. Everything completed successfully from the RAW device format through to the grid infrastructure and database software installation. But when I started to create the database using DBCA, I got this error:

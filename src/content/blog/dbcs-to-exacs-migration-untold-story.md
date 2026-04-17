@@ -4,6 +4,7 @@ description: "Lessons from migrating production Oracle databases from DBCS to Ex
 pubDate: 2026-04-09
 category: oci
 tags: ['exadata', 'migration', 'dbcs', 'data-guard']
+cover: /images/blog/dbcs-to-exacs-migration-untold-story.svg
 ---
 
 I've done enough database migrations to stop believing in "smooth" ones. There are migrations that go according to plan, and migrations that teach you something. This one did both.
