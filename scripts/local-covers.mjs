@@ -221,17 +221,17 @@ function seeded(seed) {
 // ---------- Individual scenes ----------
 
 function sceneGcBufferBusy() {
-  const r1 = serverRack({ x: 250, y: 370, expression: 'stressed', tint: '#2b2623', leds: 'error', glowColor: '#c74634' });
-  const r2 = serverRack({ x: 1450, y: 370, expression: 'smug', tint: '#1f1a17' });
-  // Contested red cube in the middle, slightly tilted
-  const cube = redCube({ x: 900, y: 500, size: 140 });
-  // Tug-of-war cables
-  const cable1 = redCable({ x1: 470, y1: 540, x2: 900, y2: 570, curve: 0.1, thick: 8 });
-  const cable2 = redCable({ x1: 1040, y1: 570, x2: 1450, y2: 540, curve: 0.1, thick: 8 });
+  // Racks pushed into the lower third so they never touch the 3-line title.
+  const r1 = serverRack({ x: 250, y: 540, expression: 'stressed', tint: '#2b2623', leds: 'error', glowColor: '#c74634' });
+  const r2 = serverRack({ x: 1450, y: 540, expression: 'smug', tint: '#1f1a17' });
+  // Contested red cube centered between them, midline of the racks is ~ y=710
+  const cube = redCube({ x: 900, y: 660, size: 140 });
+  // Tug-of-war cables anchored at rack mid-body height
+  const cable1 = redCable({ x1: 470, y1: 710, x2: 900, y2: 730, curve: 0.1, thick: 8 });
+  const cable2 = redCable({ x1: 1040, y1: 730, x2: 1450, y2: 710, curve: 0.1, thick: 8 });
   return wrap(`
     ${categoryTag('ADVANCED DBA')}
-    ${title(['Two racks.', 'One block.', 'Weekend ruined.'], 88, 250, 88)}
-    <!-- scene on lower half -->
+    ${title(['Two racks.', 'One block.', 'Weekend ruined.'], 88, 250, 74)}
     ${r1}
     ${r2}
     ${cable1}
