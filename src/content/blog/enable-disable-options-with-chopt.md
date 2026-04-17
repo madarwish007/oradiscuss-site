@@ -1,10 +1,15 @@
 ---
-title: "Enabling/Disabling Database Options in Oracle Enterprise Edition with chopt"
-description: "Use the chopt utility to disable unlicensed Oracle Enterprise Edition options and avoid licensing surprises on 11.2 and later."
+title: Enabling/Disabling Database Options in Oracle Enterprise Edition with chopt
+description: Use the chopt utility to disable unlicensed Oracle Enterprise Edition options and avoid licensing surprises on 11.2 and later.
 pubDate: 2014-09-24
+updatedDate: ''
 category: dba
-tags: ['chopt', 'partitioning', 'licensing']
-cover: /images/blog/enable-disable-options-with-chopt.svg
+tags:
+  - chopt
+  - partitioning
+  - licensing
+cover: ''
+coverAlt: ''
 ---
 
 This is a pure licensing post, but it is really important for DBAs to know how to do it correctly. After installing a new 11.2 Enterprise Edition, Oracle installs all database options by default, including ones you may not be licensed to use.
