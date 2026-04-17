@@ -1,0 +1,32 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+<BaseLayout title="Page not found — OraDiscuss" description="The requested article or page was not found." noindex={true}>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← Back to Home</a>
+      <div class="art-cat">404</div>
+      <h1 class="art-title">This page doesn't exist</h1>
+      <p style="color:var(--ink-3);font-size:17px;line-height:1.65;margin-top:12px;max-width:620px">
+        The link you followed may be broken, or the page may have been removed during the
+        OraDiscuss Astro migration. Most existing article URLs were preserved — try the list
+        below or head back home.
+      </p>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <h2>Popular starting points</h2>
+      <ul>
+        <li><a href="/">Homepage</a> — latest articles</li>
+        <li><a href="/dba/">Advanced DBA</a> — RAC, AWR, performance tuning</li>
+        <li><a href="/oci/">OCI / Cloud</a> — Exadata Cloud, DBCS, migrations</li>
+        <li><a href="/goldengate/">GoldenGate</a> — replication patterns</li>
+        <li><a href="/scripts/">Scripts</a> — ready-to-run SQL &amp; shell</li>
+        <li><a href="/tools/">Tools</a> — free Oracle DBA utilities</li>
+        <li><a href="/about/">About</a> — Mahmoud Darwish</li>
+      </ul>
+    </article>
+  </section>
+</BaseLayout>

@@ -1,0 +1,25 @@
+# Root wrangler config — deploys the Astro static build as a Workers Static
+# Asset site (Cloudflare Workers Builds flow). The build pipeline is:
+#
+#   npm run build           # Astro → ./dist
+#   npx wrangler deploy     # uploads ./dist behind worker.js
+#
+# worker.js acts as a thin edge shim that returns a proper 404 for scanner
+# probes (wp-admin, .env, xmlrpc, etc.) and otherwise hands the request off
+# to the ASSETS binding so the static site is served normally.
+#
+# The OAuth proxy (worker-oauth/) is a SEPARATE Worker with its own
+# wrangler.toml and is deployed independently.
+
+name = "oradiscuss-site"
+main = "worker.js"
+compatibility_date = "2026-04-11"
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+# Serve /404/index.html on unknown paths so our styled 404 page renders.
+not_found_handling = "404-page"
+
+[observability]
+enabled = true
