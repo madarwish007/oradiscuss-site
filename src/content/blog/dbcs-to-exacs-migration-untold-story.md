@@ -1,10 +1,16 @@
 ---
-title: "Moving from DBCS to ExaCS — The Things Nobody Puts in the Migration Guide!!"
-description: "Lessons from migrating production Oracle databases from DBCS to Exadata Cloud Service — the things the official guide skips."
+title: Moving from DBCS to ExaCS — The Things Nobody Puts in the Migration Guide!!
+description: Lessons from migrating production Oracle databases from DBCS to Exadata Cloud Service — the things the official guide skips.
 pubDate: 2026-04-09
+updatedDate: ''
 category: oci
-tags: ['exadata', 'migration', 'dbcs', 'data-guard']
-cover: /images/blog/dbcs-to-exacs-migration-untold-story.svg
+tags:
+  - exadata
+  - migration
+  - dbcs
+  - data-guard
+cover: ''
+coverAlt: ''
 ---
 
 I've done enough database migrations to stop believing in "smooth" ones. There are migrations that go according to plan, and migrations that teach you something. This one did both.
