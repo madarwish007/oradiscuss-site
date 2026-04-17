@@ -1,10 +1,15 @@
 ---
-title: "AWR is Talking, Are You Actually Listening? A Practical Guide to Reading What Matters"
-description: "How to read an AWR report as a conversation rather than a symptom lookup — context, load profile, wait-event patterns, SQL and segments."
+title: AWR is Talking, Are You Actually Listening? A Practical Guide to Reading What Matters
+description: How to read an AWR report as a conversation rather than a symptom lookup — context, load profile, wait-event patterns, SQL and segments.
 pubDate: 2026-04-14
+updatedDate: ''
 category: dba
-tags: ['awr', 'performance', 'diagnostics']
-cover: /images/blog/awr-is-talking-are-you-listening.svg
+tags:
+  - awr
+  - performance
+  - diagnostics
+cover: ''
+coverAlt: ''
 ---
 
 Here's a confession: for the first couple of years of my DBA career, I used AWR reports the wrong way. I'd run the report, scroll straight to "Top 5 Timed Events," see something like `db file sequential read` or `log file sync`, and then go Google "how to fix log file sync" — as if the wait event itself was the answer, rather than a symptom.
@@ -15,8 +20,8 @@ It took a few painful production incidents to teach me that AWR is a conversatio
 
 Before you read a single line of the AWR report, ask yourself:
 
-- What was the *expected* behavior during this window?
-- What was the *actual* behavior that prompted this investigation?
+- What was the _expected_ behavior during this window?
+- What was the _actual_ behavior that prompted this investigation?
 - Is there a baseline comparison available?
 
 An AWR snapshot without context is just numbers. A DB time of 450 minutes over one hour sounds alarming, but if you have 64 CPUs and the application was processing a legitimate peak load, that might be perfectly fine. Context determines which.
@@ -27,7 +32,7 @@ Always generate a **comparative AWR** against a known-good window:
 @$ORACLE_HOME/rdbms/admin/awrddrpt.sql
 ```
 
-The difference report (`awrddrpt`) is underused. It shows you *what changed* between two time periods, not just a snapshot of the bad time.
+The difference report (`awrddrpt`) is underused. It shows you _what changed_ between two time periods, not just a snapshot of the bad time.
 
 ## Step 1: DB Time and Load Profile — The Vital Signs
 
@@ -49,7 +54,7 @@ gc cr request                 18.3%  of wait time
 log file sync                 12.1%  of wait time
 ```
 
-A lot of people would start tuning for `gc buffer busy acquired` immediately. But look at the story these three events tell together. You have heavy inter-node block transfer (`gc buffer busy`, `gc cr request`) AND commit bottleneck (`log file sync`). That's a pattern — a high-write, high-sharing workload where both the commit path and the block transfer path are under strain. The solution space is completely different from if you had *only* `gc buffer busy` at the top.
+A lot of people would start tuning for `gc buffer busy acquired` immediately. But look at the story these three events tell together. You have heavy inter-node block transfer (`gc buffer busy`, `gc cr request`) AND commit bottleneck (`log file sync`). That's a pattern — a high-write, high-sharing workload where both the commit path and the block transfer path are under strain. The solution space is completely different from if you had _only_ `gc buffer busy` at the top.
 
 Read the wait events as a **pattern**, not as individual items on a to-do list.
 
@@ -86,7 +91,7 @@ If you see an index appearing in "Segments by Physical Reads" that has no busine
 
 ## The One Rule I Follow
 
-Every time I investigate a performance issue, I write down my hypothesis *before* I look at the next section of the AWR. It forces me to think rather than just scroll. "I believe the problem is X, and I expect to see Y evidence in the next section."
+Every time I investigate a performance issue, I write down my hypothesis _before_ I look at the next section of the AWR. It forces me to think rather than just scroll. "I believe the problem is X, and I expect to see Y evidence in the next section."
 
 When my hypothesis is wrong, I learn something. When it's right, I've found the problem faster because I was looking for specific evidence rather than browsing.
 
