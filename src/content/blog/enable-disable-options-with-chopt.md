@@ -8,7 +8,7 @@ tags:
   - chopt
   - partitioning
   - licensing
-cover: /images/blog/enable-disable-options-with-chopt.svg
+cover: ''
 coverAlt: ''
 ---
 
