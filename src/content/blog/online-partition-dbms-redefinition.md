@@ -8,7 +8,7 @@ tags:
   - partitioning
   - dbms-redefinition
   - online-operations
-cover: ''
+cover: /images/blog/online-partition-dbms-redefinition.png
 coverAlt: ''
 ---
 
