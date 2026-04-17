@@ -1,13 +1,19 @@
 ---
-title: "gc buffer busy acquired: The RAC Wait Event That Ruined My Weekend"
-description: "A RAC gc buffer busy acquired war story — how an application optimisation concentrated hot blocks and doubled transaction times."
+title: 'gc buffer busy acquired: The RAC Wait Event That Ruined My Weekend'
+description: A RAC gc buffer busy acquired war story — how an application optimisation concentrated hot blocks and doubled transaction times.
 pubDate: 2026-04-03
+updatedDate: ''
 category: dba
-tags: ['rac', 'wait-events', 'performance', 'awr']
-cover: /images/blog/gc-buffer-busy-acquired-rac.svg
+tags:
+  - rac
+  - wait-events
+  - performance
+  - awr
+cover: ''
+coverAlt: ''
 ---
 
-If you've spent any meaningful time managing Oracle RAC, you've developed a personal relationship with `gc buffer busy acquired`. Not a *good* relationship. The kind where you see the name in an AWR report and reach for your coffee.
+If you've spent any meaningful time managing Oracle RAC, you've developed a personal relationship with `gc buffer busy acquired`. Not a _good_ relationship. The kind where you see the name in an AWR report and reach for your coffee.
 
 ## The Setup
 
@@ -53,7 +59,7 @@ One table came back as a clear outlier — our account balance table. Several "h
 
 The developer had made an "optimisation" — they changed a query to use an index range scan on a status column. The problem: this index access pattern was now hitting the same small set of "active status" rows repeatedly, concentrating I/O on very few blocks.
 
-The old code was scattering the I/O slightly more — and that slight scatter was actually *better* in a RAC context because it reduced per-block contention.
+The old code was scattering the I/O slightly more — and that slight scatter was actually _better_ in a RAC context because it reduced per-block contention.
 
 ## What We Fixed
 
@@ -65,4 +71,4 @@ The old code was scattering the I/O slightly more — and that slight scatter wa
 
 ## The Takeaway
 
-`gc buffer busy acquired` is not an "Oracle RAC problem." It's an *application design meeting a shared-everything architecture* problem. Before you tune the database, understand what the application is actually doing to those blocks. And when a developer tells you an "optimisation" is making things worse in production — they're usually not wrong.
+`gc buffer busy acquired` is not an "Oracle RAC problem." It's an _application design meeting a shared-everything architecture_ problem. Before you tune the database, understand what the application is actually doing to those blocks. And when a developer tells you an "optimisation" is making things worse in production — they're usually not wrong.
