@@ -19,20 +19,26 @@ export const TAG_LABEL: Record<(typeof TAG_PAGES)[number], string> = {
   asm: 'ASM',
 };
 
+// Sveltia CMS serialises un-filled optional fields as empty strings instead of
+// omitting them, which breaks z.coerce.date() (coerces '' to Invalid Date).
+// blankToUndef normalises them back to undefined before Zod sees them.
+const blankToUndef = (v: unknown) => (v === '' || v == null ? undefined : v);
+
 const blog = defineCollection({
   loader: glob({ pattern: '**/*.{md,mdx}', base: './src/content/blog' }),
   schema: z.object({
     title: z.string(),
     description: z.string(),
     pubDate: z.coerce.date(),
-    updatedDate: z.coerce.date().optional(),
+    updatedDate: z.preprocess(blankToUndef, z.coerce.date().optional()),
     category: z.enum(CATEGORIES),
     tags: z.array(z.string()).default([]),
-    // cover is a public URL path (e.g. "/images/blog/foo.png"). Sveltia CMS writes
-    // this shape automatically; if you ever need optimised images, swap back to
-    // image() + relative paths and update the CMS media_folder accordingly.
-    cover: z.string().optional(),
-    coverAlt: z.string().optional(),
+    // cover is a public URL path (e.g. "/images/blog/foo.png") or an external
+    // URL. Sveltia CMS writes this shape automatically; if you ever need Astro
+    // image-optimisation, swap back to image() + relative paths and update
+    // the CMS media_folder accordingly.
+    cover: z.preprocess(blankToUndef, z.string().optional()),
+    coverAlt: z.preprocess(blankToUndef, z.string().optional()),
     draft: z.boolean().default(false),
     featured: z.boolean().default(false),
   }),

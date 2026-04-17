@@ -26,6 +26,10 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink-2);font-family:var(--sans);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden;min-height:100vh}
 
+/* Card wrappers converted from <div> to <a> for no-JS nav — strip the default
+   anchor underline/colour so inner text inherits the card's own styling. */
+a.PC, a.promo-card, a.glass-card { text-decoration: none; color: inherit }
+
 #SB{position:fixed;top:0;left:0;height:2px;background:var(--red);z-index:999;width:0;pointer-events:none}
 
 /* Kill the decorative orbs entirely — Oracle corporate look is flat */
