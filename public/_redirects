@@ -1,12 +1,11 @@
-# Cloudflare Pages redirects.
+# Cloudflare Workers Static Assets redirects.
 #
-# Note: the old SPA catch-all ("/* /index.html 200") is intentionally gone —
-# Astro generates real pages for each route, so no client-side fallback is needed.
-# Scanner-probe paths are handled by functions/_middleware.js (returns a real 404).
-
-# Force oradiscuss.pages.dev visitors to the canonical production domain
-https://oradiscuss.pages.dev/*      https://oradiscuss.com/:splat   301!
-https://*.oradiscuss.pages.dev/*    https://oradiscuss.com/:splat   301!
-
-# Canonicalise www.oradiscuss.com → oradiscuss.com (matches <link rel="canonical">)
-https://www.oradiscuss.com/*        https://oradiscuss.com/:splat   301!
+# Workers Static Assets only accepts RELATIVE URL rules — hostname-based
+# redirects aren't supported here. For www.oradiscuss.com → oradiscuss.com
+# canonicalisation and pages.dev mirror blocking, use zone-level Cloudflare
+# Redirect Rules (they run at the edge before this file is consulted).
+#
+# Scanner-probe paths are handled by worker.js (returns 404 + X-Robots-Tag).
+#
+# This file is intentionally empty of rules right now — we'll add path
+# redirects here if/when any article slug changes.
