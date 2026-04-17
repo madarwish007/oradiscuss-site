@@ -8,7 +8,7 @@ tags:
   - goldengate
   - replication
   - solaris
-cover: ''
+cover: /images/blog/bidirectional-replication-12c.png
 coverAlt: ''
 ---
 
