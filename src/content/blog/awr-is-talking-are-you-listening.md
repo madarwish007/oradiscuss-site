@@ -8,7 +8,7 @@ tags:
   - awr
   - performance
   - diagnostics
-cover: ''
+cover: /images/blog/awr-is-talking-are-you-listening.svg
 coverAlt: ''
 ---
 
