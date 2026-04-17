@@ -20,6 +20,11 @@ const dateLabel = data.pubDate.toLocaleDateString('en-US', {
 const label = CATEGORY_LABEL[data.category];
 ---
 <a class={`PC ${size} rv`} href={href} data-c={label}>
+  {data.cover && (
+    <div class="CV">
+      <img src={data.cover} alt={data.coverAlt || data.title} loading="lazy" decoding="async" />
+    </div>
+  )}
   <div class="CB">
     <span class="CC">{label}</span>
     <h2 class="CTL">{data.title}</h2>

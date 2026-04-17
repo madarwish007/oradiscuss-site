@@ -23,6 +23,11 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft))
           href={`/${p.data.category}/${p.id}/`}
           data-c={CATEGORY_LABEL[p.data.category]}
         >
+          {p.data.cover && (
+            <div class="CV">
+              <img src={p.data.cover} alt={p.data.coverAlt || p.data.title} loading="lazy" decoding="async" />
+            </div>
+          )}
           <div class="CB">
             <span class="CC">{CATEGORY_LABEL[p.data.category]}</span>
             <h3 class="CTL" style="font-size:14px">{p.data.title}</h3>

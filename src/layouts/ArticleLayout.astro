@@ -54,6 +54,12 @@ const ogImage = data.cover ?? '/og-image.png';
     </div>
   </section>
 
+  {data.cover && (
+    <div class="art-cover">
+      <img src={data.cover} alt={data.coverAlt || data.title} loading="eager" decoding="async" />
+    </div>
+  )}
+
   <section class="art-body-wrap">
     <article class="art-prose">
       <slot />

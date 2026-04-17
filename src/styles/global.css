@@ -501,8 +501,20 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border);background
 
 /* Selection color */
 
-/* Post cards — no code previews, uniform 3-col grid with full-width feature */
-.PC .CV,.more-grid .PC .CV{display:none !important}
+/* Post cards — uniform 3-col grid with full-width feature.
+   Cards without a cover are text-only (.CV isn't rendered at all, so no empty
+   slate box appears). Cards with a cover get a full-bleed image in .CV. */
+.CV img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease}
+.PC:hover .CV img{transform:scale(1.03)}
+.CV:has(img){padding:0;background:var(--bg-alt);display:block}
+
+/* Article page cover — banner image between hero and body. */
+.art-cover{max-width:1360px;margin:0 auto;padding:0 32px 32px;background:var(--bg-alt)}
+.art-cover img{width:100%;max-height:480px;object-fit:cover;display:block;border-radius:var(--r-md);border:1px solid var(--border)}
+@media(max-width:640px){
+  .art-cover{padding:0 0 24px}
+  .art-cover img{max-height:280px;border-radius:0;border-left:none;border-right:none}
+}
 .BG{grid-template-columns:repeat(3,1fr);grid-auto-rows:auto}
 .PCF{grid-column:span 3;grid-row:auto}
 .PCT,.PCW,.PCN{grid-column:span 1;grid-row:auto}
