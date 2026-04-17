@@ -9,7 +9,7 @@ tags:
   - migration
   - dbcs
   - data-guard
-cover: ''
+cover: /images/blog/dbcs-to-exacs-migration-untold-story.png
 coverAlt: ''
 ---
 
