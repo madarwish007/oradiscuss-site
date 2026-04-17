@@ -1,0 +1,53 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import Newsletter from '../../components/Newsletter.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (
+  await getCollection('blog', ({ data }) => !data.draft && data.tags.includes('asm'))
+).sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime());
+
+function sizeFor(i: number): 'PCF' | 'PCT' | 'PCW' | 'PCN' {
+  if (i === 0) return 'PCF';
+  if (i < 3) return 'PCT';
+  if (i < 5) return 'PCW';
+  return 'PCN';
+}
+---
+<BaseLayout
+  title="ASM — OraDiscuss"
+  description="Oracle Automatic Storage Management (ASM) articles: Grid Infrastructure troubleshooting, disk group management, ASMCMD, and recovery from broken installs."
+>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← All Articles</a>
+      <div class="art-cat">ASM</div>
+      <h1 class="art-title">ASM</h1>
+      <p style="color:var(--ink-3);font-size:17px;line-height:1.65;max-width:700px;margin-top:12px">
+        Oracle Automatic Storage Management — Grid Infrastructure install gotchas, ASMCMD
+        workflows, disk group health, and recovering from the kind of issues you only hit at 2am.
+      </p>
+      <div class="art-meta" style="margin-top:16px">
+        <span>{posts.length} article{posts.length === 1 ? '' : 's'}</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="posts">
+    <div class="SW2">
+      <div class="BG rv">
+        {posts.length === 0 && (
+          <div
+            style="grid-column:1/-1;padding:40px;background:#fff;border:1px solid var(--border);border-radius:var(--r-md);text-align:center;color:var(--ink-3)"
+          >
+            <p>No ASM articles yet.</p>
+          </div>
+        )}
+        {posts.map((p, i) => <PostCard post={p} size={sizeFor(i)} />)}
+      </div>
+    </div>
+  </section>
+
+  <Newsletter />
+</BaseLayout>

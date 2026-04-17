@@ -1,0 +1,127 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Newsletter from '../components/Newsletter.astro';
+---
+<BaseLayout
+  title="About Mahmoud Darwish — OraDiscuss"
+  description="Oracle ACE Apprentice and Senior Oracle DBA in Riyadh, SA. Oracle 9i through 23ai, RAC, Exadata, OCI, and core banking performance engineering."
+>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← Home</a>
+      <div class="art-cat">About</div>
+      <h1 class="art-title">About Mahmoud Darwish</h1>
+      <div class="art-meta">
+        <span>Oracle ACE Apprentice</span><span class="sep">·</span>
+        <span>Senior Oracle DBA · Oracle 9i–23ai</span><span class="sep">·</span>
+        <span>Riyadh, Saudi Arabia</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <div
+        style="display:flex;align-items:center;gap:28px;margin-bottom:2.5rem;padding:28px;background:var(--bg-alt);border:1px solid var(--border);border-radius:var(--r-md)"
+      >
+        <div
+          style="width:90px;height:90px;border-radius:50%;background:var(--red);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-size:40px;font-weight:700;flex-shrink:0"
+        >M</div>
+        <div>
+          <div
+            style="font-family:var(--sans);font-size:24px;font-weight:700;color:var(--ink);margin-bottom:4px;letter-spacing:-.01em"
+          >Mahmoud Darwish</div>
+          <div
+            style="font-family:var(--sans);font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-4);margin-bottom:12px"
+          >Senior Oracle DBA · Oracle 9i–23ai · Oracle ACE Apprentice</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <span class="ab ab-p">Oracle ACE Apprentice</span>
+            <span class="ab ab-t">Oracle &amp; RAC Specialist</span>
+            <span class="ab ab-c">Exadata Expert</span>
+          </div>
+        </div>
+      </div>
+
+      <p>
+        A passionate technologist and community leader, Mahmoud Darwish has spent his career
+        mastering the complexities of the Oracle ecosystem. With deep specialisation across Oracle
+        Database versions 9i through 23ai, RAC, Performance Tuning, AI Vector Search, and
+        large-scale Database Migrations, Mahmoud is recognised for his ability to manage
+        high-availability environments and solve the most complex database challenges.
+      </p>
+      <p>
+        As the industry shifts toward the cloud, Mahmoud has established significant expertise in
+        Oracle Exadata Cloud@Customer (ExaCC), Oracle Cloud Infrastructure (OCI), specifically
+        focusing on Exadata Cloud Services (ExaCS) and Database Cloud Service (DBCS). He excels at
+        bridging the gap between legacy on-premises systems and modern cloud architectures,
+        implementing complex techniques to ensure peak performance and reliability.
+      </p>
+      <p>
+        Beyond his technical role, Mahmoud is a dedicated advocate for the Oracle community. He
+        actively shares his real-world troubleshooting experiences and cloud transformation
+        insights through forums and blogs, helping fellow DBAs and architects navigate the nuances
+        of the Oracle landscape.
+      </p>
+
+      <h2>Areas of Expertise</h2>
+      <ul>
+        <li>
+          <strong>Oracle RAC &amp; Grid Infrastructure</strong> — 2-node and multi-node cluster
+          design, GCS tuning, interconnect optimisation
+        </li>
+        <li>
+          <strong>Exadata &amp; ExaCS</strong> — Smart Scan, CellMemory, storage cell
+          configuration, OCI ExaCS migrations
+        </li>
+        <li>
+          <strong>Performance Engineering</strong> — AWR/ASH analysis, SQL tuning, execution plan
+          management, memory parameters
+        </li>
+        <li>
+          <strong>Database Migrations</strong> — DBCS to ExaCS, on-premises to OCI,
+          DBMS_REDEFINITION for zero-downtime restructuring
+        </li>
+        <li>
+          <strong>High Availability</strong> — Data Guard, GoldenGate bidirectional replication,
+          RMAN backup strategy
+        </li>
+        <li>
+          <strong>Core Banking (T24/Temenos)</strong> — Oracle performance tuning for financial
+          transaction processing environments
+        </li>
+      </ul>
+
+      <h2>Oracle ACE Program</h2>
+      <p>
+        Mahmoud is an Oracle ACE Apprentice — part of Oracle's recognition programme for technical
+        community contributors. You can view his Oracle ACE profile and contributions at the link
+        below.
+      </p>
+      <p>
+        <a
+          href="https://ace.oracle.com/ords/ace/oapt/profile/madarwish"
+          target="_blank"
+          rel="noopener">🏆 View Oracle ACE Profile →</a
+        >
+      </p>
+
+      <h2>Connect</h2>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:1rem">
+        <a
+          class="art-share-btn"
+          href="https://www.linkedin.com/in/darwishmahmoud/"
+          target="_blank"
+          rel="noopener">🔗 LinkedIn</a
+        >
+        <a class="art-share-btn" href="https://community.oracle.com/" target="_blank" rel="noopener"
+          >🌐 Oracle Community</a
+        >
+        <a class="art-share-btn" href="https://github.com/MaDarwish" target="_blank" rel="noopener"
+          >💻 GitHub</a
+        >
+      </div>
+    </article>
+  </section>
+
+  <Newsletter />
+</BaseLayout>

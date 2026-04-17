@@ -1,0 +1,44 @@
+---
+import { getCollection } from 'astro:content';
+import { CATEGORY_LABEL } from '../content.config';
+
+export interface Props {
+  currentId: string;
+  max?: number;
+}
+const { currentId, max = 3 } = Astro.props;
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .filter((p) => p.id !== currentId)
+  .sort((a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime())
+  .slice(0, max);
+---
+{posts.length > 0 && (
+  <div class="more-posts">
+    <h2>More Articles</h2>
+    <div class="more-grid">
+      {posts.map((p) => (
+        <a
+          class="PC PCN rv"
+          href={`/${p.data.category}/${p.id}/`}
+          data-c={CATEGORY_LABEL[p.data.category]}
+        >
+          <div class="CB">
+            <span class="CC">{CATEGORY_LABEL[p.data.category]}</span>
+            <h3 class="CTL" style="font-size:14px">{p.data.title}</h3>
+            <div class="CMT">
+              <span>
+                {p.data.pubDate.toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
+              </span>
+              <span class="CRA">Read →</span>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+)}

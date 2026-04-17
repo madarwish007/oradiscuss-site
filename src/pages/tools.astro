@@ -1,0 +1,279 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Newsletter from '../components/Newsletter.astro';
+---
+<BaseLayout
+  title="Oracle DBA Tools — OraDiscuss"
+  description="Free Oracle DBA utilities: search OraDiscuss + docs.oracle.com in one shot, and an ORA- error explainer that pulls the official Message, Cause and Action."
+>
+  <section class="tools-page-hero">
+    <div class="SW2">
+      <a class="art-back" href="/" style="margin-bottom:18px">← Back to Home</a>
+      <span class="SK" style="display:block;margin-bottom:10px">Free DBA Utilities</span>
+      <h1>Oracle <span class="hl">DBA Tools</span></h1>
+      <p>
+        Two small utilities I wrote to save myself time every week. The first searches OraDiscuss
+        and <code>docs.oracle.com</code> in one shot. The second explains any <code>ORA-</code> error
+        in plain English, grounded in the official Oracle documentation.
+      </p>
+      <div class="tools-facts">
+        <span>No tracking</span>
+        <span>Zero external AI calls</span>
+        <span>Edge-cached results</span>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding:40px 0 80px">
+    <div class="SW2">
+      <div style="display:grid;grid-template-columns:1fr;gap:32px;max-width:900px;margin:0 auto">
+
+        <div class="ai-chat-full rv" id="AI-SEARCH">
+          <div class="ai-chat-hdr">
+            <div class="ai-chat-av">💻</div>
+            <div style="flex:1">
+              <div class="ai-chat-nm">Oracle DBA Assistant</div>
+              <div class="ai-chat-st">Searching OraDiscuss + docs.oracle.com</div>
+            </div>
+          </div>
+          <div class="ai-chat-msgs" id="AI-MSGS">
+            <div class="ai-msg">
+              <div class="ai-msg-role a">Assistant</div>
+              <div class="ai-msg-bbl a">
+                Hi — ask me anything Oracle. I search across OraDiscuss articles and the official
+                Oracle docs, and I give you the direct links so you can verify what you read.
+              </div>
+            </div>
+          </div>
+          <div class="ai-chat-chips">
+            <span class="ai-chip" data-q="gc buffer busy acquired">gc buffer busy acquired</span>
+            <span class="ai-chip" data-q="AWR interpretation">AWR interpretation</span>
+            <span class="ai-chip" data-q="DBMS_REDEFINITION partitioning">DBMS_REDEFINITION</span>
+            <span class="ai-chip" data-q="DBCS to ExaCS migration">DBCS → ExaCS</span>
+          </div>
+          <div class="ai-chat-inp">
+            <input id="AI-IN" type="text" placeholder="Search OraDiscuss & docs.oracle.com ..." autocomplete="off" />
+            <button id="AI-SND" class="ai-chat-snd" aria-label="Send">➤</button>
+          </div>
+        </div>
+
+        <div class="ai-tool-card rv" id="ORA-EXP">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="ai-tool-icon">⚠</div>
+            <div>
+              <div class="ai-tool-title">ORA- Error Explainer</div>
+              <div class="ai-msg-role a" style="font-size:11px">Grounded in docs.oracle.com</div>
+            </div>
+          </div>
+          <p class="ai-tool-desc">
+            Paste any <code>ORA-</code> error code. I'll fetch the official description from
+            <code>docs.oracle.com</code> and add a short, practical note on what usually causes it
+            and where to look next.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <input
+              id="ORA-IN"
+              type="text"
+              placeholder="ORA-04031"
+              class="ai-tool-input"
+              style="flex:1;min-width:180px;min-height:auto;padding:10px 14px;font-family:var(--mono);font-size:13px"
+            />
+            <button id="ORA-BTN" class="ai-tool-btn" style="align-self:stretch">Explain</button>
+          </div>
+          <div class="ai-result" id="ORA-OUT"></div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px">
+            <span class="ai-chip" data-ora="ORA-04031">ORA-04031</span>
+            <span class="ai-chip" data-ora="ORA-00060">ORA-00060</span>
+            <span class="ai-chip" data-ora="ORA-01555">ORA-01555</span>
+            <span class="ai-chip" data-ora="ORA-12537">ORA-12537</span>
+          </div>
+        </div>
+
+        <div
+          class="tools-facts"
+          style="background:#fff;border:1px solid var(--border);border-radius:var(--r-md);padding:20px 24px;font-size:13px;color:var(--ink-3);line-height:1.7;flex-direction:column;align-items:flex-start"
+        >
+          <strong
+            style="color:var(--ink);font-family:var(--sans);font-size:16px;text-transform:none;letter-spacing:0"
+            >A note on accuracy.</strong
+          >
+          Both tools pull live data from Oracle's public documentation. OraDiscuss is not
+          affiliated with Oracle Corporation. Always validate critical changes against your own
+          environment and the official Oracle documentation before applying them to production.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <Newsletter />
+</BaseLayout>
+
+<script is:inline>
+  (function () {
+    var API = 'https://oradiscuss-ai.mahmood-darweesh.workers.dev';
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function mdLite(s) {
+      // Minimal markdown renderer for Worker responses
+      var text = String(s || '');
+      text = text.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+      text = text.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+      text = text.replace(/```([\s\S]*?)```/g, function (_m, c) {
+        return '<pre>' + esc(c) + '</pre>';
+      });
+      text = text.replace(/`([^`]+)`/g, function (_m, c) { return '<code>' + esc(c) + '</code>'; });
+      text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      text = text.replace(/^\- (.+)$/gm, '<li>$1</li>');
+      text = text.replace(/(<li>[\s\S]*?<\/li>(?:\s*<li>[\s\S]*?<\/li>)*)/g, '<ul>$1</ul>');
+      text = text.replace(/^---$/gm, '<hr />');
+      // Split paragraphs on blank lines (avoid wrapping block-level blocks)
+      var blocks = text.split(/\n{2,}/).map(function (b) {
+        if (/^\s*<(h\d|ul|ol|pre|hr|blockquote|table)/i.test(b)) return b;
+        return '<p>' + b.replace(/\n/g, '<br>') + '</p>';
+      });
+      return blocks.join('\n');
+    }
+
+    // ── Oracle DBA Assistant (search)
+    (function () {
+      var input = document.getElementById('AI-IN');
+      var send = document.getElementById('AI-SND');
+      var msgs = document.getElementById('AI-MSGS');
+      if (!input || !send || !msgs) return;
+
+      function push(role, text, asHtml) {
+        var d = document.createElement('div');
+        d.className = 'ai-msg';
+        var r = document.createElement('div');
+        r.className = 'ai-msg-role ' + (role === 'user' ? 'u' : 'a');
+        r.textContent = role === 'user' ? 'You' : 'Assistant';
+        var b = document.createElement('div');
+        b.className = 'ai-msg-bbl ' + (role === 'user' ? 'u' : 'a');
+        if (asHtml) b.innerHTML = text; else b.textContent = text;
+        d.appendChild(r);
+        d.appendChild(b);
+        msgs.appendChild(d);
+        msgs.scrollTop = msgs.scrollHeight;
+        return b;
+      }
+
+      function run(q) {
+        q = (q || '').trim();
+        if (!q) return;
+        push('user', q, false);
+        var bubble = push('assistant', '<em>Searching…</em>', true);
+        send.disabled = true;
+        fetch(API + '/api/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: q }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) {
+              bubble.innerHTML = '<em>' + esc(data.error) + '</em>';
+            } else if (data.explanation) {
+              bubble.innerHTML = mdLite(data.explanation);
+            } else if (data.results && data.results.length) {
+              var html = '<h3>Results</h3><ul>';
+              data.results.forEach(function (r) {
+                html +=
+                  '<li><a href="' +
+                  esc(r.url) +
+                  '" target="_blank" rel="noopener">' +
+                  esc(r.title) +
+                  '</a>' +
+                  (r.snippet ? '<br><span style="color:var(--ink-4);font-size:12px">' + esc(r.snippet) + '</span>' : '') +
+                  '</li>';
+              });
+              html += '</ul>';
+              if (data.deepLink) {
+                html +=
+                  '<p><a href="' + esc(data.deepLink) + '" target="_blank" rel="noopener">See all on docs.oracle.com →</a></p>';
+              }
+              bubble.innerHTML = html;
+            } else {
+              bubble.innerHTML = '<em>No results.</em>';
+            }
+          })
+          .catch(function () {
+            bubble.innerHTML = '<em>Could not reach the search service. Try again in a moment.</em>';
+          })
+          .finally(function () { send.disabled = false; });
+      }
+
+      send.addEventListener('click', function () {
+        var q = input.value;
+        input.value = '';
+        run(q);
+      });
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); send.click(); }
+      });
+      document.querySelectorAll('#AI-SEARCH .ai-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          run(chip.getAttribute('data-q') || chip.textContent || '');
+        });
+      });
+    })();
+
+    // ── ORA- Error Explainer
+    (function () {
+      var input = document.getElementById('ORA-IN');
+      var btn = document.getElementById('ORA-BTN');
+      var out = document.getElementById('ORA-OUT');
+      if (!input || !btn || !out) return;
+
+      function run() {
+        var code = (input.value || '').trim();
+        if (!code) return;
+        if (!/^ORA-\d{3,5}$/i.test(code)) {
+          out.className = 'ai-result show';
+          out.innerHTML = '<em>Please enter an ORA-NNNNN code.</em>';
+          return;
+        }
+        btn.disabled = true;
+        var old = btn.textContent;
+        btn.textContent = 'Looking up…';
+        out.className = 'ai-result show';
+        out.innerHTML = '<em>Fetching from docs.oracle.com…</em>';
+        fetch(API + '/api/ora-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ errorCode: code.toUpperCase() }),
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            if (data.error) {
+              out.innerHTML = '<em>' + esc(data.error) + '</em>';
+            } else if (data.explanation) {
+              out.innerHTML = mdLite(data.explanation);
+            } else {
+              out.innerHTML = '<em>No explanation returned.</em>';
+            }
+          })
+          .catch(function () {
+            out.innerHTML = '<em>Could not reach the lookup service. Try again in a moment.</em>';
+          })
+          .finally(function () { btn.disabled = false; btn.textContent = old; });
+      }
+
+      btn.addEventListener('click', run);
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); run(); }
+      });
+      document.querySelectorAll('#ORA-EXP .ai-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          input.value = chip.getAttribute('data-ora') || chip.textContent || '';
+          run();
+        });
+      });
+    })();
+  })();
+</script>

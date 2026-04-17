@@ -1,0 +1,12 @@
+# Cloudflare Pages redirects.
+#
+# Note: the old SPA catch-all ("/* /index.html 200") is intentionally gone —
+# Astro generates real pages for each route, so no client-side fallback is needed.
+# Scanner-probe paths are handled by functions/_middleware.js (returns a real 404).
+
+# Force oradiscuss.pages.dev visitors to the canonical production domain
+https://oradiscuss.pages.dev/*      https://oradiscuss.com/:splat   301!
+https://*.oradiscuss.pages.dev/*    https://oradiscuss.com/:splat   301!
+
+# Canonicalise www.oradiscuss.com → oradiscuss.com (matches <link rel="canonical">)
+https://www.oradiscuss.com/*        https://oradiscuss.com/:splat   301!

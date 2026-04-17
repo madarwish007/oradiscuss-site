@@ -1,0 +1,199 @@
+---
+export interface Props {
+  slug: string;
+}
+const { slug } = Astro.props;
+---
+<section class="cmt-wrap" data-slug={slug}>
+  <h3>Discussion</h3>
+  <div class="cmt-avg">
+    <span class="cmt-avg-stars" id="cmt-avg-stars">☆☆☆☆☆</span>
+    <span><span class="cmt-avg-num" id="cmt-avg-num">—</span> / 5</span>
+    <span class="cmt-avg-count" id="cmt-avg-count"></span>
+  </div>
+
+  <form class="cmt-form" id="cmt-form" novalidate>
+    <div class="cmt-rating-row">
+      <label>Your rating</label>
+      <span class="cmt-star interactive" data-v="1">☆</span>
+      <span class="cmt-star interactive" data-v="2">☆</span>
+      <span class="cmt-star interactive" data-v="3">☆</span>
+      <span class="cmt-star interactive" data-v="4">☆</span>
+      <span class="cmt-star interactive" data-v="5">☆</span>
+    </div>
+    <input class="cmt-input" name="name" type="text" placeholder="Your name" required maxlength="80" />
+    <textarea
+      class="cmt-textarea"
+      name="text"
+      placeholder="Share your thoughts, ask a follow-up, or point out something I got wrong."
+      required
+      minlength="4"
+      maxlength="1400"
+    ></textarea>
+    <button class="cmt-submit" type="submit">Post comment</button>
+    <div class="cmt-msg" id="cmt-msg" role="status"></div>
+  </form>
+
+  <div class="cmt-list" id="cmt-list"></div>
+</section>
+
+<script is:inline define:vars={{ slug }}>
+  (function () {
+    var API = 'https://oradiscuss-ai.mahmood-darweesh.workers.dev';
+    var list = document.getElementById('cmt-list');
+    var avgStars = document.getElementById('cmt-avg-stars');
+    var avgNum = document.getElementById('cmt-avg-num');
+    var avgCount = document.getElementById('cmt-avg-count');
+    var form = document.getElementById('cmt-form');
+    var msg = document.getElementById('cmt-msg');
+    if (!list || !form || !msg) return;
+
+    var rating = 0;
+    var stars = form.querySelectorAll('.cmt-star');
+    function fillStars(n) {
+      stars.forEach(function (s, i) {
+        s.classList.toggle('filled', i < n);
+        s.textContent = i < n ? '★' : '☆';
+      });
+    }
+    stars.forEach(function (s, i) {
+      s.addEventListener('click', function () {
+        rating = i + 1;
+        fillStars(rating);
+      });
+      s.addEventListener('mouseenter', function () {
+        fillStars(i + 1);
+      });
+    });
+    var row = form.querySelector('.cmt-rating-row');
+    if (row) row.addEventListener('mouseleave', function () { fillStars(rating); });
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+      });
+    }
+
+    function starRow(n) {
+      n = Math.max(0, Math.min(5, Number(n) || 0));
+      return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(n);
+    }
+
+    function render(data) {
+      var items = (data && data.comments) || (Array.isArray(data) ? data : []);
+      if (!Array.isArray(items) || items.length === 0) {
+        list.innerHTML =
+          '<p style="color:var(--ink-4);font-size:14px;padding:6px 2px">No comments yet — be the first.</p>';
+        avgStars.textContent = '☆☆☆☆☆';
+        avgNum.textContent = '—';
+        avgCount.textContent = '';
+        return;
+      }
+      var total = 0;
+      var rated = 0;
+      items.forEach(function (c) {
+        if (c.rating) {
+          total += Number(c.rating);
+          rated++;
+        }
+      });
+      var avg = rated ? (total / rated).toFixed(1) : '—';
+      avgNum.textContent = avg;
+      avgCount.textContent =
+        '(' + items.length + (items.length === 1 ? ' comment)' : ' comments)');
+      avgStars.textContent = rated ? starRow(Math.round(total / rated)) : '☆☆☆☆☆';
+
+      list.innerHTML = items
+        .map(function (c) {
+          var date = c.date
+            ? new Date(c.date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+              })
+            : '';
+          var stars = c.rating ? '<div class="cmt-stars">' + starRow(c.rating) + '</div>' : '';
+          return (
+            '<div class="cmt-item">' +
+            '<div class="cmt-header">' +
+            '<span class="cmt-name">' +
+            esc(c.name || 'Anonymous') +
+            '</span>' +
+            '<span class="cmt-date">' +
+            esc(date) +
+            '</span>' +
+            '</div>' +
+            stars +
+            '<div class="cmt-text">' +
+            esc(c.text || '') +
+            '</div>' +
+            '</div>'
+          );
+        })
+        .join('');
+    }
+
+    function load() {
+      fetch(API + '/api/comments?slug=' + encodeURIComponent(slug))
+        .then(function (r) {
+          return r.ok ? r.json() : { comments: [] };
+        })
+        .then(render)
+        .catch(function () {
+          list.innerHTML =
+            '<p style="color:var(--ink-4);font-size:14px;padding:6px 2px">Could not load comments right now.</p>';
+        });
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      msg.className = 'cmt-msg';
+      msg.textContent = '';
+      var fd = new FormData(form);
+      var payload = {
+        slug: slug,
+        name: String(fd.get('name') || '').trim(),
+        text: String(fd.get('text') || '').trim(),
+        rating: rating || null,
+      };
+      if (!payload.name || payload.text.length < 4) {
+        msg.className = 'cmt-msg error';
+        msg.textContent = 'Please provide a name and at least 4 characters.';
+        return;
+      }
+      var btn = form.querySelector('button[type=submit]');
+      if (btn) { btn.disabled = true; btn.textContent = 'Posting...'; }
+      fetch(API + '/api/comments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function (r) {
+          return r.json().then(function (j) { return { ok: r.ok, json: j }; });
+        })
+        .then(function (res) {
+          if (res.ok) {
+            msg.className = 'cmt-msg success';
+            msg.textContent = 'Thanks — your comment is posted.';
+            form.reset();
+            rating = 0;
+            fillStars(0);
+            load();
+          } else {
+            msg.className = 'cmt-msg error';
+            msg.textContent =
+              (res.json && (res.json.error || res.json.message)) || 'Something went wrong — try again.';
+          }
+        })
+        .catch(function () {
+          msg.className = 'cmt-msg error';
+          msg.textContent = 'Network error — please retry.';
+        })
+        .finally(function () {
+          if (btn) { btn.disabled = false; btn.textContent = 'Post comment'; }
+        });
+    });
+
+    load();
+  })();
+</script>

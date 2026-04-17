@@ -1,0 +1,149 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Newsletter from '../components/Newsletter.astro';
+
+type Service = {
+  icon: string;
+  title: string;
+  sub: string;
+  bullets: string[];
+  cls: string;
+};
+
+const services: Service[] = [
+  {
+    cls: 's1',
+    icon: '💻',
+    title: 'Database Administration',
+    sub: 'Day-to-day DBA work across on-prem and cloud — the reliable plumbing behind any critical Oracle workload.',
+    bullets: [
+      '24×7 monitoring, alert tuning, proactive health checks',
+      'Backup & recovery strategy with RMAN (catalog, cross-platform, PITR drills)',
+      'Patching: RUs, one-off patches, Exadata bundle patches, zero-downtime rolling',
+      'User, role, and privilege administration with audit hygiene',
+      'Capacity planning, storage reclamation, growth forecasting',
+    ],
+  },
+  {
+    cls: 's2',
+    icon: '✈',
+    title: 'Database Migrations',
+    sub: "Low-risk migration paths to the right target — I pick the approach based on your downtime budget, not on what's fashionable.",
+    bullets: [
+      'On-prem → OCI (Base DB, ExaCS, ExaCC, Autonomous)',
+      'DBCS → ExaCS consolidation and cost rightsizing',
+      'Cross-platform and cross-endian migrations (AIX/HP-UX → Linux)',
+      'Upgrades to 19c & 23ai (including PDB conversions)',
+      'Zero Downtime Migration (ZDM), Data Pump, GoldenGate, XTTS',
+    ],
+  },
+  {
+    cls: 's3',
+    icon: '🔍',
+    title: 'Performance & Health Check',
+    sub: 'A deep, evidence-based review of your database — not a generic checklist. You get a written report and a concrete action plan.',
+    bullets: [
+      'AWR / ASH / ADDM interpretation for real workloads',
+      'SQL tuning: plan analysis, SPM baselines, hint-free fixes',
+      'Wait event analysis (I/O, concurrency, RAC GC, commit path)',
+      'Memory sizing (SGA / PGA / In-Memory) and parameter review',
+      'Statistics, partitioning, and index strategy recommendations',
+    ],
+  },
+  {
+    cls: 's4',
+    icon: '🛡',
+    title: 'High Availability & DR',
+    sub: 'Architect and operate HA/DR stacks you can actually fail over — tested, documented, and owned by the team.',
+    bullets: [
+      'Active Data Guard: physical, logical, cascaded, Far Sync',
+      'Real Application Clusters (RAC) design & troubleshooting',
+      'GoldenGate: bi-directional, active-active, zero-downtime upgrades',
+      'Role transitions, DR drills, switchover / failover automation',
+      'RPO / RTO alignment with business SLAs',
+    ],
+  },
+  {
+    cls: 's5',
+    icon: '⚡',
+    title: 'Exadata, ExaCS & ExaCC',
+    sub: 'Engineered-systems-specific expertise — getting full value out of Smart Scan, storage cells, and IORM instead of treating Exadata like "just another server."',
+    bullets: [
+      'Smart Scan / Storage Indexes / HCC compression tuning',
+      'IORM policy design for multi-tenant workloads',
+      'Exadata cell patching and rolling grid upgrades',
+      'ExaCS / ExaCC provisioning, scaling, & OCPU management',
+      'Migration from non-Exadata platforms with realistic benchmarks',
+    ],
+  },
+  {
+    cls: 's6',
+    icon: '🏦',
+    title: 'Core Banking (T24) Tuning',
+    sub: 'Niche experience with Temenos T24 on Oracle — COB windows, end-of-day batches, and the very specific DB-side patterns these systems need.',
+    bullets: [
+      'COB / EOD window reduction through targeted tuning',
+      'Redo / undo sizing for high-concurrency banking workloads',
+      'Online / offline reorgs without impacting settlement cut-offs',
+      'Parameter & storage profile for T24 on Exadata & ExaCS',
+      'Regulatory audit readiness (data retention, encryption, auditing)',
+    ],
+  },
+];
+---
+<BaseLayout
+  title="Oracle Services — OraDiscuss"
+  description="Oracle DBA engagements: database administration, migrations to OCI/ExaCS, performance reviews, HA/DR architecture, Exadata, and Temenos T24 core banking tuning."
+>
+  <section class="svc-hero">
+    <div class="SW2">
+      <a class="art-back" href="/" style="margin-bottom:18px;text-align:left">← Back to Home</a>
+      <span class="SK" style="display:block;margin-bottom:10px">Professional Engagements</span>
+      <h1>My <span class="hl">Oracle Services</span></h1>
+      <p>
+        I'm Mahmoud Darwish — Oracle ACE Apprentice and Senior DBA with hands-on experience across
+        Exadata, ExaCS/ExaCC, RAC, Data Guard, GoldenGate, and OCI. Below is what I help teams
+        with, whether it's a one-off engagement or a longer project.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="SW2">
+      <div class="svc-grid">
+        {services.map((s) => (
+          <div class={`svc-card ${s.cls} rv`}>
+            <div class="svc-icon">{s.icon}</div>
+            <h3>{s.title}</h3>
+            <p class="svc-sub">{s.sub}</p>
+            <ul>
+              {s.bullets.map((b) => <li>{b}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <div class="svc-cta-row">
+        <a
+          class="svc-cta primary"
+          href="mailto:mahmood.darweesh@gmail.com?subject=OraDiscuss%20%E2%80%93%20Engagement%20Enquiry"
+          >✉ Start a conversation</a
+        >
+        <a
+          class="svc-cta secondary"
+          href="https://www.linkedin.com/in/darwishmahmoud/"
+          target="_blank"
+          rel="noopener">🔗 Connect on LinkedIn</a
+        >
+      </div>
+
+      <p style="text-align:center;color:var(--ink-3);font-size:13px;max-width:620px;margin:14px auto 80px;line-height:1.7">
+        Engagements range from a single AWR-based health check to multi-month migration programs.
+        Send a short note about your environment and what you're trying to achieve — I'll reply
+        with a scoped proposal.
+      </p>
+    </div>
+  </section>
+
+  <Newsletter />
+</BaseLayout>

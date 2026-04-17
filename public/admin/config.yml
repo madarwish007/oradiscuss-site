@@ -1,0 +1,117 @@
+# Sveltia CMS configuration — reads/writes markdown directly against GitHub.
+# Docs: https://github.com/sveltia/sveltia-cms/blob/main/docs/configuration-options.md
+#
+# IMPORTANT: the `base_url` below points at the OAuth proxy Worker we deploy
+# separately (see worker-oauth/). Update it if you change the worker URL.
+
+backend:
+  name: github
+  repo: madarwish007/oradiscuss-site
+  branch: main
+  base_url: https://oradiscuss-cms-auth.mahmood-darweesh.workers.dev
+  auth_endpoint: auth
+  commit_messages:
+    create: 'cms: create "{{slug}}"'
+    update: 'cms: update "{{slug}}"'
+    delete: 'cms: delete "{{slug}}"'
+    uploadMedia: 'cms: upload {{path}}'
+    deleteMedia: 'cms: delete {{path}}'
+
+publish_mode: simple
+
+# Images uploaded via the CMS land under /public/images/blog/
+# and are referenced with their absolute public path in frontmatter.
+media_folder: public/images/blog
+public_folder: /images/blog
+
+site_url: https://oradiscuss.com
+display_url: https://oradiscuss.com
+logo_url: https://oradiscuss.com/logo.svg
+
+editor:
+  preview: false
+
+collections:
+  - name: blog
+    label: Articles
+    label_singular: Article
+    folder: src/content/blog
+    create: true
+    delete: true
+    extension: md
+    format: frontmatter
+    slug: '{{slug}}'
+    identifier_field: title
+    summary: '{{title}} — {{pubDate | date("YYYY-MM-DD")}} · {{category}}'
+    sortable_fields: [pubDate, title, category]
+    view_groups:
+      - label: Category
+        field: category
+      - label: Year
+        field: pubDate
+        pattern: '\d{4}'
+    fields:
+      - label: Title
+        name: title
+        widget: string
+        hint: 'Shown as the article H1 and the page <title>.'
+      - label: Description
+        name: description
+        widget: text
+        hint: 'One compelling sentence, under ~160 characters. Used for SEO meta + OG + card previews.'
+      - label: Publish date
+        name: pubDate
+        widget: datetime
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        format: 'YYYY-MM-DD'
+        picker_utc: true
+      - label: Last updated (optional)
+        name: updatedDate
+        widget: datetime
+        required: false
+        date_format: 'YYYY-MM-DD'
+        time_format: false
+        format: 'YYYY-MM-DD'
+        picker_utc: true
+      - label: Category
+        name: category
+        widget: select
+        options:
+          - { label: 'Advanced DBA',   value: 'dba' }
+          - { label: 'OCI / Cloud',    value: 'oci' }
+          - { label: 'GoldenGate',     value: 'goldengate' }
+          - { label: 'Scripts',        value: 'scripts' }
+          - { label: 'Community',      value: 'community' }
+        hint: 'Determines the URL prefix (/dba/, /oci/, /goldengate/, /scripts/, /community/).'
+      - label: Tags
+        name: tags
+        widget: list
+        default: []
+        hint: 'Lowercase, hyphenated. Use `asm` to also surface the post on the /asm/ tag page.'
+      - label: Cover image
+        name: cover
+        widget: image
+        required: false
+        media_library:
+          config:
+            multiple: false
+        hint: 'Optional. Saved under /public/images/blog/ and served from /images/blog/.'
+      - label: Cover alt text
+        name: coverAlt
+        widget: string
+        required: false
+      - label: Draft
+        name: draft
+        widget: boolean
+        default: false
+        hint: 'Draft posts are skipped by build output but still saved to the repo.'
+      - label: Featured
+        name: featured
+        widget: boolean
+        default: false
+        hint: 'Pinned to the top of the homepage grid.'
+      - label: Body
+        name: body
+        widget: markdown
+        hint: 'Full article. Supports fenced code blocks (```sql, ```bash, ```text).'

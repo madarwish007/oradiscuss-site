@@ -1,0 +1,67 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from './BaseLayout.astro';
+import ShareButtons from '../components/ShareButtons.astro';
+import Comments from '../components/Comments.astro';
+import MorePosts from '../components/MorePosts.astro';
+import Newsletter from '../components/Newsletter.astro';
+import { CATEGORY_LABEL } from '../content.config';
+import readingTime from 'reading-time';
+
+export interface Props {
+  post: CollectionEntry<'blog'>;
+}
+
+const { post } = Astro.props;
+const { data, id } = post;
+const bodyStr = (post as unknown as { body?: string }).body ?? '';
+
+const categoryLabel = CATEGORY_LABEL[data.category];
+const siteOrigin = Astro.site?.origin ?? 'https://oradiscuss.com';
+const articleUrl = new URL(Astro.url.pathname, siteOrigin).href;
+const slugPath = `/${data.category}/${id}`;
+
+const rt = readingTime(bodyStr);
+const minutes = Math.max(1, Math.round(rt.minutes));
+const readLabel = `${minutes} min read`;
+
+const dateLabel = data.pubDate.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
+
+const ogImage = data.cover ?? '/og-image.png';
+---
+<BaseLayout
+  title={`${data.title} — OraDiscuss`}
+  description={data.description}
+  article={true}
+  image={ogImage}
+  publishedTime={data.pubDate}
+  modifiedTime={data.updatedDate ?? data.pubDate}
+>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← All Articles</a>
+      <div class={`art-cat ${data.category}`}>{categoryLabel}</div>
+      <h1 class="art-title">{data.title}</h1>
+      <div class="art-meta">
+        <span>Mahmoud Darwish</span><span class="sep">·</span>
+        <span>{dateLabel}</span><span class="sep">·</span>
+        <span>{readLabel}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <slot />
+    </article>
+    <ShareButtons title={data.title} url={articleUrl} />
+    <Comments slug={slugPath} />
+  </section>
+
+  <MorePosts currentId={id} />
+  <Newsletter />
+</BaseLayout>

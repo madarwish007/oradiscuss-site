@@ -1,0 +1,14 @@
+# Cloudflare Worker that proxies GitHub's OAuth flow for Sveltia CMS.
+# See README.md in this directory for end-to-end deployment instructions.
+
+name = "oradiscuss-cms-auth"
+main = "src/index.ts"
+compatibility_date = "2026-04-01"
+
+# Secrets (set via `wrangler secret put <NAME>` — do NOT commit real values):
+#   GITHUB_CLIENT_ID       — OAuth App Client ID from https://github.com/settings/developers
+#   GITHUB_CLIENT_SECRET   — OAuth App Client Secret
+#
+# Optional public var — uncomment to override the default:
+# [vars]
+# ALLOWED_DOMAIN = "oradiscuss.com"

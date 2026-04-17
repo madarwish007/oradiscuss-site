@@ -1,0 +1,42 @@
+---
+export interface Props {
+  title: string;
+  url: string;
+}
+const { url, title } = Astro.props;
+const encoded = encodeURIComponent(url);
+const encodedTitle = encodeURIComponent(title);
+---
+<div class="art-share">
+  <span class="art-share-label">Share</span>
+  <a
+    class="art-share-btn"
+    href={`https://www.linkedin.com/sharing/share-offsite/?url=${encoded}`}
+    target="_blank"
+    rel="noopener">🔗 LinkedIn</a
+  >
+  <a
+    class="art-share-btn"
+    href={`https://x.com/intent/tweet?url=${encoded}&text=${encodedTitle}`}
+    target="_blank"
+    rel="noopener">✕ X</a
+  >
+  <button class="art-share-btn" type="button" data-copy-url={url}>📋 Copy link</button>
+</div>
+
+<script is:inline>
+  document.querySelectorAll('[data-copy-url]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var u = btn.getAttribute('data-copy-url');
+      if (navigator.clipboard && u) {
+        navigator.clipboard.writeText(u).then(function () {
+          var old = btn.textContent;
+          btn.textContent = '✓ Copied';
+          setTimeout(function () {
+            btn.textContent = old;
+          }, 1600);
+        });
+      }
+    });
+  });
+</script>
