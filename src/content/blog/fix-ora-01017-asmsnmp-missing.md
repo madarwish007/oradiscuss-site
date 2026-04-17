@@ -9,7 +9,7 @@ tags:
   - troubleshooting
   - ora-01017
   - grid-infrastructure
-cover: /images/blog/fix-ora-01017-asmsnmp-missing.svg
+cover: ''
 coverAlt: ''
 ---
 
