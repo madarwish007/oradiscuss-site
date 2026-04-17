@@ -1,0 +1,200 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Marquee from '../components/Marquee.astro';
+import HomePromos from '../components/HomePromos.astro';
+import Newsletter from '../components/Newsletter.astro';
+import PostCard from '../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+import { CATEGORIES, CATEGORY_LABEL } from '../content.config';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.pubDate.getTime() - a.data.pubDate.getTime()
+);
+
+function sizeFor(i: number): 'PCF' | 'PCT' | 'PCW' | 'PCN' {
+  if (i === 0) return 'PCF';
+  if (i < 3) return 'PCT';
+  if (i < 5) return 'PCW';
+  return 'PCN';
+}
+---
+<BaseLayout>
+  <section>
+    <div class="hero">
+      <div class="HL">
+        <div class="EBW"><div class="dot"></div><span>Oracle Intelligence Lab · Riyadh, SA</span></div>
+        <h1 class="HT">
+          <em>Deep dives for</em><br />
+          <span class="hl">serious</span> Oracle<br />
+          <span id="TW">engineers</span>
+        </h1>
+        <p class="HD">
+          Production-grade Oracle DBA insights from a practising ACE Apprentice. Oracle 9i to 23ai,
+          Exadata, RAC, AWR, GoldenGate, OCI — the hard problems, solved in writing.
+        </p>
+        <div class="HA">
+          <a href="#posts" class="BP">Explore Articles →</a>
+        </div>
+      </div>
+      <div class="HR-panel">
+        <a
+          class="glass-card"
+          href="https://ace.oracle.com/ords/ace/oapt/profile/madarwish"
+          target="_blank"
+          rel="noopener"
+          style="display:flex;flex-direction:column;gap:20px;text-decoration:none"
+        >
+          <div class="ace-badge-wrap">
+            <div class="auth-av">M</div>
+            <div style="flex:1">
+              <div class="auth-name">Mahmoud Darwish</div>
+              <div class="auth-role">Senior Oracle DBA</div>
+            </div>
+            <img
+              class="ace-badge-lg"
+              src="/badge-ace-apprentice-2026-hx.png"
+              alt="Oracle ACE Apprentice 2026 — official badge"
+            />
+          </div>
+          <p class="auth-bio">
+            Oracle 9i through 23ai — Exadata, RAC, OCI, and core banking performance engineering.
+            Oracle ACE Apprentice 2026, based in Riyadh, Saudi Arabia.
+          </p>
+          <div class="auth-badges">
+            <span class="ab ab-p">Oracle ACE Apprentice · 2026</span>
+            <span class="ab ab-t">Oracle &amp; RAC Specialist</span>
+            <span class="ab ab-c">Exadata Expert</span>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:16px;display:flex;gap:24px">
+            <div class="hstat">
+              <div class="HSN"><span class="cnt" data-t="20">0</span>+</div>
+              <div class="HSL">Years Oracle</div>
+            </div>
+            <div class="hstat">
+              <div class="HSN"><span class="cnt2" data-t={posts.length || 12}>0</span>+</div>
+              <div class="HSL">Articles</div>
+            </div>
+            <div class="hstat">
+              <div class="HSN">9i–23ai</div>
+              <div class="HSL">Oracle Expert</div>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Marquee />
+
+  <section id="posts">
+    <div class="SW2">
+      <div class="SH rv">
+        <div>
+          <div class="SK">Knowledge Base</div>
+          <div class="STL">All Articles</div>
+        </div>
+        <div class="FT" id="FT">
+          <button class="FTB act" data-f="all">All</button>
+          {CATEGORIES.map((c) => (
+            <button class="FTB" data-f={CATEGORY_LABEL[c]}>{CATEGORY_LABEL[c]}</button>
+          ))}
+        </div>
+      </div>
+      <div class="BG rv" id="PG">
+        {posts.length === 0 && (
+          <div
+            style="grid-column:1/-1;padding:40px;background:#fff;border:1px solid var(--border);border-radius:var(--r-md);text-align:center;color:var(--ink-3)"
+          >
+            <p>Articles are migrating into the new CMS — back in a moment.</p>
+          </div>
+        )}
+        {posts.map((p, i) => <PostCard post={p} size={sizeFor(i)} />)}
+      </div>
+    </div>
+  </section>
+
+  <HomePromos />
+  <Newsletter />
+</BaseLayout>
+
+<script is:inline>
+  // Typewriter on #TW
+  (function () {
+    var el = document.getElementById('TW');
+    if (!el) return;
+    var words = ['engineers', 'DBAs', 'architects', 'SREs'];
+    var i = 0,
+      j = 0,
+      deleting = false;
+    function tick() {
+      var w = words[i];
+      if (!deleting) {
+        el.textContent = w.slice(0, ++j);
+        if (j === w.length) {
+          deleting = true;
+          setTimeout(tick, 1600);
+          return;
+        }
+      } else {
+        el.textContent = w.slice(0, --j);
+        if (j === 0) {
+          deleting = false;
+          i = (i + 1) % words.length;
+        }
+      }
+      setTimeout(tick, deleting ? 60 : 110);
+    }
+    setTimeout(tick, 600);
+  })();
+
+  // Category filter chips
+  (function () {
+    var chips = document.querySelectorAll('#FT .FTB');
+    var cards = document.querySelectorAll('#PG .PC');
+    chips.forEach(function (c) {
+      c.addEventListener('click', function () {
+        chips.forEach(function (x) {
+          x.classList.remove('act');
+        });
+        c.classList.add('act');
+        var f = c.getAttribute('data-f');
+        cards.forEach(function (card) {
+          var match = f === 'all' || card.getAttribute('data-c') === f;
+          card.style.display = match ? '' : 'none';
+        });
+      });
+    });
+  })();
+
+  // Animate stat counters
+  (function () {
+    var nodes = document.querySelectorAll('[data-t]');
+    if (!('IntersectionObserver' in window)) {
+      nodes.forEach(function (n) {
+        n.textContent = n.getAttribute('data-t') || '0';
+      });
+      return;
+    }
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var n = e.target;
+          var target = parseInt(n.getAttribute('data-t') || '0', 10);
+          var start = 0;
+          var step = Math.max(1, Math.round(target / 30));
+          var tick = setInterval(function () {
+            start = Math.min(target, start + step);
+            n.textContent = String(start);
+            if (start >= target) clearInterval(tick);
+          }, 50);
+          io.unobserve(n);
+        });
+      },
+      { threshold: 0.3 }
+    );
+    nodes.forEach(function (n) {
+      io.observe(n);
+    });
+  })();
+</script>

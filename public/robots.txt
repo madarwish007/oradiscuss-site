@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Keep scanner-probe and admin fingerprint paths out of crawl queues
+Disallow: /wp-admin/
+Disallow: /wp-content/
+Disallow: /wp-includes/
+Disallow: /wp-json/
+Disallow: /xmlrpc.php
+Disallow: /phpmyadmin/
+Disallow: /admin/
+
+Sitemap: https://oradiscuss.com/sitemap.xml

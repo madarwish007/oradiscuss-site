@@ -1,0 +1,87 @@
+---
+const path = Astro.url.pathname;
+function isActive(prefix: string): boolean {
+  if (prefix === '/') return path === '/' || path === '';
+  const bare = prefix.replace(/\/$/, '');
+  return path === bare || path === bare + '/' || path.startsWith(bare + '/');
+}
+
+type NavItem = { href: string; label: string };
+const items: NavItem[] = [
+  { href: '/', label: 'Home' },
+  { href: '/dba/', label: 'Advanced DBA' },
+  { href: '/scripts/', label: 'Scripts' },
+  { href: '/goldengate/', label: 'GoldenGate' },
+  { href: '/oci/', label: 'Exadata' },
+  { href: '/tools/', label: 'Tools' },
+  { href: '/services/', label: 'Services' },
+  { href: '/about/', label: 'About' },
+];
+---
+<header>
+  <div class="HI">
+    <a class="logo" href="/" aria-label="OraDiscuss home">
+      <div class="lm">Od</div>
+      <div class="ln">Ora<em>Discuss</em></div>
+    </a>
+    <nav id="MAIN-NAV">
+      {items.map((item) => (
+        <a href={item.href} class={isActive(item.href) ? 'act' : ''}>{item.label}</a>
+      ))}
+    </nav>
+    <button class="nav-toggle" id="NAV-TOGGLE" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="HR">
+      <div class="SIW">
+        <span style="color:var(--ink-4);font-size:13px" aria-hidden="true">⌕</span>
+        <input type="text" id="SI" placeholder="Search articles..." autocomplete="off" aria-label="Search articles" />
+        <div class="SD" id="SD" role="listbox"></div>
+      </div>
+      <a
+        href="https://ace.oracle.com/ords/ace/oapt/profile/madarwish"
+        target="_blank"
+        rel="noopener"
+        class="ace-btn"
+        title="Oracle ACE Apprentice · 2026"
+      >
+        <img src="/badge-ace-apprentice-2026-hx.png" alt="Oracle ACE Apprentice 2026" loading="lazy" />
+        <span>ACE Apprentice</span>
+        <span class="ace-year">2026</span>
+      </a>
+    </div>
+  </div>
+</header>
+<div class="nav-backdrop" id="NAV-BACKDROP"></div>
+
+<script is:inline>
+  (function () {
+    var toggle = document.getElementById('NAV-TOGGLE');
+    var nav = document.getElementById('MAIN-NAV');
+    var back = document.getElementById('NAV-BACKDROP');
+    if (!toggle || !nav || !back) return;
+    function open() {
+      toggle.classList.add('open');
+      nav.classList.add('open');
+      back.classList.add('open');
+      document.body.classList.add('nav-open');
+      toggle.setAttribute('aria-expanded', 'true');
+    }
+    function close() {
+      toggle.classList.remove('open');
+      nav.classList.remove('open');
+      back.classList.remove('open');
+      document.body.classList.remove('nav-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    }
+    toggle.addEventListener('click', function () {
+      if (toggle.classList.contains('open')) close();
+      else open();
+    });
+    back.addEventListener('click', close);
+    nav.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.tagName === 'A') close();
+    });
+  })();
+</script>

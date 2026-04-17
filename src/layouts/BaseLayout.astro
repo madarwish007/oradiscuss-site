@@ -1,0 +1,173 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+export interface Props {
+  title?: string;
+  description?: string;
+  image?: string;
+  article?: boolean;
+  canonical?: string | URL;
+  noindex?: boolean;
+  publishedTime?: Date;
+  modifiedTime?: Date;
+}
+
+const {
+  title = 'OraDiscuss — Oracle Mastery, Distilled',
+  description = 'Production-grade Oracle DBA insights from a practising ACE Apprentice. Exadata, RAC, AWR, GoldenGate, OCI — the hard problems, solved in writing.',
+  image = '/og-image.png',
+  article = false,
+  canonical,
+  noindex = false,
+  publishedTime,
+  modifiedTime,
+} = Astro.props;
+
+const siteOrigin = Astro.site?.origin ?? 'https://oradiscuss.com';
+const canonicalURL = canonical
+  ? new URL(canonical, siteOrigin).href
+  : new URL(Astro.url.pathname, siteOrigin).href;
+const imageURL = new URL(image, siteOrigin).href;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<meta name="author" content="Mahmoud Darwish" />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+<link rel="canonical" href={canonicalURL} />
+
+<meta property="og:type" content={article ? 'article' : 'website'} />
+<meta property="og:site_name" content="OraDiscuss" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={imageURL} />
+<meta property="og:url" content={canonicalURL} />
+<meta property="article:author" content="Mahmoud Darwish" />
+{publishedTime && <meta property="article:published_time" content={publishedTime.toISOString()} />}
+{modifiedTime && <meta property="article:modified_time" content={modifiedTime.toISOString()} />}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={imageURL} />
+
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="mask-icon" href="/favicon.svg" color="#C74634" />
+<meta name="theme-color" content="#C74634" />
+<meta name="google-site-verification" content="mQYy7TOgJ0hwpmQH37WEmgHRsuEWktzpNxDRKpUAkKk" />
+
+<link rel="alternate" type="application/rss+xml" title="OraDiscuss RSS" href="/rss.xml" />
+<link rel="sitemap" href="/sitemap-index.xml" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  rel="stylesheet"
+/>
+
+<meta name="generator" content={Astro.generator} />
+
+<script is:inline>
+  (function () {
+    var h = location.hostname;
+    if (
+      h !== 'oradiscuss.com' &&
+      h !== 'www.oradiscuss.com' &&
+      h !== 'localhost' &&
+      h !== '127.0.0.1'
+    ) {
+      var m = document.createElement('meta');
+      m.name = 'robots';
+      m.content = 'noindex, nofollow';
+      document.head.appendChild(m);
+      location.replace('https://oradiscuss.com' + location.pathname + location.search + location.hash);
+    }
+  })();
+</script>
+</head>
+<body>
+<div id="SB"></div>
+
+<Header />
+
+<main>
+  <slot />
+</main>
+
+<Footer />
+
+<script is:inline>
+  // Scroll progress bar
+  (function () {
+    var bar = document.getElementById('SB');
+    if (!bar) return;
+    var ticking = false;
+    function update() {
+      var h = document.documentElement;
+      var max = h.scrollHeight - h.clientHeight;
+      var pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+      bar.style.width = pct + '%';
+      ticking = false;
+    }
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (!ticking) {
+          requestAnimationFrame(update);
+          ticking = true;
+        }
+      },
+      { passive: true }
+    );
+    update();
+  })();
+
+  // Reveal on scroll
+  (function () {
+    var els = document.querySelectorAll('.rv');
+    if (!('IntersectionObserver' in window)) {
+      els.forEach(function (el) {
+        el.classList.add('vis');
+      });
+      return;
+    }
+    var io = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) {
+            e.target.classList.add('vis');
+            io.unobserve(e.target);
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    els.forEach(function (el) {
+      io.observe(el);
+    });
+  })();
+</script>
+
+<script is:inline>
+  (function () {
+    var h = location.hostname;
+    if (h === 'oradiscuss.com' || h === 'www.oradiscuss.com') {
+      var s = document.createElement('script');
+      s.defer = true;
+      s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+      s.setAttribute(
+        'data-cf-beacon',
+        '{"token":"74c0753c3129495abc5257ec1e3a48b6"}'
+      );
+      document.head.appendChild(s);
+    }
+  })();
+</script>
+</body>
+</html>

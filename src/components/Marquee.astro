@@ -1,0 +1,25 @@
+---
+const items = [
+  'Oracle 9i–23ai',
+  'Exadata Dedicated',
+  'DBMS_REDEFINITION',
+  'AWR Analysis',
+  'GoldenGate 12c',
+  'RMAN Backup',
+  'Global Cache Tuning',
+  'Core Banking',
+  'SQL Plan Management',
+  'Oracle ACE Apprentice',
+  'PGA/SGA Tuning',
+  'Interval Partitioning',
+];
+// Render twice for seamless loop (matches keyframes mq translateX(-50%))
+const doubled = [...items, ...items];
+---
+<div class="MQ">
+  <div class="MQT">
+    {doubled.map((i) => (
+      <span class="MQI"><span class="MQD"></span>{i}</span>
+    ))}
+  </div>
+</div>

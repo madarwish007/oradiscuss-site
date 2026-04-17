@@ -1,0 +1,32 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { CATEGORY_LABEL } from '../content.config';
+
+type Size = 'PCF' | 'PCT' | 'PCW' | 'PCN';
+
+export interface Props {
+  post: CollectionEntry<'blog'>;
+  size?: Size;
+}
+
+const { post, size = 'PCN' } = Astro.props;
+const { data, id } = post;
+const href = `/${data.category}/${id}/`;
+const dateLabel = data.pubDate.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric',
+});
+const label = CATEGORY_LABEL[data.category];
+---
+<a class={`PC ${size} rv`} href={href} data-c={label}>
+  <div class="CB">
+    <span class="CC">{label}</span>
+    <h2 class="CTL">{data.title}</h2>
+    <p class="CEX">{data.description}</p>
+    <div class="CMT">
+      <span>{dateLabel}</span>
+      <span class="CRA">Read →</span>
+    </div>
+  </div>
+</a>

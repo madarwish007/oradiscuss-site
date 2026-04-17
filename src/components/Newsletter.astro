@@ -1,0 +1,38 @@
+---
+---
+<section>
+  <div class="SW2">
+    <div class="NLW rv">
+      <div class="NK">Stay Current</div>
+      <div class="NT">Oracle insights.<br />Distilled.</div>
+      <p class="ND">
+        Deep technical posts on Oracle performance, RAC, Exadata, and AI-assisted DBA workflows.
+      </p>
+      <form class="NF" id="NF" novalidate>
+        <input class="NI" type="email" name="email" placeholder="your@email.com" required aria-label="Email address" />
+        <button class="NB" type="submit">Subscribe →</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  (function () {
+    var f = document.getElementById('NF');
+    if (!f) return;
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var btn = f.querySelector('button');
+      var input = f.querySelector('input[type=email]');
+      if (!btn || !input) return;
+      btn.textContent = 'Thanks!';
+      btn.disabled = true;
+      // TODO: wire to newsletter backend (Worker endpoint)
+      setTimeout(function () {
+        btn.textContent = 'Subscribe →';
+        btn.disabled = false;
+        input.value = '';
+      }, 2500);
+    });
+  })();
+</script>
