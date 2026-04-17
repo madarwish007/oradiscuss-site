@@ -8,7 +8,7 @@ tags:
   - rman
   - backup
   - monitoring
-cover: ''
+cover: /images/blog/rman-backup-progress-monitoring.png
 coverAlt: ''
 ---
 

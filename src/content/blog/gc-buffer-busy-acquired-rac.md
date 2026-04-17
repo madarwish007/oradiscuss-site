@@ -9,7 +9,7 @@ tags:
   - wait-events
   - performance
   - awr
-cover: ''
+cover: /images/blog/gc-buffer-busy-acquired-rac.png
 coverAlt: ''
 ---
 
