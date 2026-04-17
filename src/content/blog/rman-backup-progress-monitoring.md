@@ -8,7 +8,7 @@ tags:
   - rman
   - backup
   - monitoring
-cover: /images/blog/RMAN_Monitoring_Scripts.png
+cover: ''
 coverAlt: ''
 ---
 
