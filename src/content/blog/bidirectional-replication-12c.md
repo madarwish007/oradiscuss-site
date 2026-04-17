@@ -1,10 +1,15 @@
 ---
-title: "Configuring Bidirectional Replication using Oracle GoldenGate 12c"
-description: "Step-by-step GoldenGate 12c bidirectional replication setup on Oracle 12.1 and Solaris 11.2 SPARC — Extract, DataPump and Replicat."
+title: Configuring Bidirectional Replication using Oracle GoldenGate 12c
+description: Step-by-step GoldenGate 12c bidirectional replication setup on Oracle 12.1 and Solaris 11.2 SPARC — Extract, DataPump and Replicat.
 pubDate: 2015-12-27
+updatedDate: ''
 category: goldengate
-tags: ['goldengate', 'replication', 'solaris']
-cover: /images/blog/bidirectional-replication-12c.svg
+tags:
+  - goldengate
+  - replication
+  - solaris
+cover: ''
+coverAlt: ''
 ---
 
 Today I will simplify the Oracle GoldenGate configurations for the bidirectional path setup between homogeneous environments (Oracle to Oracle). This was implemented on Oracle Solaris 11.2 SPARC with Oracle Database 12.1.0.2.0 and Oracle GoldenGate 12c.
