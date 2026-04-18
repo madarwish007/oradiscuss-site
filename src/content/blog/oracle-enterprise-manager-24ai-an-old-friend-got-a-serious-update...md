@@ -44,7 +44,7 @@ I want to be specific here rather than just listing features, because feature li
 
 This one is personal for me.
 
-One of the most common categories of SRs I used to handle in the OEM Support Group was some variation of: "OEM went down for maintenance and we missed a critical alert." Or "We were patching OEM and the database had an issue and nobody knew about it until 30 minutes later." It happened constantly. Not because the customers were doing anything wrong, it's just how OEM was architected. When the OMS was down, monitoring was down. Period. Always-on Monitoring (AOM) was the workaround, and while it helped, it was always a secondary, limited system.
+One of the most common categories of SRs I used to handle in the OEM Support Group was some variation of: _"OEM went down for maintenance and we missed a critical alert."_ Or _"We were patching OEM and the database had an issue and nobody knew about it until 30 minutes later."_ It happened constantly. Not because the customers were doing anything wrong, it's just how OEM was architected. When the OMS was down, monitoring was down. Period. Always-on Monitoring (AOM) was the workaround, and while it helped, it was always a secondary, limited system.
 
 EM 24ai fixes this at the architectural level. The new **Zero Downtime Monitoring (ZDT Monitoring)** service runs as a separate component of the OMS and continues processing events, alerts, notifications, corrective actions, and incident creation, even while the OMS itself is being patched. No AOM needed. No blind spots. You're doing a Release Update on your EM 24ai environment and your critical database fires a tablespace full alert, it still gets processed, the corrective action still fires, the notification still goes out. That's what the old architecture couldn't do.
 
@@ -64,9 +64,9 @@ The way it works: there's a small chat icon in the top right of the EM 24ai cons
 
 Two modes:
 
-**Telemetry questions:** "Which of my databases had I/O spikes last night?" or "Show me databases where apply lag exceeded 30 seconds this week." These pull from your actual OEM telemetry via Ops Insights and give you real answers from your real environment.
+**Telemetry questions:** _"Which of my databases had I/O spikes last night?"_ or _"Show me databases where apply lag exceeded 30 seconds this week."_ These pull from your actual OEM telemetry via Ops Insights and give you real answers from your real environment.
 
-**Documentation questions**: "How do I troubleshoot buffer busy waits?" or "What does the gc current blocks received metric mean on Exadata?" These use RAG (Retrieval-Augmented Generation) against Oracle's full documentation library, indexed in Oracle Database 23ai, and return contextually accurate answers with clickable reference links to the actual source documents.
+**Documentation questions**: _"How do I troubleshoot buffer busy waits?"_ or _"What does the gc current blocks received metric mean on Exadata?"_ These use RAG (Retrieval-Augmented Generation) against Oracle's full documentation library, indexed in Oracle Database 23ai, and return contextually accurate answers with clickable reference links to the actual source documents.
 
 The setup requires an OCI account with Ops Insights enabled and connection to the **us-chicago-1** GenAI region _(more regions coming)_. The Ask EM Configuration Wizard walks you through it, three screens, maybe 15 minutes if your OCI credentials are ready.
 
@@ -121,7 +121,7 @@ Let me be specific about what shifted operationally once we moved to 24ai, becau
 
 **My first response to a new alert now includes Ask EM.** Before escalating or spending time in documentation, I ask Ask EM for context. About half the time it gives me a useful starting direction immediately. The other half, it at least confirms what I already suspected and points me to the right documentation section.
 
-**Capacity planning conversations with management are now data-driven.** The Capacity Planning extension gives me defensible, ML-based storage and CPU projections that I can share directly with leadership. "The database will run out of tablespace space in approximately 4 months at current growth" is a much better conversation than _"we should probably add storage soon."_
+**Capacity planning conversations with management are now data-driven.** The Capacity Planning extension gives me defensible, ML-based storage and CPU projections that I can share directly with leadership. _"The database will run out of tablespace space in approximately 4 months at current growth"_ is a much better conversation than _"we should probably add storage soon."_
 
 **Junior DBAs on my team are more self-sufficient.** Ask EM is genuinely useful as a first-line resource for less experienced team members. They can investigate alerts and get initial context without immediately escalating, which means my time is spent on the things that actually need senior attention.
 
@@ -141,4 +141,4 @@ If you're already on EM 24ai base release, apply RU4 or later immediately. Ask E
 
 And if you're someone like me, someone who's been around long enough to remember typing `emctl start oms` and staring at the console waiting, or spending hours in an SR queue helping customers figure out why their OEM agent went unreachable again, this release will feel like a genuinely earned upgrade.
 
-Some old friends age well. This one did.
+_Some old friends age well. This one did._
