@@ -8,7 +8,7 @@ tags:
   - OEM
   - Performance
   - OCI
-cover: /images/blog/oem24ai-1.png
+cover: /images/blog/OEM24aiR8.png
 coverAlt: ''
 draft: false
 featured: true
