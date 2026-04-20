@@ -40,6 +40,7 @@ const { slug } = Astro.props;
 <script is:inline define:vars={{ slug }}>
   (function () {
     var API = 'https://oradiscuss-ai.mahmood-darweesh.workers.dev';
+    var MAX_INDENT_DEPTH = 3;
     var list = document.getElementById('cmt-list');
     var avgStars = document.getElementById('cmt-avg-stars');
     var avgNum = document.getElementById('cmt-avg-num');
@@ -79,6 +80,57 @@ const { slug } = Astro.props;
       return '★★★★★'.slice(0, n) + '☆☆☆☆☆'.slice(n);
     }
 
+    function buildTree(items) {
+      var byId = {};
+      var roots = [];
+      items.forEach(function (c) {
+        byId[c.id] = Object.assign({}, c, { children: [] });
+      });
+      items.forEach(function (c) {
+        var node = byId[c.id];
+        if (c.parentId && byId[c.parentId]) {
+          byId[c.parentId].children.push(node);
+        } else {
+          roots.push(node);
+        }
+      });
+      return roots;
+    }
+
+    function renderNode(c, depth) {
+      var date = c.date
+        ? new Date(c.date).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+          })
+        : '';
+      var starsHtml = c.rating ? '<div class="cmt-stars">' + starRow(c.rating) + '</div>' : '';
+      var replyBtn = c.id
+        ? '<button type="button" class="cmt-reply-btn" data-parent-id="' + esc(c.id) + '" data-parent-name="' + esc(c.name || 'Anonymous') + '">Reply</button>'
+        : '';
+      var childrenHtml = '';
+      if (c.children && c.children.length) {
+        childrenHtml = '<div class="cmt-children">' +
+          c.children.map(function (ch) { return renderNode(ch, depth + 1); }).join('') +
+          '</div>';
+      }
+      var depthClass = depth >= MAX_INDENT_DEPTH ? ' cmt-depth-max' : '';
+      return (
+        '<div class="cmt-item' + depthClass + '" data-comment-id="' + esc(c.id || '') + '">' +
+          '<div class="cmt-header">' +
+            '<span class="cmt-name">' + esc(c.name || 'Anonymous') + '</span>' +
+            '<span class="cmt-date">' + esc(date) + '</span>' +
+          '</div>' +
+          starsHtml +
+          '<div class="cmt-text">' + esc(c.text || '') + '</div>' +
+          (replyBtn ? '<div class="cmt-actions">' + replyBtn + '</div>' : '') +
+          '<div class="cmt-reply-slot" data-reply-slot="' + esc(c.id || '') + '"></div>' +
+          childrenHtml +
+        '</div>'
+      );
+    }
+
     function render(data) {
       var items = (data && data.comments) || (Array.isArray(data) ? data : []);
       if (!Array.isArray(items) || items.length === 0) {
@@ -103,35 +155,90 @@ const { slug } = Astro.props;
         '(' + items.length + (items.length === 1 ? ' comment)' : ' comments)');
       avgStars.textContent = rated ? starRow(Math.round(total / rated)) : '☆☆☆☆☆';
 
-      list.innerHTML = items
-        .map(function (c) {
-          var date = c.date
-            ? new Date(c.date).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              })
-            : '';
-          var stars = c.rating ? '<div class="cmt-stars">' + starRow(c.rating) + '</div>' : '';
-          return (
-            '<div class="cmt-item">' +
-            '<div class="cmt-header">' +
-            '<span class="cmt-name">' +
-            esc(c.name || 'Anonymous') +
-            '</span>' +
-            '<span class="cmt-date">' +
-            esc(date) +
-            '</span>' +
-            '</div>' +
-            stars +
-            '<div class="cmt-text">' +
-            esc(c.text || '') +
-            '</div>' +
-            '</div>'
-          );
-        })
-        .join('');
+      var tree = buildTree(items);
+      list.innerHTML = tree.map(function (n) { return renderNode(n, 0); }).join('');
     }
+
+    function openReplyForm(parentId, parentName, anchorBtn) {
+      // Close any other open reply form first
+      var open = list.querySelector('.cmt-reply-form');
+      if (open) open.remove();
+
+      var slot = list.querySelector('[data-reply-slot="' + parentId + '"]');
+      if (!slot) return;
+
+      var f = document.createElement('form');
+      f.className = 'cmt-reply-form';
+      f.innerHTML =
+        '<div class="cmt-reply-to">Replying to <strong>' + esc(parentName) + '</strong></div>' +
+        '<input class="cmt-input" name="name" type="text" placeholder="Your name" required maxlength="80" />' +
+        '<textarea class="cmt-textarea" name="text" placeholder="Your reply" required minlength="4" maxlength="1400"></textarea>' +
+        '<div class="cmt-reply-actions">' +
+          '<button type="submit" class="cmt-submit">Post reply</button>' +
+          '<button type="button" class="cmt-cancel">Cancel</button>' +
+        '</div>' +
+        '<div class="cmt-reply-msg" role="status"></div>';
+
+      slot.appendChild(f);
+      var nameInput = f.querySelector('input[name=name]');
+      if (nameInput) nameInput.focus();
+
+      f.querySelector('.cmt-cancel').addEventListener('click', function () { f.remove(); });
+
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var rMsg = f.querySelector('.cmt-reply-msg');
+        rMsg.className = 'cmt-reply-msg';
+        rMsg.textContent = '';
+        var fd = new FormData(f);
+        var payload = {
+          slug: slug,
+          parentId: parentId,
+          name: String(fd.get('name') || '').trim(),
+          text: String(fd.get('text') || '').trim(),
+        };
+        if (!payload.name || payload.text.length < 4) {
+          rMsg.className = 'cmt-reply-msg error';
+          rMsg.textContent = 'Please provide a name and at least 4 characters.';
+          return;
+        }
+        var btn = f.querySelector('button[type=submit]');
+        if (btn) { btn.disabled = true; btn.textContent = 'Posting...'; }
+        fetch(API + '/api/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+          .then(function (r) {
+            return r.json().then(function (j) { return { ok: r.ok, json: j }; });
+          })
+          .then(function (res) {
+            if (res.ok) {
+              f.remove();
+              load();
+            } else {
+              rMsg.className = 'cmt-reply-msg error';
+              rMsg.textContent =
+                (res.json && (res.json.error || res.json.message)) || 'Something went wrong — try again.';
+              if (btn) { btn.disabled = false; btn.textContent = 'Post reply'; }
+            }
+          })
+          .catch(function () {
+            rMsg.className = 'cmt-reply-msg error';
+            rMsg.textContent = 'Network error — please retry.';
+            if (btn) { btn.disabled = false; btn.textContent = 'Post reply'; }
+          });
+      });
+    }
+
+    list.addEventListener('click', function (e) {
+      var t = e.target;
+      if (t && t.classList && t.classList.contains('cmt-reply-btn')) {
+        var pid = t.getAttribute('data-parent-id');
+        var pname = t.getAttribute('data-parent-name') || 'Anonymous';
+        if (pid) openReplyForm(pid, pname, t);
+      }
+    });
 
     function load() {
       fetch(API + '/api/comments?slug=' + encodeURIComponent(slug))
