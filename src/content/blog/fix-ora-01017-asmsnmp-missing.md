@@ -13,6 +13,8 @@ cover: /images/blog/fix-ora-01017-asmsnmp-missing.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 Recently, I was trying to install a single Oracle Database Enterprise Edition 11.2.0.4 with ASM. Everything completed successfully from the RAW device format through to the grid infrastructure and database software installation. But when I started to create the database using DBCA, I got this error:
 
 ```text
