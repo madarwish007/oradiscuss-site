@@ -12,6 +12,8 @@ coverAlt: ''
 featured: true
 ---
 
+_By: Mahmoud Darwish_
+
 It has been a long time — years, actually — since I last posted here on OraDiscuss. Life, work, and everything in between took over. But I'm back, and I couldn't think of a better way to re-launch this journey than by sharing a major professional milestone: **I've officially joined the Oracle ACE program as an ACE Apprentice!**
 
 ## What Actually is an Oracle ACE?
