@@ -13,6 +13,8 @@ cover: /images/blog/dbcs-to-exacs-migration-untold-story.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 I've done enough database migrations to stop believing in "smooth" ones. There are migrations that go according to plan, and migrations that teach you something. This one did both.
 
 Earlier this year we migrated several core databases from Oracle Base Database Service (DBCS) on OCI to Oracle Exadata Database Service on Dedicated Infrastructure (ExaCS). Same region, same VCN, but a completely different platform under the hood.
