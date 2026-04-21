@@ -13,6 +13,8 @@ cover: /images/blog/gc-buffer-busy-acquired-rac.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 If you've spent any meaningful time managing Oracle RAC, you've developed a personal relationship with `gc buffer busy acquired`. Not a _good_ relationship. The kind where you see the name in an AWR report and reach for your coffee.
 
 ## The Setup
