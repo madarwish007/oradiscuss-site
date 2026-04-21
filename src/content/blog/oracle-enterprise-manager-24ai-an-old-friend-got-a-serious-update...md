@@ -142,3 +142,5 @@ If you're already on EM 24ai base release, apply RU4 or later immediately. Ask E
 And if you're someone like me, someone who's been around long enough to remember typing `emctl start oms` and staring at the console waiting, or spending hours in an SR queue helping customers figure out why their OEM agent went unreachable again, this release will feel like a genuinely earned upgrade.
 
 _Some old friends age well. This one did._
+
+_By: Mahmoud Darwish_
