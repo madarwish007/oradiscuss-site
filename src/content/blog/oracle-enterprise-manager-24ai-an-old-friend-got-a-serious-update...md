@@ -14,6 +14,8 @@ draft: false
 featured: true
 ---
 
+_By: Mahmoud Darwish_
+
 ### It is all about expectations...
 
 **_Too many times I've sat in front of a new OEM release, gone through the feature list, and thought, okay, that's nice, but it doesn't change my Tuesday morning._**
