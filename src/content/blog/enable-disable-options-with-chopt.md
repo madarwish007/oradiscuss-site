@@ -12,6 +12,8 @@ cover: /images/blog/enable-disable-options-with-chopt.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 This is a pure licensing post, but it is really important for DBAs to know how to do it correctly. After installing a new 11.2 Enterprise Edition, Oracle installs all database options by default, including ones you may not be licensed to use.
 
 ## Checking Which Options Are Currently Enabled
