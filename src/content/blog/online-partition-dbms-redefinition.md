@@ -12,6 +12,8 @@ cover: /images/blog/online-partition-dbms-redefinition.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 ## Introduction: When Tables Get Too Big
 
 Every seasoned DBA eventually faces the "Big Table" problem. In our case, it was a monolithic, non-partitioned table that had ballooned to **20 Terabytes**. Full table scans were glacial, index rebuilds were an all-weekend affair, and storage costs were escalating rapidly.
