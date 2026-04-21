@@ -12,6 +12,8 @@ cover: /images/blog/awr-is-talking-are-you-listening.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 Here's a confession: for the first couple of years of my DBA career, I used AWR reports the wrong way. I'd run the report, scroll straight to "Top 5 Timed Events," see something like `db file sequential read` or `log file sync`, and then go Google "how to fix log file sync" — as if the wait event itself was the answer, rather than a symptom.
 
 It took a few painful production incidents to teach me that AWR is a conversation, not a diagnosis. You have to learn how to read it, not just react to it.
