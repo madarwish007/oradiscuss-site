@@ -12,6 +12,8 @@ cover: /images/blog/rman-backup-progress-monitoring.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 It was a very long time since writing in this blog — here we are back again! I was looking for a proper and accurate way to monitor the progress of RMAN backups. The scripts below can be used to monitor progress efficiently.
 
 ## Script 1: RMAN Backup Progress via V$RMAN_STATUS
