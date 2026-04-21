@@ -12,6 +12,8 @@ cover: /images/blog/bidirectional-replication-12c.png
 coverAlt: ''
 ---
 
+_By: Mahmoud Darwish_
+
 Today I will simplify the Oracle GoldenGate configurations for the bidirectional path setup between homogeneous environments (Oracle to Oracle). This was implemented on Oracle Solaris 11.2 SPARC with Oracle Database 12.1.0.2.0 and Oracle GoldenGate 12c.
 
 ## 1. Preparing the Source and Target Databases
