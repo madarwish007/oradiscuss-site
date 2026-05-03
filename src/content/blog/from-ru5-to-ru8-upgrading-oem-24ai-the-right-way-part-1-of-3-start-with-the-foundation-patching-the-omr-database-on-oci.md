@@ -24,8 +24,6 @@ This is the first post in a three-part series documenting my upgrade of Oracle E
 
 Before getting into the steps, let me describe the environment. Our OEM 24ai deployment was built using Oracle's official **Oracle Enterprise Manager Cloud Control** image from the OCI Marketplace. The Marketplace stack provisions everything you need: two OMS instances, an OCI Load Balancer in front of them, and a 2-node RAC database on Oracle Base Database Service (DBCS) as the Management Repository (OMR).
 
-
-
 The dual OMS behind a load balancer gives you high availability at the management layer. The RAC OMR gives you high availability at the repository layer. When one OMS is being patched, the other continues serving the console and monitoring targets — but that's Article 2.
 
 For now, the focus is the bottom of that diagram: the 2-node RAC DBCS running Grid Infrastructure and Oracle Database 19.28, needing to reach 19.30 plus an overlay patch before the OMS upgrade can safely begin.
@@ -59,8 +57,6 @@ This is also why, when I applied the overlay patch manually afterward, I ran `op
 #### Step 1 — Patching Grid Infrastructure to 19.30 via OCI Console
 
 Navigate to the OMR database system in the OCI Console:
-
-
 
 On the DB System Details page, confirm the current GI and DB patch level. In my case, both showed **19.28**.
 
