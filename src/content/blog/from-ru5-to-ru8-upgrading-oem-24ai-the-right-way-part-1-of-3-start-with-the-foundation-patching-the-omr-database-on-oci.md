@@ -360,6 +360,8 @@ OEM console:          Repository connection active
 
 This is precisely the state the OEM RU8 README requires. The foundation is correct and verified at three levels: binary (OPatch), SQL dictionary (datapatch), and connectivity (OEM console). The OMS upgrade can proceed safely.
 
+![](/images/blog/OCI_DBSystem_masked.png "Masked Screen")
+
 A note for those who hit the `opatchauto` GI skip message and stopped: now you understand why it happens and what to check. The patch lives in the DB Home. Check the right drawer.
 
 In **Part 2 of 3**, I'll cover the OMS upgrade from 24.1.0.5 to 24.1.0.8 using ZDT patching via `omspatcher`, the Holistic patch 38864999 covering WebLogic PSU, JDK 8, OPatch, and FMW DB Client, and one of the most operationally impactful changes of the entire upgrade cycle, switching OEM from offline mode to online MOS connectivity via IDCS, a change that required convincing the security team and changed how we manage patches permanently.
