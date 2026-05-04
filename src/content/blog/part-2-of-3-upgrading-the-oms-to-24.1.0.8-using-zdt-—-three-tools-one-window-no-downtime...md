@@ -6,7 +6,7 @@ updatedDate: 2026-05-04
 category: oci
 tags:
   - /OEM
-cover: ''
+cover: /images/blog/ZDT02.png
 coverAlt: ''
 draft: true
 featured: true
