@@ -134,7 +134,7 @@ INST_ID INSTANCE_NAME 	 HOST_NAME 	VERSION_FULL 	STATUS
 
 At this point: GI at 19.30, DB home at 19.30. The console work is done. Now the manual part begins.
 
-#### Step 3: Applying the Overlay Patch 38641793 Manually
+#### Step 3: Applying GI MRP 39168344 Manually
 
 With both homes at 19.30, the next step is applying GI MRP **39168344,** the Grid Infrastructure Monthly Recommended Patch that the OEM RU8 README requires.
 
