@@ -6,7 +6,7 @@ updatedDate: 2026-05-03
 category: oci
 tags:
   - OCI, OEM, Upgrade, ACE
-cover: /images/blog/oradiscuss-omr-24ai-cover (1).png
+cover: /images/blog/oradiscuss-db-19-28-to-19-30-cover.png
 coverAlt: ''
 draft: false
 featured: true
@@ -68,8 +68,6 @@ This is also why, when I applied the overlay patch manually afterward, I ran `op
 Navigate to the OMR database system in the OCI Console:
 
 OCI Console > Oracle AI Database > Oracle Base Database Service
-
-![](/images/blog/Screenshot%202026-05-04%20at%2006.57.23.png "DBCS")
 
 On the DB System Details page, confirm the current GI and DB patch level. In my case, both showed **19.28**.
 
@@ -359,8 +357,6 @@ OEM console:          Repository connection active
 ```
 
 This is precisely the state the OEM RU8 README requires. The foundation is correct and verified at three levels: binary (OPatch), SQL dictionary (datapatch), and connectivity (OEM console). The OMS upgrade can proceed safely.
-
-![](/images/blog/OCI_DBSystem_masked.png "Masked Screen")
 
 A note for those who hit the `opatchauto` GI skip message and stopped: now you understand why it happens and what to check. The patch lives in the DB Home. Check the right drawer.
 
