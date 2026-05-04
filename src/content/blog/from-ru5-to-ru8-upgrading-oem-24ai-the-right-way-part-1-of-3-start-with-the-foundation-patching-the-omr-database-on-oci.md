@@ -1,5 +1,5 @@
 ---
-title: 'From RU5 to RU8, Upgrading OEM 24ai the Right Way Part 1 of 3: Start With the Foundation, Patching the OMR Database on OCI'
+title: 'Part 1 of 3: From RU5 to RU8, Upgrading OEM 24ai the Right Way , Start With the Foundation, Patching the OMR Database on OCI'
 description: This will be your only detailed guide to upgrade your OEM RU5 to RU8 correctly without making huge downtime.
 pubDate: 2026-05-03
 updatedDate: 2026-05-03
