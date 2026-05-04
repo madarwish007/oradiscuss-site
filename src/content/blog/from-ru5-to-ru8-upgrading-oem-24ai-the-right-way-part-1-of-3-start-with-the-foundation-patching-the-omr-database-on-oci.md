@@ -6,7 +6,7 @@ updatedDate: 2026-05-03
 category: oci
 tags:
   - OCI, OEM, Upgrade, ACE
-cover: ''
+cover: /images/blog/oradiscuss-omr-24ai-cover (1).png
 coverAlt: ''
 draft: true
 featured: true
