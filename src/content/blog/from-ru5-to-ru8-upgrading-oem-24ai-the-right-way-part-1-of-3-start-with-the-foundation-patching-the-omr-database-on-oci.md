@@ -8,7 +8,7 @@ tags:
   - OCI, OEM, Upgrade, ACE
 cover: /images/blog/oradiscuss-omr-24ai-cover (1).png
 coverAlt: ''
-draft: true
+draft: false
 featured: true
 ---
 
