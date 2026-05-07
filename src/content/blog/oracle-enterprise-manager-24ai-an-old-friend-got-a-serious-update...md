@@ -5,9 +5,10 @@ pubDate: 2026-04-18
 updatedDate: 2026-04-18
 category: oci
 tags:
-  - OEM
-  - Performance
-  - OCI
+  - oci
+  - oem
+  - oem-24ai
+  - performance
 cover: /images/blog/OEM24aiR8.png
 coverAlt: ''
 draft: false

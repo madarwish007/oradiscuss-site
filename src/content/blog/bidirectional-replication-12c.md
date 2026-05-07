@@ -7,6 +7,8 @@ category: goldengate
 tags:
   - goldengate
   - replication
+  - oracle-database
+  - 12c
   - solaris
 cover: /images/blog/bidirectional-replication-12c.png
 coverAlt: ''

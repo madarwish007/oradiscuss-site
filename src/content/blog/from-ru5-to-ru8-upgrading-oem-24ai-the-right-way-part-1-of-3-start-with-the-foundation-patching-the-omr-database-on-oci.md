@@ -5,7 +5,13 @@ pubDate: 2026-05-03
 updatedDate: 2026-05-03
 category: oci
 tags:
-  - OCI, OEM, Upgrade, ACE
+  - oci
+  - oem
+  - oem-24ai
+  - upgrade
+  - patching
+  - exadata
+  - 19c
 cover: /images/blog/oradiscuss-db-19-28-to-19-30-cover.png
 coverAlt: ''
 draft: false

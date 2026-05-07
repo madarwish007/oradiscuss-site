@@ -5,9 +5,10 @@ pubDate: 2014-09-24
 updatedDate: ''
 category: dba
 tags:
+  - oracle-database
   - chopt
-  - partitioning
   - licensing
+  - partitioning
 cover: /images/blog/enable-disable-options-with-chopt.png
 coverAlt: ''
 ---

@@ -5,7 +5,12 @@ pubDate: 2026-05-08
 updatedDate: 2026-05-08
 category: oci
 tags:
-  - OCI, OEM, Upgrade, ACE
+  - oci
+  - oem
+  - oem-24ai
+  - upgrade
+  - agent-gold-image
+  - patching
 cover: /images/blog/cover-part3.png
 coverAlt: ''
 draft: true
