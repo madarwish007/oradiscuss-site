@@ -6,7 +6,7 @@ updatedDate: 2026-05-08
 category: oci
 tags:
   - OCI, OEM, Upgrade, ACE
-cover: /images/blog/OEM_Arch01.png
+cover: /images/blog/cover-part3.png
 coverAlt: ''
 draft: false
 featured: true
@@ -185,12 +185,12 @@ Two reasons not to do it in one shot:
 
 The way I batched the rollout:
 
-| Batch | Targets               | Window                                          |
-|-------|-----------------------|-------------------------------------------------|
-| 1     | DEV agents (all)      | Tuesday 14:00, lunch hour, low load             |
-| 2     | UAT agents (all)      | Wednesday 14:00                                 |
-| 3     | PROD batch A (50%)    | Friday 22:00, off-peak, weekend on standby      |
-| 4     | PROD batch B (50%)    | Saturday 22:00                                  |
+| Batch | Targets | Window |
+| --- | --- | --- |
+| 1 | DEV agents (all) | Tuesday 14:00, lunch hour, low load |
+| 2 | UAT agents (all) | Wednesday 14:00 |
+| 3 | PROD batch A (50%) | Friday 22:00, off-peak, weekend on standby |
+| 4 | PROD batch B (50%) | Saturday 22:00 |
 
 DEV first because the cost of a stuck DEV agent is zero. UAT next because if anything is going to break, the DEV pass is where it usually shows up. PROD in two halves so that if Friday's batch surfaces a problem, Saturday is a recovery window with the change record already booked.
 
