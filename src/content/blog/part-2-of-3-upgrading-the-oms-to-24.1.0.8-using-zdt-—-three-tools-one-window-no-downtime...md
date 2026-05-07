@@ -52,25 +52,45 @@ The Marketplace stack we deployed already provided all three. If you built your 
 
 Before downloading the patch, I confirmed the environment was ready:
 
-Component              Required                                    Status
+```plain
+Component              Required                     Status
+```
 
-----------            --------                                  ------
+```plain
+----------            --------                      ------
+```
 
-OMR Database        19.30 + 39168344                  (Article 1)
+```plain
+OMR Database.         19.30 + 39168344               (Article 1)
+```
 
-OMS RU                     24.1.0.5                                       Current
+```plain
+OMS RU.               24.1.0.5                      Current
+```
 
-Plug-ins                     24.1.1.5                                       Current
+```plain
+Plug-ins.             24.1.1.5                      Current
+```
 
-Agents                        24.1.0.5                                      Current
+```plain
+Agents                24.1.0.5                     Current
+```
 
-OMS count                2                                                   oms1 + oms2
+```plain
+OMS count             2                            oms1 + oms2
+```
 
-Load Balancer          Active            
+```plain
+Load Balancer         Active            
+```
 
-Software Library    Shared FS                                  /u01/app/oracle/em_shared_fs/swlib/
+```plain
+Software Library      Shared FS             /u01/app/oracle/em_shared_fs/swlib/
+```
 
+```plain
 The shared filesystem is critical, omspatcher will fail with a clear error message if the patch is not staged on a path accessible from all OMS instances. In our environment, the shared mount is at /u01/app/oracle/em_shared_fs/, accessible identically from both oms1 and oms2.
+```
 
 Download the OEM 24ai RU8 patch (24.1.0.8) from My Oracle Support and stage it on the shared filesystem so both OMS instances can read it from the same path:
 
