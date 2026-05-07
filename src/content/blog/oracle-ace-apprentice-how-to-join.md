@@ -7,6 +7,7 @@ category: community
 tags:
   - oracle-ace
   - career
+  - community
 cover: /images/blog/badge-ace-apprentice-2026-hx.png
 coverAlt: ''
 featured: true

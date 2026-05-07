@@ -5,6 +5,7 @@ pubDate: 2026-01-25
 updatedDate: ''
 category: dba
 tags:
+  - oracle-database
   - partitioning
   - dbms-redefinition
   - online-operations

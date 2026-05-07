@@ -8,6 +8,7 @@ tags:
   - rman
   - backup
   - monitoring
+  - oracle-database
 cover: /images/blog/rman-backup-progress-monitoring.png
 coverAlt: ''
 ---

@@ -5,7 +5,12 @@ pubDate: 2026-05-07
 updatedDate: 2026-05-07
 category: oci
 tags:
-  - /OEM
+  - oci
+  - oem
+  - oem-24ai
+  - upgrade
+  - zdt-patching
+  - omspatcher
 cover: /images/blog/oradiscuss-zdt-oms-24108-cover-1920x764.png
 coverAlt: ''
 draft: false

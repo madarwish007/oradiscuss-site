@@ -5,9 +5,11 @@ pubDate: 2026-04-09
 updatedDate: ''
 category: oci
 tags:
+  - oci
   - exadata
-  - migration
+  - exacs
   - dbcs
+  - migration
   - data-guard
 cover: /images/blog/dbcs-to-exacs-migration-untold-story.png
 coverAlt: ''

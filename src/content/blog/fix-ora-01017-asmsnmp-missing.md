@@ -5,10 +5,12 @@ pubDate: 2014-08-24
 updatedDate: ''
 category: dba
 tags:
+  - oracle-database
   - asm
+  - grid-infrastructure
   - troubleshooting
   - ora-01017
-  - grid-infrastructure
+  - 11g
 cover: /images/blog/fix-ora-01017-asmsnmp-missing.png
 coverAlt: ''
 ---

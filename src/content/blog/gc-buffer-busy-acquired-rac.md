@@ -5,8 +5,10 @@ pubDate: 2026-04-03
 updatedDate: ''
 category: dba
 tags:
+  - oracle-database
   - rac
   - wait-events
+  - gc-buffer-busy
   - performance
   - awr
 cover: /images/blog/gc-buffer-busy-acquired-rac.png

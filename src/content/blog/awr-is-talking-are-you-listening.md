@@ -5,8 +5,10 @@ pubDate: 2026-04-14
 updatedDate: ''
 category: dba
 tags:
+  - oracle-database
   - awr
   - performance
+  - wait-events
   - diagnostics
 cover: /images/blog/awr-is-talking-are-you-listening.png
 coverAlt: ''
