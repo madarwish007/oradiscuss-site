@@ -6,7 +6,7 @@ updatedDate: 2026-05-07
 category: oci
 tags:
   - /OEM
-cover: /images/blog/ZDT02.png
+cover: /images/blog/oradiscuss-db-19-28-to-19-30-cover-1920x764.png
 coverAlt: ''
 draft: false
 featured: true
