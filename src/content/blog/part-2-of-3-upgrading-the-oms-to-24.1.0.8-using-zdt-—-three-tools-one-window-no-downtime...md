@@ -6,7 +6,7 @@ updatedDate: 2026-05-07
 category: oci
 tags:
   - /OEM
-cover: ''
+cover: /images/blog/oradiscuss-zdt-oms-24108-cover-1920x764.png
 coverAlt: ''
 draft: false
 featured: true
@@ -53,13 +53,13 @@ The Marketplace stack we deployed already provided all three. If you built your 
 Before downloading the patch, I confirmed the environment was ready:
 
 - Component                 Required                                 Status
-- OMR Database.         19.30 + 39168344               (Article 1)
-- OMS RU.                       24.1.0.5                                  Current
-- Plug-ins.                      24.1.1.5                                   Current
-- Agents                          24.1.0.5                                  Current
-- OMS count                  2                                               oms1 + oms2
-- Load Balancer            Active            
-- Software Library      Shared FS                               /u01/app/oracle/em_shared_fs/swlib/
+- OMR Database ==> 19.30 + 39168344 ==> (Article 1)
+- OMS RU. ==> 24.1.0.5 ==> Current
+- Plug-ins. ==> 24.1.1.5 ==> Current
+- Agents ==> 24.1.0.5 ==> Current
+- OMS count ==> 2 ==> oms1 + oms2
+- Load Balancer ==> Active            
+- Software Library ==> Shared FS ==> /u01/app/oracle/em_shared_fs/swlib/
 
 The shared filesystem is critical, omspatcher will fail with a clear error message if the patch is not staged on a path accessible from all OMS instances. In our environment, the shared mount is at /u01/app/oracle/em_shared_fs/, accessible identically from both oms1 and oms2.
 
