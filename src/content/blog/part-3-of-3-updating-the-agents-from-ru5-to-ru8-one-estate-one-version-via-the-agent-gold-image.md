@@ -13,7 +13,7 @@ tags:
   - patching
 cover: /images/blog/cover-part3.png
 coverAlt: ''
-draft: false
+draft: true
 featured: true
 ---
 
