@@ -1,7 +1,7 @@
 ---
 title: 'Part 3 of 3: Updating the Agents from RU5 to RU8, One Estate, One Version, via the Agent Gold Image..'
 description: The final post in the OEM 24ai RU5 to RU8 upgrade series, the mass agent update via Gold Image, off-peak batching across DEV, UAT, and PROD, and the validation queries that confirm every host in the estate is on the new RU.
-pubDate: 2026-05-08
+pubDate: 2026-05-10
 updatedDate: 2026-05-08
 category: oci
 tags:
@@ -13,7 +13,7 @@ tags:
   - patching
 cover: /images/blog/cover-part3.png
 coverAlt: ''
-draft: true
+draft: false
 featured: true
 ---
 
