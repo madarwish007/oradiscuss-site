@@ -7,5 +7,13 @@
 #
 # Scanner-probe paths are handled by worker.js (returns 404 + X-Robots-Tag).
 #
-# This file is intentionally empty of rules right now — we'll add path
-# redirects here if/when any article slug changes.
+# Article slug changes (301, permanent).
+#
+# When you rename a `src/content/blog/<slug>.md` file you change the
+# URL. Add an entry here so the old URL keeps working for any external
+# links / search-engine indexing.
+
+# Part 3 of the OEM 24ai upgrade series — original draft said "Agent
+# Gold Image" but the published version uses Patch Plan via Provisioning
+# and Patching. Slug renamed 2026-05-10 to match the new title.
+/oci/part-3-of-3-updating-the-agents-from-ru5-to-ru8-one-estate-one-version-via-the-agent-gold-image/ /oci/part-3-of-3-updating-the-agents-from-ru5-to-ru8-one-estate-one-version-via-the-oem-patching-tool/ 301
