@@ -9,7 +9,7 @@ tags:
   - oem
   - oem-24ai
   - upgrade
-  - agent-gold-image
+  - patch-plan
   - patching
 cover: /images/blog/cover-part3.png
 coverAlt: ''
