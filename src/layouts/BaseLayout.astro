@@ -15,8 +15,8 @@ export interface Props {
 }
 
 const {
-  title = 'OraDiscuss — Oracle Mastery, Distilled',
-  description = 'Production-grade Oracle DBA insights from a practising ACE Apprentice. Exadata, RAC, AWR, GoldenGate, OCI — the hard problems, solved in writing.',
+  title = 'OraDiscuss: Oracle Mastery, Distilled',
+  description = 'Production-grade Oracle DBA insights from a practising Oracle ACE Associate. Exadata, RAC, AWR, GoldenGate, OCI: the hard problems, solved in writing.',
   image = '/og-image.png',
   article = false,
   canonical,
@@ -66,12 +66,31 @@ const imageURL = new URL(image, siteOrigin).href;
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- Instrument type: Sora display, Archivo body, JetBrains Mono for data. -->
 <link
-  href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Sora:wght@600;700;800&display=swap"
   rel="stylesheet"
 />
 
 <meta name="generator" content={Astro.generator} />
+
+<script is:inline>
+  (function () {
+    /* The reveal is opt IN. Content is visible by default and this class is
+       what allows anything to be hidden, so a JS failure can never blank a
+       page. It runs in the head, before first paint, to avoid a flash. */
+    try {
+      var reduce =
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+        window.matchMedia('(max-width: 767px)').matches;
+      if (!reduce && 'IntersectionObserver' in window) {
+        document.documentElement.className += ' motion';
+      }
+    } catch (e) {
+      /* no motion class, everything stays visible */
+    }
+  })();
+</script>
 
 <script is:inline>
   (function () {
@@ -142,28 +161,86 @@ const imageURL = new URL(image, siteOrigin).href;
     update();
   })();
 
-  // Reveal on scroll
+  /* Reveal on scroll, plus the counters that dramatize a report filling in.
+     One contract for the whole site: .rv is revealed by .vis, and the
+     numbers settle on their final value whatever happens. */
   (function () {
     var els = document.querySelectorAll('.rv');
-    if (!('IntersectionObserver' in window)) {
-      els.forEach(function (el) {
-        el.classList.add('vis');
-      });
+    var counters = document.querySelectorAll('[data-count-to]');
+
+    function settleCounter(el) {
+      el.textContent = el.getAttribute('data-count-to') || '0';
+    }
+    function settleAll() {
+      els.forEach(function (el) { el.classList.add('vis'); });
+      counters.forEach(settleCounter);
+    }
+
+    if (!document.documentElement.classList.contains('motion')) {
+      settleAll();
       return;
     }
-    var io = new IntersectionObserver(
-      function (entries) {
-        entries.forEach(function (e) {
-          if (e.isIntersecting) {
-            e.target.classList.add('vis');
+
+    function runCount(el) {
+      var to = parseInt(el.getAttribute('data-count-to'), 10);
+      if (!to) { settleCounter(el); return; }
+      var start = null;
+      var dur = 900;
+      function step(ts) {
+        if (start === null) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        /* ease out expo, so it settles rather than ticks */
+        var eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p);
+        el.textContent = String(Math.round(to * eased));
+        if (p < 1) requestAnimationFrame(step);
+      }
+      setTimeout(function () { requestAnimationFrame(step); }, 560);
+    }
+
+    function reveal(el) {
+      if (el.classList.contains('vis')) return;
+      el.classList.add('vis');
+      var inner = el.querySelectorAll ? el.querySelectorAll('[data-count-to]') : [];
+      inner.forEach(runCount);
+    }
+    function revealAll() { els.forEach(reveal); }
+
+    var delivered = false;
+    var io = null;
+    if ('IntersectionObserver' in window) {
+      io = new IntersectionObserver(
+        function (entries) {
+          delivered = true;
+          entries.forEach(function (e) {
+            if (!e.isIntersecting) return;
+            reveal(e.target);
             io.unobserve(e.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-    els.forEach(function (el) {
-      io.observe(el);
+          });
+        },
+        { threshold: 0.1, rootMargin: '0px 0px -6% 0px' }
+      );
+      els.forEach(function (el) { io.observe(el); });
+    }
+
+    /* Anything on or near the first screen is revealed without waiting for a
+       callback, so the top of the page never depends on async work. One turn
+       of the event loop first, so the entrance still animates. */
+    setTimeout(function () {
+      var h = window.innerHeight || 800;
+      els.forEach(function (el) {
+        if (el.getBoundingClientRect().top < h * 1.05) reveal(el);
+      });
+    }, 0);
+
+    /* Backstop. A throttled or undelivered observer must never be able to
+       leave content hidden, so if nothing has been delivered by now, show
+       everything. setTimeout still fires where rAF and IntersectionObserver
+       are throttled, which is exactly the case this guards. */
+    setTimeout(function () { if (!delivered) revealAll(); }, 1200);
+
+    /* A counter that sits outside any .rv still has to run. */
+    counters.forEach(function (c) {
+      if (!c.closest('.rv')) runCount(c);
     });
   })();
 </script>

@@ -8,7 +8,7 @@ const { slug } = Astro.props;
   <h3>Discussion</h3>
   <div class="cmt-avg">
     <span class="cmt-avg-stars" id="cmt-avg-stars">☆☆☆☆☆</span>
-    <span><span class="cmt-avg-num" id="cmt-avg-num">—</span> / 5</span>
+    <span><span class="cmt-avg-num" id="cmt-avg-num">n/a</span> / 5</span>
     <span class="cmt-avg-count" id="cmt-avg-count"></span>
   </div>
 
@@ -135,9 +135,9 @@ const { slug } = Astro.props;
       var items = (data && data.comments) || (Array.isArray(data) ? data : []);
       if (!Array.isArray(items) || items.length === 0) {
         list.innerHTML =
-          '<p style="color:var(--ink-4);font-size:14px;padding:6px 2px">No comments yet — be the first.</p>';
+          '<p style="color:var(--ink-4);font-size:14px;padding:6px 2px">No comments yet. Be the first.</p>';
         avgStars.textContent = '☆☆☆☆☆';
-        avgNum.textContent = '—';
+        avgNum.textContent = 'n/a';
         avgCount.textContent = '';
         return;
       }
@@ -149,7 +149,7 @@ const { slug } = Astro.props;
           rated++;
         }
       });
-      var avg = rated ? (total / rated).toFixed(1) : '—';
+      var avg = rated ? (total / rated).toFixed(1) : 'n/a';
       avgNum.textContent = avg;
       avgCount.textContent =
         '(' + items.length + (items.length === 1 ? ' comment)' : ' comments)');
@@ -219,13 +219,13 @@ const { slug } = Astro.props;
             } else {
               rMsg.className = 'cmt-reply-msg error';
               rMsg.textContent =
-                (res.json && (res.json.error || res.json.message)) || 'Something went wrong — try again.';
+                (res.json && (res.json.error || res.json.message)) || 'Something went wrong. Try again.';
               if (btn) { btn.disabled = false; btn.textContent = 'Post reply'; }
             }
           })
           .catch(function () {
             rMsg.className = 'cmt-reply-msg error';
-            rMsg.textContent = 'Network error — please retry.';
+            rMsg.textContent = 'Network error. Please retry.';
             if (btn) { btn.disabled = false; btn.textContent = 'Post reply'; }
           });
       });
@@ -281,7 +281,7 @@ const { slug } = Astro.props;
         .then(function (res) {
           if (res.ok) {
             msg.className = 'cmt-msg success';
-            msg.textContent = 'Thanks — your comment is posted.';
+            msg.textContent = 'Thanks, your comment is posted.';
             form.reset();
             rating = 0;
             fillStars(0);
@@ -289,12 +289,12 @@ const { slug } = Astro.props;
           } else {
             msg.className = 'cmt-msg error';
             msg.textContent =
-              (res.json && (res.json.error || res.json.message)) || 'Something went wrong — try again.';
+              (res.json && (res.json.error || res.json.message)) || 'Something went wrong. Try again.';
           }
         })
         .catch(function () {
           msg.className = 'cmt-msg error';
-          msg.textContent = 'Network error — please retry.';
+          msg.textContent = 'Network error. Please retry.';
         })
         .finally(function () {
           if (btn) { btn.disabled = false; btn.textContent = 'Post comment'; }

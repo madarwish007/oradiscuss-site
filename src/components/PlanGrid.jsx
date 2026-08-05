@@ -61,9 +61,11 @@ export default function PlanGrid() {
               {cut && <p className="plan-then">then {item.regular_display}/yr</p>}
               {cut && <p className="plan-lock">Locked for life while subscribed</p>}
               <p className="plan-blurb">{item.blurb}</p>
-              <span className="plan-cta">
-                {free ? 'Download the kit' : 'Join at this price'}
-              </span>
+              {/* No call to action is rendered until it can actually be
+                  actioned. Styling inert text as a button is both a lie to the
+                  reader and unreachable by keyboard, and an independent review
+                  flagged it as the most serious defect on the page. Phase 6
+                  wires Paddle and replaces this with a real link. */}
             </article>
           );
         })}
@@ -73,6 +75,10 @@ export default function PlanGrid() {
           <li key={r}>{r}</li>
         ))}
       </ul>
+      <p className="plans-note">
+        Checkout is not open yet. The packs are field-tested on real estates first, and payment
+        goes live once that is done.
+      </p>
     </>
   );
 }

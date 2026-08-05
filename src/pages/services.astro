@@ -15,7 +15,7 @@ const services: Service[] = [
     cls: 's1',
     icon: '💻',
     title: 'Database Administration',
-    sub: 'Day-to-day DBA work across on-prem and cloud — the reliable plumbing behind any critical Oracle workload.',
+    sub: 'Day-to-day DBA work across on-prem and cloud: the reliable plumbing behind any critical Oracle workload.',
     bullets: [
       '24×7 monitoring, alert tuning, proactive health checks',
       'Backup & recovery strategy with RMAN (catalog, cross-platform, PITR drills)',
@@ -28,7 +28,7 @@ const services: Service[] = [
     cls: 's2',
     icon: '✈',
     title: 'Database Migrations',
-    sub: "Low-risk migration paths to the right target — I pick the approach based on your downtime budget, not on what's fashionable.",
+    sub: "Low-risk migration paths to the right target. I pick the approach based on your downtime budget, not on what's fashionable.",
     bullets: [
       'On-prem → OCI (Base DB, ExaCS, ExaCC, Autonomous)',
       'DBCS → ExaCS consolidation and cost rightsizing',
@@ -41,7 +41,7 @@ const services: Service[] = [
     cls: 's3',
     icon: '🔍',
     title: 'Performance & Health Check',
-    sub: 'A deep, evidence-based review of your database — not a generic checklist. You get a written report and a concrete action plan.',
+    sub: 'A deep, evidence-based review of your database, not a generic checklist. You get a written report and a concrete action plan.',
     bullets: [
       'AWR / ASH / ADDM interpretation for real workloads',
       'SQL tuning: plan analysis, SPM baselines, hint-free fixes',
@@ -54,7 +54,7 @@ const services: Service[] = [
     cls: 's4',
     icon: '🛡',
     title: 'High Availability & DR',
-    sub: 'Architect and operate HA/DR stacks you can actually fail over — tested, documented, and owned by the team.',
+    sub: 'Architect and operate HA/DR stacks you can actually fail over: tested, documented, and owned by the team.',
     bullets: [
       'Active Data Guard: physical, logical, cascaded, Far Sync',
       'Real Application Clusters (RAC) design & troubleshooting',
@@ -67,7 +67,7 @@ const services: Service[] = [
     cls: 's5',
     icon: '⚡',
     title: 'Exadata, ExaCS & ExaCC',
-    sub: 'Engineered-systems-specific expertise — getting full value out of Smart Scan, storage cells, and IORM instead of treating Exadata like "just another server."',
+    sub: 'Engineered-systems-specific expertise: getting full value out of Smart Scan, storage cells, and IORM instead of treating Exadata like "just another server."',
     bullets: [
       'Smart Scan / Storage Indexes / HCC compression tuning',
       'IORM policy design for multi-tenant workloads',
@@ -80,7 +80,7 @@ const services: Service[] = [
     cls: 's6',
     icon: '🏦',
     title: 'Core Banking (T24) Tuning',
-    sub: 'Niche experience with Temenos T24 on Oracle — COB windows, end-of-day batches, and the very specific DB-side patterns these systems need.',
+    sub: 'Niche experience with Temenos T24 on Oracle: COB windows, end-of-day batches, and the very specific DB-side patterns these systems need.',
     bullets: [
       'COB / EOD window reduction through targeted tuning',
       'Redo / undo sizing for high-concurrency banking workloads',
@@ -92,7 +92,7 @@ const services: Service[] = [
 ];
 ---
 <BaseLayout
-  title="Oracle Services — OraDiscuss"
+  title="Oracle Services · OraDiscuss"
   description="Oracle DBA engagements: database administration, migrations to OCI/ExaCS, performance reviews, HA/DR architecture, Exadata, and Temenos T24 core banking tuning."
 >
   <section class="svc-hero">
@@ -101,15 +101,15 @@ const services: Service[] = [
       <span class="SK" style="display:block;margin-bottom:10px">Professional Engagements</span>
       <h1>My <span class="hl">Oracle Services</span></h1>
       <p>
-        I'm Mahmoud Darwish — Oracle ACE Apprentice and Senior DBA with hands-on experience across
+        I'm Mahmoud Darwish, Oracle ACE Associate and Senior DBA with hands-on experience across
         Exadata, ExaCS/ExaCC, RAC, Data Guard, GoldenGate, and OCI. Below is what I help teams
-        with, whether it's a one-off engagement or a longer project.
+        with, whether it is a one-off engagement or a longer project.
       </p>
     </div>
   </section>
 
   <section>
-    <div class="SW2">
+    <div class="SW2 sw2-tight">
       <div class="svc-grid">
         {services.map((s) => (
           <div class={`svc-card ${s.cls} rv`}>
@@ -137,9 +137,9 @@ const services: Service[] = [
         >
       </div>
 
-      <p style="text-align:center;color:var(--ink-3);font-size:13px;max-width:620px;margin:14px auto 80px;line-height:1.7">
+      <p style="color:var(--ink3);font-size:14px;max-width:64ch;margin:18px 0 0;line-height:1.7">
         Engagements range from a single AWR-based health check to multi-month migration programs.
-        Send a short note about your environment and what you're trying to achieve — I'll reply
+        Send a short note about your environment and what you're trying to achieve. I will reply
         with a scoped proposal.
       </p>
     </div>
