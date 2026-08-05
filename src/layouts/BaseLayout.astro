@@ -76,17 +76,30 @@ const imageURL = new URL(image, siteOrigin).href;
 <script is:inline>
   (function () {
     var h = location.hostname;
-    if (
-      h !== 'oradiscuss.com' &&
-      h !== 'www.oradiscuss.com' &&
-      h !== 'localhost' &&
-      h !== '127.0.0.1'
-    ) {
+    var isCanonical = h === 'oradiscuss.com' || h === 'www.oradiscuss.com';
+    /* Sanctioned non-production origins: local dev and any Workers preview
+       environment. These must stay reachable. */
+    var isDevOrPreview =
+      h === 'localhost' || h === '127.0.0.1' || /\.workers\.dev$/.test(h);
+
+    /* Any host that is not the canonical domain stays out of search results,
+       preview environments included. */
+    if (!isCanonical) {
       var m = document.createElement('meta');
       m.name = 'robots';
       m.content = 'noindex, nofollow';
       document.head.appendChild(m);
-      location.replace('https://oradiscuss.com' + location.pathname + location.search + location.hash);
+    }
+
+    /* Only bounce hosts that are neither canonical nor a sanctioned preview
+       origin. That preserves the original intent (stop mirrors and stray
+       hostnames competing with the canonical domain) without sending the
+       preview environment to production, which silently turned every preview
+       check into a test of production. */
+    if (!isCanonical && !isDevOrPreview) {
+      location.replace(
+        'https://oradiscuss.com' + location.pathname + location.search + location.hash
+      );
     }
   })();
 </script>

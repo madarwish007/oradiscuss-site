@@ -23,6 +23,11 @@ directory = "./dist"
 binding = "ASSETS"
 # Serve /404/index.html on unknown paths so our styled 404 page renders.
 not_found_handling = "404-page"
+# Without this, Static Assets answers browser NAVIGATIONS to /api/* with the
+# 404 page before the Worker ever runs, while fetch()-shaped requests fall
+# through correctly. Verified by replaying both request shapes with curl.
+# This is not cosmetic: the Phase 6 download link is a navigation.
+run_worker_first = ["/api/*"]
 
 [observability]
 enabled = true
@@ -65,6 +70,7 @@ name = "oradiscuss-site-preview"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
+run_worker_first = ["/api/*"]
 
 [env.preview.observability]
 enabled = true
