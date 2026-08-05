@@ -9,6 +9,9 @@ function isActive(prefix: string): boolean {
 type NavItem = { href: string; label: string };
 const items: NavItem[] = [
   { href: '/', label: 'Home' },
+  /* The article index moved off "/" when the membership page became the home,
+     so the writing needs its own door here or it stops being reachable. */
+  { href: '/articles/', label: 'Articles' },
   { href: '/dba/', label: 'Advanced DBA' },
   { href: '/scripts/', label: 'Scripts' },
   { href: '/goldengate/', label: 'GoldenGate' },

@@ -10,6 +10,13 @@ import react from '@astrojs/react';
 export default defineConfig({
   site: 'https://oradiscuss.com',
   integrations: [mdx(), sitemap(), react()],
+  /* The membership page was reviewed at /instrument/ before it became the home.
+     Anyone holding that URL should land on the real page, not a 404. */
+  redirects: {
+    /* One key only. Declaring both "/instrument" and "/instrument/" makes Astro
+       treat it as the same static route defined twice and it drops one. */
+    '/instrument': '/',
+  },
   markdown: {
     shikiConfig: {
       theme: 'github-dark',
