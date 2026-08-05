@@ -19,15 +19,28 @@
   --surface:#FFFFFF;        /* cards, panels */
   --ink:#0B1B34;            /* headlines, primary text */
   --ink2:#4D5A74;           /* body */
-  --ink3:#7C879B;           /* captions, muted */
+  --ink3:#626C80;           /* captions, muted */
   --hair:#DFE5EE;           /* borders, rules */
   --hair-2:#C6D0E0;         /* the heavier hairline */
   --act:#C74634;            /* Oracle red: buttons, eyebrows, selected plan */
   --act-2:#A83A2B;          /* action hover */
   --blue:#1F5AA8;           /* the emphasised headline clause */
-  --ok:#1FA37A;             /* live, healthy, read only states */
+  --ok:#1FA37A;             /* MARKS ONLY: the live dot, borders, fills */
+  --ok-text:#17785A;        /* the same signal as WORDS, at a legible weight */
   --on-deep:#9FB6D4;        /* body text sitting on the navy band */
-  --eyebrow-deep:#FF8B76;   /* the eyebrow, lifted for navy */
+  /* The eyebrow on navy. Sized against the LIGHTEST band stop #0B4A6F, which is
+     the binding constraint here rather than the darkest: #FF8B76 measured
+     4.14:1 on that stop and failed. This clears 4.96:1 there. */
+  --eyebrow-deep:#FFA592;
+
+  /* Every muted colour above is sized against the DARKEST ground it is ever
+     painted on, not against white, because a token that only passes on
+     #FFFFFF fails in the footer and the marquee where the ground is
+     --field-2. Measured on the rendered pixels, WCAG 2.1 non-large text:
+       --ink3   #626C80  4.79 on --field-2 / 5.10 on --field / 5.28 on white
+       --ok-text #17785A 4.80 on --field-2 / 5.10 on --field / 5.28 on white
+     --ok stays bright because a 7px dot and a border are not text and carry
+     no ratio requirement. Never set --ok on a word. */
 
   /* ---- Type ---- */
   --sora:Sora,"Oracle Sans",system-ui,sans-serif;
@@ -60,7 +73,11 @@
   --ink-1:var(--ink);
   --ink-2:var(--ink2);
   --ink-3:var(--ink3);
-  --ink-4:#8592A8;
+  /* --ink-4 was a fourth muted step at #8592A8, a near duplicate of --ink3
+     that measured 3.04:1 on the field and carried price text. Retired: the
+     name survives for its existing consumers, the value does not. There are
+     three ink steps, not four. */
+  --ink-4:var(--ink3);
   --border:var(--hair);
   --border-2:var(--hair-2);
   --red:var(--act);
@@ -186,8 +203,14 @@ a.PC, a.promo-card, a.glass-card { text-decoration: none; color: inherit }
 
 /* =====================================================================
    HEADER
+   Scoped to body > header on purpose. An unscoped header{position:fixed}
+   captures EVERY nested <header> on the site: the one inside the hero
+   artifact panel was being held in place only by that panel's own
+   backdrop-filter creating a containing block, so removing the glass
+   would have torn the panel header out and laid it across the site
+   header at full width. The child combinator makes that impossible.
    ===================================================================== */
-header{
+body > header{
   position:fixed;top:0;left:0;right:0;z-index:800;
   background:rgba(250,251,253,.92);
   backdrop-filter:saturate(150%) blur(10px);-webkit-backdrop-filter:saturate(150%) blur(10px);
@@ -322,6 +345,9 @@ h1.HT{font-family:var(--sora);font-size:clamp(40px,5.2vw,68px);font-weight:800;c
 .ck{color:#FF8B76;font-weight:600}
 .cf{color:#F1A74E}
 .cs{color:#7FD3B4}
+/* Deliberately a literal, not var(--ink3): this is a comment in the code art
+   on the DARK slate cover, where it measures 4.75:1. Pointing it at --ink3
+   would darken it against that ground and break it. */
 .cc{color:#7C879B;font-style:italic}
 .cn{color:#8FBBF5}
 
@@ -439,7 +465,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--hair);background:v
 .cmt-submit:hover{background:var(--act-2);border-color:var(--act-2)}
 .cmt-submit:disabled{opacity:.5;cursor:not-allowed}
 .cmt-msg{font-family:var(--arch);font-size:13px;min-height:18px}
-.cmt-msg.success{color:var(--ok)}
+.cmt-msg.success{color:var(--ok-text)}
 .cmt-msg.error{color:var(--act-2)}
 .cmt-list{display:flex;flex-direction:column;gap:14px}
 .cmt-item{padding:18px 20px;border-radius:var(--r-md);background:var(--surface);border:1px solid var(--hair)}
@@ -502,7 +528,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--hair);background:v
 .ai-chat-hdr{background:var(--field-2);padding:16px 20px;border-bottom:1px solid var(--hair);display:flex;align-items:center;gap:12px}
 .ai-chat-av{width:38px;height:38px;border-radius:50%;background:var(--act);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:none;flex-shrink:0}
 .ai-chat-nm{font-family:var(--sora);font-size:15px;font-weight:700;color:var(--ink);font-style:normal;letter-spacing:-.025em}
-.ai-chat-st{font-family:var(--jb);font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ok);display:flex;align-items:center;gap:6px}
+.ai-chat-st{font-family:var(--jb);font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ok-text);display:flex;align-items:center;gap:6px}
 .ai-chat-st::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
 .ai-chat-msgs{padding:16px;height:320px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;scroll-behavior:smooth}
 .ai-chat-msgs::-webkit-scrollbar{width:4px}

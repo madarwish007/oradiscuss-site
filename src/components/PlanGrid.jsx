@@ -40,37 +40,46 @@ export default function PlanGrid() {
 
   return (
     <>
-      <div className="plans">
+      {/* The plans are a list of three comparable things, so they are marked
+          up as one, the same as the packs above. role="list" is explicit
+          because list-style:none on a display:grid container drops the list
+          role in WebKit, which is the whole reason this read as a bare div.
+          Each card is still an <article>, now NAMED by its own heading, so it
+          is announced as "Toolkit, article" rather than as an unnamed region. */}
+      <ul className="plans" role="list">
         {state.items.map((item, i) => {
           const free = item.launch_price === 0;
           const cut = !free && item.launch_price < item.regular_price;
+          const titleId = `plan-title-${item.sku}`;
           return (
-            <article
-              key={item.sku}
-              className={`plan${item.tier === 1 ? ' is-pick' : ''}`}
-              style={{ '--d': `${i * 90}ms` }}
-            >
-              <span className="plan-k">
-                {free ? 'Free forever' : `Tier ${item.tier} · annual`}
-              </span>
-              <h3>{item.name}</h3>
-              <p className="plan-price">
-                {item.launch_display}
-                {!free && <small>/yr</small>}
-              </p>
-              {cut && <p className="plan-then">then {item.regular_display}/yr</p>}
-              {cut && <p className="plan-lock">Locked for life while subscribed</p>}
-              <p className="plan-blurb">{item.blurb}</p>
-              {/* No call to action is rendered until it can actually be
-                  actioned. Styling inert text as a button is both a lie to the
-                  reader and unreachable by keyboard, and an independent review
-                  flagged it as the most serious defect on the page. Phase 6
-                  wires Paddle and replaces this with a real link. */}
-            </article>
+            <li key={item.sku}>
+              <article
+                className={`plan${item.tier === 1 ? ' is-pick' : ''}`}
+                style={{ '--d': `${i * 90}ms` }}
+                aria-labelledby={titleId}
+              >
+                <span className="plan-k">
+                  {free ? 'Free forever' : `Tier ${item.tier} · annual`}
+                </span>
+                <h3 id={titleId}>{item.name}</h3>
+                <p className="plan-price">
+                  {item.launch_display}
+                  {!free && <small>/yr</small>}
+                </p>
+                {cut && <p className="plan-then">then {item.regular_display}/yr</p>}
+                {cut && <p className="plan-lock">Locked for life while subscribed</p>}
+                <p className="plan-blurb">{item.blurb}</p>
+                {/* No call to action is rendered until it can actually be
+                    actioned. Styling inert text as a button is both a lie to the
+                    reader and unreachable by keyboard, and an independent review
+                    flagged it as the most serious defect on the page. Phase 6
+                    wires Paddle and replaces this with a real link. */}
+              </article>
+            </li>
           );
         })}
-      </div>
-      <ul className="plan-rules">
+      </ul>
+      <ul className="plan-rules" role="list">
         {RULES.map((r) => (
           <li key={r}>{r}</li>
         ))}

@@ -106,7 +106,7 @@ export default function PricingTable() {
               </div>
 
               {discounted && (
-                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ok)' }}>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--ok-text)' }}>
                   Launch price, locked for life while subscribed
                 </span>
               )}

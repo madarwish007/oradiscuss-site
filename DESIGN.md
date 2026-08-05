@@ -18,13 +18,23 @@ A pale, cool instrument panel lit by a slow aurora, anchored by a deep navy stru
 | Surface | `#FFFFFF` | cards, panels |
 | Ink | `#0B1B34` | headlines, primary text |
 | Ink 2 | `#4D5A74` | body |
-| Ink 3 | `#7C879B` | captions, muted |
+| Ink 3 | `#626C80` | captions, muted |
 | Hairline | `#DFE5EE` | borders, rules |
 | **Action (Oracle red)** | `#C74634` | buttons, eyebrows, wordmark accent, selected plan |
 | Action hover | `#A83A2B` | |
 | Deep (navy band) | `#0B1B34` to `#0E2A52` to `#0B4A6F` | the structural band, 158deg |
+| On deep | `#9FB6D4` | every word on the navy band that is not a heading |
 | Quiet blue | `#1F5AA8` | the emphasised headline clause |
-| Signal OK | `#1FA37A` | live, healthy, read-only states |
+| Signal OK, mark | `#1FA37A` | the live dot, borders, fills. **Never a word.** |
+| Signal OK, text | `#17785A` | the same signal written out: "read-only", "Clear", the price lock |
+
+There is no fourth ink. `--ink-4` existed at `#8592A8`, a near duplicate of Ink 3 that
+measured 3.04:1 on the field while carrying price text; it now resolves to `--ink3` and
+the name survives only for its remaining call sites.
+
+Muted colours are sized against the **darkest ground they are ever painted on**, which is
+`--field-2 #F1F4FA` in the footer and the marquee, not white. Measured on rendered pixels:
+Ink 3 4.79:1, Signal OK text 4.80:1 on that ground.
 
 **Aurora field**, three blooms at low opacity behind the hero, blurred 46px: navy `rgba(31,90,168,.42)` upper left, teal `rgba(31,163,122,.36)` upper right, Oracle red `rgba(199,70,52,.30)` centre. The red bloom is what stops this being the stock purple-orange SaaS aurora: the light belongs to this brand.
 
@@ -72,4 +82,84 @@ Never animate layout properties. Transform and opacity only.
 
 ## Accessibility
 
-Body text at least 4.5:1 on the field. Red on white passes for large text and UI; body copy never uses red. Focus states are visible on every interactive element. The live-state colour is always paired with a word, never colour alone.
+Every piece of text clears 4.5:1 against the ground it actually sits on, measured from the
+rendered pixels rather than from the token's value on white, because the same token sits on
+the field, on `--field-2` and on the glass panel and only the tightest of those counts.
+Colour that is not text (the live dot, a border, a fill) carries no ratio requirement and
+keeps its brightness. Focus states are visible on every interactive element. The live-state
+colour is always paired with a word, never colour alone.
+
+Two known exceptions, both Oracle red, both predating the Instrument rebuild, neither one
+resolvable without a founder decision:
+
+- **The hero eyebrow on the aurora.** `#C74634` at 11px over the blue bloom measures
+  **3.01:1 at its worst point in the 28s drift** (worst ground `#BCCEE5`). Clearing 4.5
+  needs either the brand red darkened or the blue bloom's declared alpha cut from `.42` to
+  about `.03`, which is the aurora deleted. Even `--act-2 #A83A2B` only reaches 4.01:1 there.
+- **Red on the red-tinted chips.** `.ace-btn` label 4.16:1, `.ab-p` badge 3.99:1. Oracle red
+  on `--red-faint`, a pairing the site has carried since before this system.
+
+## Superseded legacy classes
+
+The Instrument primitives were added **beside** the legacy set, not in place of it, so both
+ship. This is the retirement map: each legacy name below is now fully expressed by the
+Instrument primitive beside it. Retiring them is a separate pass; nothing here is urgent,
+and nothing here should be done piecemeal without re-measuring the page it touches.
+
+### Cards, 12 implementations of one idea
+
+`.i-card` (white, `--hair` border, `--r-card`, 3px hover lift) supersedes:
+
+| Legacy | Where | Note |
+|---|---|---|
+| `.glass-card` | global.css | already de-glassed to a plain card |
+| `.PC` | global.css | post card, adds a cover slot |
+| `.promo-card` | global.css | adds `.promo-alt` on `--field-2` |
+| `.svc-card` | global.css | |
+| `.ai-tool-card` | global.css | |
+| `.ai-chat-full` | global.css | |
+| `.cmt-item` | global.css | |
+| `.cmt-form` | global.css | |
+| `.inst .plan` | instrument.astro | keeps the `.is-pick` red-border modifier |
+
+Deliberately **not** cards, leave them: `.ai-result` (a scrolling output well),
+`.cmt-reply-form` (an inset on `--field-2`), `.inst-pack` (a ledger row, hairline only).
+
+### Buttons
+
+`.i-btn` + `.i-btn-primary` supersedes `.BP`, `.svc-cta.primary`, `.cmt-submit`,
+`.ai-tool-btn`, `.NB`. `.i-btn` + `.i-btn-ghost` supersedes `.BS`, `.svc-cta.secondary`.
+
+### Eyebrows
+
+`.i-eyebrow` (mono 11px 600, `.16em`, Oracle red) supersedes `.SK`, `.EBW span`, `.art-cat`,
+`.CC`, `.promo-cta`, and the label half of `.inst-onward`.
+`.i-eyebrow.i-eyebrow-deep` supersedes `.NK`.
+
+### Mono labels
+
+`.i-label` (mono 10.5px 600, `.12em`, `--ink3`) supersedes `.HSL`, `.auth-role`,
+`.art-share-label`, `.FC h4`, `.cmt-date`, `.cmt-rating-row label`, `.ai-msg-role`,
+`.plan-k`, and `.SRC` in a red variant.
+
+### Meta strips
+
+`.i-meta` supersedes `.art-meta`, `.CMT`, `.FB2`, and `.tools-facts` in a pill variant.
+
+### The measure
+
+`.i-shell` (1240px, 56px gutters) supersedes `.SW2` and `.more-posts` directly. `.HI`,
+`.FI` and `.FB2` use a different 1360px/32px measure; reconcile the two numbers before
+touching those, because that is a visual decision and not a cleanup.
+
+### The radius ladder, two ladders on top of each other
+
+| Legacy | Consumers | Instrument |
+|---|---|---|
+| `--r-sm` 7px | 14 | `--r-btn` 9px |
+| `--r-md` 11px | 14 | `--r-card` 13px |
+| `--r-lg` 13px | 1 | `--r-card` 13px, an exact duplicate value |
+| `--r-pill` 999px | 5 | no equivalent, **keep** |
+
+29 consumers sit on the three superseded steps. `--r-sm` to `--r-btn` and `--r-md` to
+`--r-card` both change a real radius, so each is a look change, not a rename.
