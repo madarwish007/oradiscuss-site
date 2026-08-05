@@ -607,6 +607,166 @@ footer{position:relative;z-index:1;border-top:1px solid var(--hair);background:v
 .tools-facts span{padding:7px 14px;border:1px solid var(--hair);border-radius:var(--r-pill);background:var(--surface)}
 
 /* =====================================================================
+   CAPTURE FORM
+   The one form on /kit/ and /roadmap/. Component: CaptureForm.jsx.
+
+   THE DISABLED STATE IS THE SHIPPING STATE until the beehiiv and Turnstile
+   keys exist, so it is styled as a first-class state rather than as a
+   greyed afterthought. Two rules follow from that and neither is
+   negotiable:
+
+   1. NO OPACITY ANYWHERE IN HERE. Opacity multiplies text toward its
+      ground, so a disabled control styled with opacity:.5 fails contrast
+      while a naive sweep that reads only `color` still calls it a pass.
+      The inert look comes from ground, border and cursor instead.
+   2. The explanation of WHY the form is shut is live prose that a person
+      is meant to read, not inactive chrome, so it carries the darkest ink
+      on the recessed ground rather than a muted step.
+   ===================================================================== */
+.cap{background:var(--surface);border:1px solid var(--hair);border-radius:var(--r-card);
+  padding:clamp(22px,3vw,30px);min-width:0}
+
+/* State line. The word carries the state; the border colour only seconds it. */
+.cap-state{border-radius:var(--r-sm);background:var(--field-2);border-left:3px solid var(--hair-2);
+  padding:13px 16px;font-size:14.5px;line-height:1.6;color:var(--ink)}
+.cap-state-off{border-left-color:var(--warn)}
+.cap-state-on{border-left-color:var(--ok)}
+
+.cap-form{margin-top:20px}
+.cap-fields{border:0;padding:0;margin:0;min-width:0}
+
+/* Courses, as one radio group. A single group and a single widget, rather
+   than a form and a bot check per course. */
+.cap-courses{border:0;padding:0;margin:0 0 26px}
+.cap-courses-legend{padding:0;font-family:var(--arch);font-size:15px;font-weight:600;color:var(--ink)}
+.cap-course{display:grid;grid-template-columns:18px minmax(0,1fr);gap:13px;align-items:start;
+  margin-top:10px;padding:15px 16px;border:1px solid var(--hair);border-radius:var(--r-md);
+  background:var(--surface);cursor:pointer;transition:border-color .16s}
+.cap-course:hover{border-color:var(--hair-2)}
+.cap-course:has(input:checked){border-color:var(--act);box-shadow:inset 0 0 0 1px var(--act)}
+.cap-course input{width:18px;height:18px;margin-top:2px;accent-color:var(--act);cursor:pointer}
+.cap-course-body{display:block;min-width:0}
+.cap-course-title{display:block;font-family:var(--sora);font-size:15.5px;font-weight:700;
+  letter-spacing:-.025em;color:var(--ink)}
+.cap-course-summary{display:block;margin-top:4px;font-size:13.5px;line-height:1.6;color:var(--ink2)}
+/* Inert must never look interactive: inside a disabled fieldset the rows
+   stop offering a pointer and stop reacting to hover. */
+.cap-fields:disabled .cap-course,.cap-fields:disabled .cap-course input{cursor:default}
+.cap-fields:disabled .cap-course:hover{border-color:var(--hair)}
+
+.cap-note{margin-top:10px;font-size:14px;line-height:1.6;color:var(--ink3)}
+
+.cap-row{display:flex;flex-direction:column;gap:7px;max-width:440px;min-width:0}
+.cap-label{font-family:var(--arch);font-size:14.5px;font-weight:600;color:var(--ink)}
+.cap-input{width:100%;min-width:0;background:var(--surface);border:1px solid var(--hair-2);
+  border-radius:var(--r-btn);padding:13px 15px;font-family:var(--arch);font-size:15px;
+  color:var(--ink);outline:none;transition:border-color .15s,box-shadow .15s}
+.cap-input:focus{border-color:var(--act);box-shadow:0 0 0 3px var(--red-faint)}
+.cap-input:disabled{background:var(--field-2);border-color:var(--hair);color:var(--ink3);
+  cursor:not-allowed;box-shadow:none}
+.cap-hint{font-size:13.5px;line-height:1.6;color:var(--ink3)}
+
+.cap-widget{margin-top:22px;min-height:65px}
+
+.cap-submit{margin-top:22px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:var(--r-btn);padding:15px 27px;font-family:var(--arch);font-size:15px;font-weight:600;
+  background:var(--act);color:#fff;border:1px solid var(--act);box-shadow:var(--shadow-act);
+  cursor:pointer;transition:transform .18s var(--ease),background-color .18s,box-shadow .18s}
+.cap-submit:hover:enabled{background:var(--act-2);border-color:var(--act-2);transform:translateY(-1px);
+  box-shadow:var(--shadow-act-2)}
+/* Disabled reads as a shape that is not a button rather than as a faded one:
+   no red, no lift, no shadow, and text that still clears 4.5:1 on its ground. */
+.cap-submit:disabled{background:var(--field-2);color:var(--ink3);border-color:var(--hair);
+  box-shadow:none;cursor:not-allowed}
+
+.cap-result{margin-top:20px;border-radius:var(--r-sm);background:var(--field-2);
+  border-left:3px solid var(--hair-2);padding:13px 16px;font-size:14.5px;line-height:1.6;color:var(--ink)}
+.cap-result-done{border-left-color:var(--ok)}
+.cap-result-error{border-left-color:var(--act)}
+
+.cap-again{margin-top:14px;display:inline-flex;align-items:center;border-radius:var(--r-btn);
+  padding:11px 20px;font-family:var(--arch);font-size:14px;font-weight:600;background:var(--surface);
+  color:var(--ink);border:1px solid var(--hair-2);cursor:pointer;transition:border-color .15s}
+.cap-again:hover{border-color:var(--ink3)}
+
+.cap-privacy{margin-top:24px;padding-top:18px;border-top:1px solid var(--hair);
+  font-size:13.5px;line-height:1.6;color:var(--ink3);max-width:62ch}
+
+@media(max-width:640px){
+  .cap{padding:20px 18px}
+  .cap-submit{width:100%}
+}
+
+/* ---------------------------------------------------------------------
+   CAPTURE PAGE SHELL
+   /kit/ and /roadmap/ are the same page shape with different prose, so
+   the composition lives here beside the form rather than being written
+   twice. Two owners make it shared furniture, not page composition.
+   --------------------------------------------------------------------- */
+.capp{background:var(--field);color:var(--ink2)}
+.capp-head{position:relative;overflow:clip;padding-top:clamp(104px,9vw,140px);
+  padding-bottom:clamp(34px,4vw,46px)}
+.capp-head::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(90deg,rgba(11,27,52,.045) 1px,transparent 1px);
+  background-size:112px 100%;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 74%);
+  mask-image:linear-gradient(180deg,#000,transparent 74%)}
+.capp-head>.i-shell{position:relative;z-index:1}
+.capp h1{margin-top:18px;font-family:var(--sora);font-size:clamp(2.1rem,4.4vw,3.3rem);
+  font-weight:800;line-height:1.05;letter-spacing:-.038em;color:var(--ink);max-width:17ch}
+.capp-lede{margin-top:22px;max-width:60ch;font-size:clamp(16px,1.2vw,17.5px);line-height:1.66;
+  color:var(--ink2)}
+
+.capp-grid{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:56px;align-items:start;
+  padding-bottom:clamp(64px,8vw,104px)}
+.capp-body{min-width:0;display:flex;flex-direction:column;gap:44px}
+.capp-aside{min-width:0;position:sticky;top:88px}
+
+.capp-sec h2{font-family:var(--sora);font-size:clamp(1.3rem,2.1vw,1.7rem);font-weight:700;
+  line-height:1.18;letter-spacing:-.03em;color:var(--ink);max-width:24ch}
+.capp-sec p{margin-top:14px;max-width:66ch;font-size:15.5px;line-height:1.7;color:var(--ink2)}
+
+/* A ledger, not cards. One line per thing, hairline separated. */
+.capp-ledger{margin-top:20px;list-style:none;padding:0;border-top:1px solid var(--hair)}
+.capp-ledger li{display:grid;grid-template-columns:34px minmax(0,1fr);gap:16px;align-items:baseline;
+  padding:12px 0;border-bottom:1px solid var(--hair);font-size:14.5px;line-height:1.6;color:var(--ink2)}
+.capp-ledger b{font-family:var(--jb);font-size:10.5px;font-weight:600;letter-spacing:.12em;
+  color:var(--ink3)}
+.capp-ledger strong{display:block;font-family:var(--arch);font-weight:600;color:var(--ink)}
+
+.capp-dual{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+/* Deliberately NOT .i-card: these two panels are read, never clicked, and
+   .i-card carries a 3px hover lift that would style an inert thing as
+   interactive. Same geometry, no affordance. */
+.capp-out{padding:20px;min-width:0;background:var(--surface);border:1px solid var(--hair);
+  border-radius:var(--r-card)}
+.capp-out h3{font-family:var(--jb);font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.capp-out p{margin-top:9px;font-size:13.8px;line-height:1.62;color:var(--ink2)}
+.capp-out span{display:block;margin-top:12px;font-family:var(--jb);font-size:10px;font-weight:600;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink3)}
+
+.capp-onward{display:inline-flex;align-items:center;gap:8px;font-family:var(--jb);font-size:11px;
+  font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--act);text-decoration:none;
+  padding-bottom:6px;border-bottom:1px solid var(--red-faint-2);transition:border-color .18s,gap .18s;
+  width:fit-content}
+.capp-onward:hover{border-color:var(--act);gap:14px}
+.capp-onward::after{content:'\2192'}
+
+@media(max-width:1080px){
+  .capp-grid{grid-template-columns:minmax(0,1fr);gap:44px}
+  .capp-aside{position:static;max-width:560px}
+}
+@media(max-width:640px){
+  .capp-dual{grid-template-columns:1fr}
+  .capp-ledger li{grid-template-columns:28px minmax(0,1fr);gap:12px}
+}
+/* The card lift is already neutralised sitewide by the mobile contract; the
+   sticky column is what has to stand down here so a phone scrolls normally. */
+@media(prefers-reduced-motion:reduce){
+  .capp-aside{position:static}
+}
+
+/* =====================================================================
    RESPONSIVE
    Grids collapse to one column and children carry min-width:0, so no
    page can push a horizontal scrollbar at 390, 768, 1440 or 1920.

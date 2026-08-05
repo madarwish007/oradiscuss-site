@@ -1,0 +1,81 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CaptureForm from '../components/CaptureForm.jsx';
+
+/* The roadmap. The courses are NOT written here: they are read live from
+   /api/roadmap, which reads D1, because a hand-typed copy of something the
+   database already knows is a second source of truth waiting to disagree.
+
+   Registration counts stay internal (spec section 2.2). /api/roadmap does not
+   even return the count, so no version of this page can leak three zeros. */
+---
+<BaseLayout
+  title="Roadmap: the courses planned, and how the order gets decided"
+  description="Three lab-manual courses are planned. Registrations route the build order, not the price. Tell us which one you want first and you hear from us the day it ships."
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Roadmap</p>
+      <h1 class="rv" style="--d:70ms">Three courses planned. You pick the order.</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        One module gets written per quarter, so the scarce resource here is time rather than
+        ambition. Registrations decide which one is written first. They do not change what anything
+        costs, and there is nothing to buy on this page.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell capp-grid">
+    <div class="capp-body">
+
+      <section class="capp-sec rv">
+        <h2>Why this page exists instead of a pre-sale</h2>
+        <p>
+          The obvious move is to price each course by demand. We are not doing that. There is no
+          demand signal yet, and a per-course price is three guesses published as three numbers to
+          defend. Worse, a separately priced course is a one-time purchase: someone takes the one
+          module they want, pays once, and never comes back. The membership stays flat and
+          all-access, and the growing library is the reason to renew.
+        </p>
+        <p>
+          What demand should route is build order. That is a real decision with a real cost, and it
+          is the one your registration actually moves.
+        </p>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>What a registration does, exactly</h2>
+        <ol class="capp-ledger">
+          <li><b>01</b><span><strong>It ranks the build order</strong>The course with the strongest interest is the one written in the next quarterly burst.</span></li>
+          <li><b>02</b><span><strong>It buys you one email</strong>Sent when that course ships. Not a drip sequence, not a launch countdown.</span></li>
+          <li><b>03</b><span><strong>It can retire a course</strong>If a course draws nothing in six months it does not get built. Learned for free, instead of after thirty lessons.</span></li>
+          <li><b>04</b><span><strong>It stores nothing about you here</strong>Your address goes to our newsletter provider. What lands in our database is one number going up by one.</span></li>
+        </ol>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>Why there are no counts on this page</h2>
+        <p>
+          Because a public number is either persuasive or discouraging, and at this stage ours would
+          be the second one. Printing it would be asking you to judge the courses by how few people
+          have found the page yet. The counts are read internally and they route the build order all
+          the same.
+        </p>
+        <p>
+          When they are worth showing they will be read from the database and rendered, never typed
+          into the page by hand. The same rule already governs every price on this site.
+        </p>
+      </section>
+
+      <a class="capp-onward rv" href="/kit/">Get the free kit while you wait</a>
+    </div>
+
+    <aside class="capp-aside rv" aria-label="Register interest in a course">
+      <CaptureForm variant="roadmap" client:load />
+    </aside>
+  </div>
+
+</div>
+</BaseLayout>

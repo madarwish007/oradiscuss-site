@@ -36,6 +36,6 @@ I'm sharing this because this blog — and you, the readers — are a huge part 
 
 My goal for OraDiscuss moving forward is to share what I'm learning _as I learn it_. No more waiting until I'm an "expert" to hit publish. We're going to grow together.
 
-You can find my Oracle ACE profile at [ace.oracle.com/ords/ace/oapt/profile/madarwish](https://ace.oracle.com/ords/ace/oapt/profile/madarwish).
+You can find my Oracle ACE profile at [ace.oracle.com/ords/ace/profile/madarwish](https://ace.oracle.com/ords/ace/profile/madarwish).
 
 **It feels good to be back.** If you've been following me since the early days, or if you're just joining now, drop a comment on the original post. I'd love to catch up and hear what you've been working on!

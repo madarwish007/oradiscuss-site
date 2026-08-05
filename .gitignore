@@ -16,6 +16,13 @@ pnpm-debug.log*
 # environment variables
 .env
 .env.production
+# Local Worker secrets for `wrangler dev`. A real BEEHIIV_API_KEY or
+# TURNSTILE_SECRET reaching git is a rotation, not a mistake.
+.dev.vars
+.dev.vars.*
+
+# wrangler build and dev scratch
+.wrangler/
 
 # macOS-specific files
 .DS_Store

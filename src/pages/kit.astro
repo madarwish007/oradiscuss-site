@@ -1,0 +1,114 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CaptureForm from '../components/CaptureForm.jsx';
+
+/* The free-kit gate. There is no download link on this page and there will not
+   be one until Phase 4 builds the artifact, because a link that 404s is worse
+   than no link and a promise we can keep is worth more than a button. */
+
+const collects = [
+  ['01', 'Instance and database', 'Version, RU level, options in use, uptime, parameters that drift.'],
+  ['02', 'Tablespaces', 'Free space, autoextend headroom, growth against the last collection.'],
+  ['03', 'Archivelog and FRA', 'Generation rate, destination state, reclaimable space, the gap that bites at 3am.'],
+  ['04', 'RMAN recency', 'Last successful backup per datafile, not per job. A green job with a stale file is the classic miss.'],
+  ['05', 'ADR incidents', 'Recent incidents and problems, with the trace names, so nothing has to be hunted.'],
+  ['06', 'Invalid objects and jobs', 'What broke, what has been failing quietly, what has not run.'],
+  ['07', 'ASM', 'Diskgroup usage and redundancy headroom where ASM is present.'],
+];
+---
+<BaseLayout
+  title="The free DBA First Aid Kit: the read-only Health Check pack"
+  description="The full read-only Health Check pack, free. It runs on your machine and produces two things from one collection: a report you read, and a briefing your own AI reads. Nothing is uploaded."
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Free · DBA First Aid Kit</p>
+      <h1 class="rv" style="--d:70ms">The Health Check pack, free.</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        The same artifact the paid packs are built to match. It runs on your own machine, reads
+        only, and produces two things from one collection: a report you read, and a briefing your
+        own AI reads. Nothing is uploaded, ever.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell capp-grid">
+    <div class="capp-body">
+
+      <section class="capp-sec rv">
+        <h2>What it collects</h2>
+        <p>
+          One pass, read-only, on a database you already have access to. It asks the dictionary and
+          the diagnostic destination the same questions a careful DBA asks on a Monday morning, and
+          it asks all of them.
+        </p>
+        <ol class="capp-ledger">
+          {collects.map(([n, name, what]) => (
+            <li><b>{n}</b><span><strong>{name}</strong>{what}</span></li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>Two outputs, one collection</h2>
+        <p>
+          This is the part no script pack and no chatbot gives you. The database is read once and
+          the same evidence is written twice, in the two shapes the two kinds of DBA actually use.
+        </p>
+        <div class="capp-dual">
+          <article class="capp-out">
+            <h3>report.html</h3>
+            <p>
+              A self-contained page you open in a browser. No server, no upload, no dependency, and
+              nothing to install to read it. It states what your database recorded, never a verdict
+              about what you should do.
+            </p>
+            <span>You read this</span>
+          </article>
+          <article class="capp-out">
+            <h3>briefing.json</h3>
+            <p>
+              The same evidence, structured for a machine, with a prompt pack that tells your
+              assistant how to reason over it. Your AI, your subscription, your data. We never see
+              any of it.
+            </p>
+            <span>Your AI reads this</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>What it will not do</h2>
+        <ol class="capp-ledger">
+          <li><b>01</b><span><strong>It writes nothing</strong>No DDL, no DML, no parameter change, no file touched. The read-only line is the whole liability position and it is not crossed.</span></li>
+          <li><b>02</b><span><strong>It uploads nothing</strong>There is no call home in the collection. Run it on an air-gapped estate and it behaves identically.</span></li>
+          <li><b>03</b><span><strong>It states no verdict</strong>It reports what your database recorded. The judgement stays with the DBA, or with the AI the DBA chooses.</span></li>
+        </ol>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>The kit is not built yet</h2>
+        <p>
+          A field-tested v0.9 exists and is being brought to v1.0 with the dual output. Before it is
+          published it has to run on real production estates, which is a gate we do not skip and the
+          reason the trust line on every pack can say what it says.
+        </p>
+        <p>
+          So there is no download button on this page. There is nothing yet to download, and a link
+          that 404s would tell you everything you need to know about the rest of it. Leave your
+          address and the kit reaches you the day it ships.
+        </p>
+      </section>
+
+      <a class="capp-onward rv" href="/roadmap/">See what gets built next</a>
+    </div>
+
+    <aside class="capp-aside rv" aria-label="Get the free kit">
+      <CaptureForm variant="kit" client:load />
+    </aside>
+  </div>
+
+</div>
+</BaseLayout>

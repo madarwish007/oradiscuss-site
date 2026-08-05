@@ -12,7 +12,15 @@ export function json(data, init = {}) {
 }
 
 export function problem(status, message) {
-  return json({ error: message }, { status });
+  return json({ ok: false, error: message }, { status });
+}
+
+// A refusal the browser can act on. `code` is a stable machine word the form
+// branches on; `error` is the sentence a person reads. Nothing internal goes in
+// either: no upstream error text, no stack, no key name that is not already
+// public configuration state.
+export function fail(status, code, message, extra = {}) {
+  return json({ ok: false, code, error: message, ...extra }, { status });
 }
 
 // Client IP for rate-limit keying. Cloudflare always sets CF-Connecting-IP at
