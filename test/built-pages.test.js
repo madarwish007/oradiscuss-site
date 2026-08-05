@@ -24,6 +24,20 @@ function read(page) {
   return readFileSync(path, 'utf8');
 }
 
+// Everything that styles this page: inline <style> blocks plus every local
+// stylesheet it links. Astro puts shared CSS in a hashed bundle, so a check
+// that reads only the page file sees almost none of the real rules.
+function allCss(html) {
+  const parts = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]);
+  for (const m of html.matchAll(/<link[^>]+rel=["']stylesheet["'][^>]*>/g)) {
+    const href = /href=["']([^"']+)["']/.exec(m[0])?.[1];
+    if (!href || !href.startsWith('/')) continue;
+    const path = join(DIST, href);
+    if (existsSync(path)) parts.push(readFileSync(path, 'utf8'));
+  }
+  return parts.join('\n');
+}
+
 function inlineScripts(html) {
   const out = [];
   const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g;
@@ -83,11 +97,18 @@ for (const page of ['kit/index.html', 'roadmap/index.html']) {
   });
 
   test(`${page}: no opacity on the disabled state`, () => {
-    // Opacity multiplies text toward its ground, so a contrast sweep that
-    // reads `color` alone would call a failing control a pass.
-    const html = read(page);
-    const styles = [...html.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]).join('\n');
-    const offenders = [...styles.matchAll(/\.cap[^{}]*\{[^}]*\}/g)].filter((m) => /opacity\s*:/.test(m[0]));
-    assert.deepEqual(offenders.map((o) => o[0]), [], 'a .cap rule sets opacity');
+    // Opacity multiplies text toward its ground, so a contrast sweep that reads
+    // `color` alone would call a failing control a pass.
+    //
+    // This reads the LINKED bundles as well as any inline <style>. The first
+    // version of this guard read inline styles only, which on this build is
+    // nothing at all: it passed against a fixture with opacity:.5 deliberately
+    // injected, because the capture CSS ships in /_astro/*.css. A guard that
+    // matches no rules is not a guard, so the count is asserted too.
+    const css = allCss(read(page));
+    const capRules = [...css.matchAll(/\.cap[^{}]*\{[^}]*\}/g)].map((m) => m[0]);
+    assert.ok(capRules.length >= 10, `only ${capRules.length} .cap rules found, so this guard is asleep`);
+    const offenders = capRules.filter((r) => /opacity\s*:/.test(r));
+    assert.deepEqual(offenders, [], 'a .cap rule sets opacity');
   });
 }

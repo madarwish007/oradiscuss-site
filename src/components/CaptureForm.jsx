@@ -304,9 +304,17 @@ function gateLine(gate) {
     return 'Sign-ups are open. One address, no account, unsubscribe in one click.';
   }
   if (gate.phase === 'closed') {
-    const named = gate.missing.filter((n) => n.startsWith('BEEHIIV') || n.startsWith('TURNSTILE'));
-    const what = named.length ? named.join(', ') : 'the newsletter connection';
-    return `Sign-ups are not open yet: ${what} is not set on the server. The form stays disabled rather than take an address that could not be delivered.`;
+    /* Name the SERVICE, not the environment variable. A visitor can act on
+       "the newsletter service is not connected"; BEEHIIV_PUBLICATION_ID reads
+       as a stack trace on a sales page. The variable names are still exact in
+       /api/health and in the endpoint's own 503, which is where the founder
+       and any developer will look. */
+    const services = [];
+    if (gate.missing.some((n) => n.startsWith('BEEHIIV'))) services.push('the newsletter service');
+    if (gate.missing.some((n) => n.startsWith('TURNSTILE'))) services.push('the bot check');
+    const what = services.length ? services.join(' and ') : 'the newsletter service';
+    const verb = services.length > 1 ? 'are' : 'is';
+    return `Sign-ups are not open yet: ${what} ${verb} not connected on the server. The form stays disabled rather than take an address that could not be delivered.`;
   }
   if (gate.phase === 'no-widget') {
     return 'The bot check could not load, so the form stays disabled. Nothing typed here would reach us.';
