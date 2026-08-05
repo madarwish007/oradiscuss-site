@@ -1,15 +1,18 @@
-# Root wrangler config — deploys the Astro static build as a Workers Static
-# Asset site (Cloudflare Workers Builds flow). The build pipeline is:
+# Root wrangler config for oradiscuss-site.
 #
-#   npm run build           # Astro → ./dist
-#   npx wrangler deploy     # uploads ./dist behind worker.js
+# Build pipeline:
+#   npm run build                        # Astro -> ./dist
+#   npx wrangler deploy --env preview    # PREVIEW: where all work lands
+#   npx wrangler deploy                  # PRODUCTION: founder gate, never a model
 #
-# worker.js acts as a thin edge shim that returns a proper 404 for scanner
-# probes (wp-admin, .env, xmlrpc, etc.) and otherwise hands the request off
-# to the ASSETS binding so the static site is served normally.
+# worker.js is the edge entry: it blocks scanner probes, serves /api/* from the
+# system layer (D1 / KV / R2), and hands everything else to the static Astro
+# build through the ASSETS binding.
 #
 # The OAuth proxy (worker-oauth/) is a SEPARATE Worker with its own
 # wrangler.toml and is deployed independently.
+#
+# PREVIEW-FIRST LAW: production deploys are a founder action. See BUILD_PLAN.md.
 
 name = "oradiscuss-site"
 main = "worker.js"
@@ -23,3 +26,66 @@ not_found_handling = "404-page"
 
 [observability]
 enabled = true
+
+# ---------------------------------------------------------------- PRODUCTION
+
+[vars]
+ENVIRONMENT = "production"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "oradiscuss"
+database_id = "acbcb2c0-ae7a-4d16-a76c-5c79a0bf14a4"
+
+[[kv_namespaces]]
+binding = "ENTITLEMENT"
+id = "1c27596118cd4e04b9119e866fd42c22"
+
+[[r2_buckets]]
+binding = "PACKS"
+bucket_name = "oradiscuss-assets"
+
+# Workers-native rate limiting. Dashboard WAF rules are a separate, additive
+# founder action; this binding is what the API routes enforce themselves.
+# NOTE: this is the `unsafe.bindings` form. The `[[ratelimit]]` form was tried
+# first and wrangler silently ignored it, producing a Worker with no rate
+# limiter and code that degraded quietly. Verified by reading the binding list
+# printed at deploy time, which is the only trustworthy confirmation.
+[unsafe]
+bindings = [
+  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } }
+]
+
+# ------------------------------------------------------------------- PREVIEW
+
+[env.preview]
+name = "oradiscuss-site-preview"
+
+[env.preview.assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "404-page"
+
+[env.preview.observability]
+enabled = true
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "oradiscuss-preview"
+database_id = "387a1c7a-0ae6-4479-a73a-d85beb168e21"
+
+[[env.preview.kv_namespaces]]
+binding = "ENTITLEMENT"
+id = "9c5f1d1719e94163a0ca91f75b5833e0"
+
+[[env.preview.r2_buckets]]
+binding = "PACKS"
+bucket_name = "oradiscuss-assets-preview"
+
+[env.preview.unsafe]
+bindings = [
+  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } }
+]

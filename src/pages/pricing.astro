@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import PricingTable from '../components/PricingTable.jsx';
+---
+<BaseLayout
+  title="Membership — OraDiscuss"
+  description="Read-only Oracle DBA tooling that produces a report you read and a briefing your own AI reads. Annual membership, quarterly updates, weekly Security Watch."
+  noindex={true}
+>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← Home</a>
+      <div class="art-cat">Membership</div>
+      <h1 class="art-title">Your scripts collect. Your AI reasons. Your data never leaves.</h1>
+      <div class="art-meta">
+        <span>Read-only</span><span class="sep">·</span>
+        <span>Runs on your machine</span><span class="sep">·</span>
+        <span>Annual</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <p>
+        Every pack runs locally, reads only, and produces two things from one collection: a
+        self-contained report for you, and a machine-readable briefing plus prompt pack for
+        whichever AI you already pay for. Nothing is uploaded. We never see your data.
+      </p>
+
+      <PricingTable client:load />
+
+      <p style="margin-top:2rem;color:var(--ink-4);font-size:14px">
+        This page is a Phase 1 scaffold on the preview environment. Prices are read live from the
+        catalogue database, never hardcoded. Checkout arrives in Phase 6, after the packs are
+        field-tested and the samples are published.
+      </p>
+    </article>
+  </section>
+</BaseLayout>
