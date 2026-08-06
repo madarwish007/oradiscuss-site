@@ -1,0 +1,182 @@
+---
+import LegalLayout from '../layouts/LegalLayout.astro';
+---
+
+<LegalLayout
+  title="Terms of Service"
+  description="The terms governing OraDiscuss membership: what is sold, how billing and renewal work, the read-only guarantee, and the limits of liability."
+  updated="August 2026"
+>
+  <p>
+    These Terms of Service (the "Terms") govern your access to OraDiscuss and your purchase of an
+    OraDiscuss membership. By using the site or completing a purchase, you agree to them. If you do
+    not agree, please do not use the service.
+  </p>
+
+  <h2>1. Who we are</h2>
+  <p>
+    OraDiscuss is operated by Mahmoud Darwish, an individual practitioner working as a senior Oracle
+    DBA. There is no registered company behind it; it is one person publishing and maintaining his
+    own work.
+  </p>
+  <p>
+    Your purchase is sold by our reseller and Merchant of Record, Paddle.com Market Ltd ("Paddle"),
+    who is the seller of record. When you buy, your contract for the sale is with Paddle, and
+    Paddle's Buyer Terms also apply. OraDiscuss operates the service and produces the material.
+  </p>
+
+  <h2>2. Eligibility</h2>
+  <p>You must be at least 18 years old and able to form a binding contract to buy a membership.</p>
+
+  <h2>3. What a membership is, and what it is not</h2>
+  <p>
+    A membership is an annual, recurring subscription giving you access to the automation packs,
+    the weekly Security Watch briefs, and, on the higher tier, the Academy courses. Current tiers
+    and prices are shown on the <a href="/">membership page</a> and are the only prices that apply.
+  </p>
+  <p>
+    A membership is <strong>not</strong> a consulting engagement, a managed service, or support for
+    your estate. Nobody from OraDiscuss connects to your systems, reviews your configuration, or is
+    on call for you. There is no service level agreement of any kind, and none is implied by the
+    price. What stands in place of one is a public changelog and email support on the material
+    itself.
+  </p>
+
+  <h2>4. Everything sold is read-only</h2>
+  <p>
+    This is the core of what OraDiscuss sells and the reason the rest of these Terms can be short.
+  </p>
+  <ul>
+    <li>
+      <strong>Nothing we sell modifies your database.</strong> The scripts collect and report. They
+      issue no DDL and no DML against your data. Where a pack offers an optional local history
+      table for trend projection, it is a separate, clearly marked file that you choose to run
+      yourself, it is never invoked automatically, and every pack works fully without it.
+    </li>
+    <li>
+      <strong>No verdicts, no commands.</strong> Reports state what your database recorded. They do
+      not tell you what to do, and they do not emit commands for you to paste. Interpretation and
+      any action remain entirely yours.
+    </li>
+    <li>
+      <strong>Source-visible.</strong> Every script ships as readable source so you or your security
+      team can inspect it before it runs. We expect you to.
+    </li>
+    <li>
+      <strong>Local collection.</strong> Diagnostic packs run on your machine and write their output
+      on your machine. Nothing is transmitted to OraDiscuss, and we never receive your estate data.
+    </li>
+  </ul>
+
+  <h2>5. Your responsibility before running anything</h2>
+  <p>
+    You are the DBA. You are responsible for reviewing any script before you run it, for running it
+    first somewhere that is not production, and for holding valid backups. Every script published
+    has been run on real production estates by a working DBA before release, which is a statement
+    about our care and not a warranty about your environment. Estates differ, versions differ, and
+    a read-only query can still consume resources on a system under pressure.
+  </p>
+
+  <h2>6. No warranty, and the limit of our liability</h2>
+  <p>
+    The material is provided "as is", without warranty of any kind, express or implied, including
+    any implied warranty of merchantability, fitness for a particular purpose, or non-infringement.
+  </p>
+  <p>
+    To the maximum extent permitted by law, our total liability to you for any claim arising out of
+    or relating to the service is limited to the amount you paid for your membership in the twelve
+    months before the claim. We are not liable for indirect, incidental, special or consequential
+    damages, or for lost profits, lost data, or business interruption. Nothing here excludes
+    liability that cannot lawfully be excluded.
+  </p>
+
+  <h2>7. Billing and renewal</h2>
+  <ul>
+    <li>Membership is billed annually. There is no monthly tier.</li>
+    <li>
+      Your membership renews automatically each year until you cancel. You can cancel at any time
+      through the customer portal link on your Paddle receipt, and cancelling stops the next charge
+      rather than ending your current year.
+    </li>
+    <li>
+      A launch price, where one applies, is held for you for as long as your membership runs
+      continuously. The regular price is displayed beside it from the first day, so a later move to
+      the regular price is announced in advance and is never a countdown.
+    </li>
+    <li>
+      Paddle charges you, handles sales tax and VAT where applicable, and issues your invoice.
+      Prices are shown in USD.
+    </li>
+  </ul>
+
+  <h2>8. Refunds</h2>
+  <p>
+    Fourteen days, no questions asked, on a first membership purchase. The full policy, including
+    how renewals are treated, is in the <a href="/refund/">Refund Policy</a>, which forms part of
+    these Terms.
+  </p>
+
+  <h2>9. Licence and acceptable use</h2>
+  <p>
+    Your membership grants you a personal, non-exclusive, non-transferable licence to use the
+    material for your own work, including on the estates you administer for your employer or
+    clients. You may modify what you download for your own use.
+  </p>
+  <p>
+    You may not redistribute, resell, publish, or share the material outside your own use, and you
+    may not share your membership credentials or download links. The buyer is an individual DBA;
+    memberships are not organisation licences.
+  </p>
+
+  <h2>10. Support</h2>
+  <p>
+    Support is by email at <a href="mailto:support@oradiscuss.com">support@oradiscuss.com</a>. If a
+    script or a course is broken, it gets fixed and returned to you. Support covers the material we
+    publish, not your estate, and there is no response time commitment.
+  </p>
+
+  <h2>11. Security Watch briefs</h2>
+  <p>
+    The weekly Security Watch summarises official Oracle advisories and links to them. It reproduces
+    no advisory in bulk, and it makes no claim about the risk to any particular estate. Treat it as
+    a reading aid pointing you at Oracle's own sources, never as an assessment of your systems.
+  </p>
+
+  <h2>12. Oracle trademarks and the ACE programme</h2>
+  <p>
+    Oracle, Java, MySQL and Exadata are registered trademarks of Oracle and/or its affiliates.
+    OraDiscuss is an independent publication and is not affiliated with, endorsed by, sponsored by,
+    or certified by Oracle Corporation. Oracle ACE Associate is a personal recognition held by
+    Mahmoud Darwish as an individual. It is stated on this site as a biographical fact about the
+    author, it is not a claim about the products, and it does not signify Oracle's endorsement of
+    anything sold here.
+  </p>
+
+  <h2>13. Changes to these Terms</h2>
+  <p>
+    We may update these Terms. The date at the top changes when we do, and material changes are
+    announced to members by email before they take effect. Continuing to use the service after a
+    change means you accept the updated Terms.
+  </p>
+
+  <h2>14. Termination</h2>
+  <p>
+    You may stop using the service at any time by cancelling. We may suspend or end a membership
+    that breaches these Terms, in particular the redistribution rules, and will refund the unused
+    remainder of the year where the breach was not deliberate.
+  </p>
+
+  <h2>15. Governing law</h2>
+  <p>
+    These Terms are governed by the laws of the Arab Republic of Egypt. This does not remove any
+    mandatory consumer protection you have under the law of the country where you live. The sale
+    itself is made by Paddle as Merchant of Record and is additionally subject to Paddle's own
+    terms.
+  </p>
+
+  <h2>16. Contact</h2>
+  <p>
+    Email <a href="mailto:support@oradiscuss.com">support@oradiscuss.com</a>. More detail on the
+    <a href="/contact/">contact page</a>.
+  </p>
+</LegalLayout>

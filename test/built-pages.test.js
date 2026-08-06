@@ -16,7 +16,15 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 const DIST = process.env.DIST_DIR ?? new URL('../dist', import.meta.url).pathname;
-const PAGES = ['kit/index.html', 'roadmap/index.html', 'index.html'];
+const PAGES = [
+  'kit/index.html',
+  'roadmap/index.html',
+  'index.html',
+  'terms/index.html',
+  'privacy/index.html',
+  'refund/index.html',
+  'contact/index.html',
+];
 
 function read(page) {
   const path = join(DIST, page);

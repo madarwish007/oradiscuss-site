@@ -1,0 +1,36 @@
+---
+// Shared shell for the policy pages. One place owns the hero, the "Legal"
+// eyebrow and the last-updated stamp, so four pages cannot drift apart.
+import BaseLayout from './BaseLayout.astro';
+
+export interface Props {
+  title: string;
+  description: string;
+  updated: string;
+}
+
+const { title, description, updated } = Astro.props;
+---
+
+<BaseLayout title={`${title} · OraDiscuss`} description={description}>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/">← Membership</a>
+      <div class="art-cat">Legal</div>
+      <h1 class="art-title">{title}</h1>
+      <div class="art-meta"><span>Last updated: {updated}</span></div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <slot />
+
+      <h2>The other policies</h2>
+      <p>
+        <a href="/terms/">Terms of Service</a> · <a href="/privacy/">Privacy Policy</a> ·
+        <a href="/refund/">Refund Policy</a> · <a href="/contact/">Contact</a>
+      </p>
+    </article>
+  </section>
+</BaseLayout>

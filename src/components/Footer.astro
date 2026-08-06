@@ -52,6 +52,32 @@ const year = new Date().getFullYear();
   </div>
   <div class="FB2">
     <span>© {year} OraDiscuss · Mahmoud Darwish · Oracle ACE Associate</span>
+    <nav class="FLg" aria-label="Legal">
+      <a href="/terms/">Terms</a>
+      <a href="/privacy/">Privacy</a>
+      <a href="/refund/">Refunds</a>
+      <a href="/contact/">Contact</a>
+    </nav>
     <span>oradiscuss.com</span>
   </div>
 </footer>
+
+<style>
+  /* Legal links live in the bottom bar rather than as a fifth footer column:
+     .FI declares exactly four grid columns, so a fifth child would wrap under
+     the brand block. Inherits the bar's type so nothing new is introduced. */
+  .FLg {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .FLg a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .FLg a:hover {
+    color: var(--act);
+  }
+</style>
