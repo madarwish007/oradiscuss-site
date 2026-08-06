@@ -74,6 +74,32 @@ test('every page reaches the policies from its footer', () => {
   }
 });
 
+test('no policy page names a person, a location, or the ACE credential in its body', () => {
+  // Owner direction 7 Aug 2026: non-content pages carry no personal identifiers.
+  // Biographical detail belongs on /about/, which is a content page.
+  //
+  // Scoped to <main> ON PURPOSE. The shared header, footer and <meta name="author">
+  // all carry the name and the ACE badge on every page of the site, so a
+  // whole-document assertion would fail for reasons this guard is not about, and
+  // stripping them is a sitewide decision that affects content pages. If that
+  // decision is ever taken, widen this to the whole document and delete this note.
+  const BANNED = [/Mahmoud/i, /Mahmood/i, /Darwish/i, /Darweesh/i, /Riyadh/i, /Saudi/i, /ACE Associate/i];
+  for (const slug of LEGAL) {
+    const text = bodyText(read(slug));
+    for (const re of BANNED) {
+      const hit = re.exec(text);
+      assert.equal(hit, null, `/${slug}/ body contains ${re}: ...${text.slice(Math.max(0, (hit?.index ?? 0) - 60), (hit?.index ?? 0) + 60)}...`);
+    }
+  }
+});
+
+test('the terms still name Egypt as governing law', () => {
+  // Explicitly retained by the owner for operational reasons, and it is a
+  // jurisdiction rather than a personal identifier. Guarded so the sweep above
+  // never takes it out by accident.
+  assert.match(bodyText(read('terms')), /laws of the Arab Republic of Egypt/);
+});
+
 test('the terms carry the Oracle trademark and non-endorsement statement', () => {
   // The ACE credential is a personal recognition. Presenting it anywhere near a
   // product claim is the one thing that risks the credential the business
