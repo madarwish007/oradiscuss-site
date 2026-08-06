@@ -83,10 +83,21 @@ test('the terms carry the Oracle trademark and non-endorsement statement', () =>
   assert.match(text, /not affiliated with, endorsed by/i);
 });
 
-test('the refund policy states the 14 day window, not some other number', () => {
-  // Spec section 6.4 fixes this at 14 days. The reference site this was modeled
-  // on says 30, which is exactly the kind of number that survives a copy edit.
+test('the refund policy states the 30 day window, not some other number', () => {
+  // Spec section 6.4 fixes this at 30 days (widened from 14 by founder ruling
+  // 6 Aug 2026: 14 is roughly the EU/UK statutory withdrawal floor, so it
+  // promised a European buyer nothing he did not already have). 14 is the stale
+  // value and is exactly what a half-finished edit would leave behind.
   const text = bodyText(read('refund'));
-  assert.match(text, /14 days/);
-  assert.ok(!/30[- ]day/i.test(text), 'a 30 day window is the reference site policy, not ours');
+  assert.match(text, /30 days/);
+  assert.ok(!/\b14[- ]day/i.test(text), 'a 14 day window is the superseded policy');
+});
+
+test('the terms and the refund policy agree on the window', () => {
+  // Two pages stating the same promise is two places for it to rot. The terms
+  // summarise the window and the refund policy owns it; this fails the moment
+  // they disagree.
+  const terms = bodyText(read('terms'));
+  assert.match(terms, /Thirty days, no questions asked/);
+  assert.ok(!/Fourteen days/i.test(terms), 'the terms still carry the superseded window');
 });
