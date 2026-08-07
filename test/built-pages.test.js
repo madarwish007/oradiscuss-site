@@ -12,8 +12,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 
 const DIST = process.env.DIST_DIR ?? new URL('../dist', import.meta.url).pathname;
 const PAGES = [
@@ -120,3 +120,27 @@ for (const page of ['kit/index.html', 'roadmap/index.html']) {
     assert.deepEqual(offenders, [], 'a .cap rule sets opacity');
   });
 }
+
+test('the built site ships no dotfiles', () => {
+  // wrangler uploads dist/ wholesale, so anything that lands there becomes a
+  // public URL. On 7 Aug a Finder-created dist/.DS_Store was uploaded to
+  // preview and served 200: it is a directory index of the folder it sits in,
+  // and at promote it would have gone to the real domain. Production was clean
+  // at the time, so this guard exists to keep it that way.
+  //
+  // It refuses ALL dotfiles rather than .DS_Store by name. A check that lists
+  // its inputs misses every input added after it was written.
+  const walk = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) return walk(full);
+      return e.name.startsWith('.') ? [relative(DIST, full)] : [];
+    });
+
+  assert.ok(existsSync(DIST), `${DIST} does not exist. Run npm run build first.`);
+  assert.deepEqual(
+    walk(DIST),
+    [],
+    'dotfiles in dist/ become public URLs. `npm run build` strips .DS_Store; anything else here needs a decision, not a delete.',
+  );
+});

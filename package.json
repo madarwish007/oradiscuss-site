@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "astro build && find dist -name '.DS_Store' -delete",
     "preview": "astro preview",
     "test": "node --test \"test/*.test.js\"",
     "astro": "astro"
