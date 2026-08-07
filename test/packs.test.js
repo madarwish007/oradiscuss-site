@@ -262,6 +262,34 @@ test('every shell script in the pack parses', () => {
   }
 });
 
+test('a RAC instance that is not OPEN reaches the briefing as CRIT', () => {
+  // The silent-failure shape this guards against: V$INSTANCE only ever
+  // describes the node the session connected to, so a two-node cluster with a
+  // dead node produces a perfectly clean report. The census reads GV$, and a
+  // downed instance has to surface as CRIT and be listed for attention.
+  const { reports, json } = renderFixture();
+  const doc = JSON.parse(readFileSync(join(reports, json), 'utf8'));
+  const census = doc.checks.find((c) => c.id === 'CLUSTER_INSTANCES');
+  assert.ok(census, 'the instance census must appear in the briefing');
+  assert.equal(census.status, 'CRIT');
+  assert.equal(census.metrics.instances_total.value, 3);
+  assert.equal(census.metrics.instances_open.value, 2);
+  assert.ok(doc.summary.needs_attention.includes('CLUSTER_INSTANCES'));
+
+  // And the scope statement must be present, so a RAC reader is told which
+  // checks describe one node rather than having to know.
+  const scope = doc.checks.find((c) => c.id === 'CLUSTER_SCOPE');
+  assert.ok(scope, 'the collection scope must be stated in the briefing');
+  assert.match(scope.detail, /Local to the instance/);
+});
+
+test('the collector reads the cluster-wide view for the instance census', () => {
+  // Asserted at source level: this is the difference between catching a dead
+  // RAC node and reporting a clean bill of health while one is down.
+  const sql = readFileSync(join(PACK, 'sql/health_check.sql'), 'utf8');
+  assert.match(sql, /FROM gv\$instance/i, 'the census must use GV$, not V$');
+});
+
 test('the generated report carries no em dash either', () => {
   const { reports, html } = renderFixture();
   assert.ok(!readFileSync(join(reports, html), 'utf8').includes('\u2014'));

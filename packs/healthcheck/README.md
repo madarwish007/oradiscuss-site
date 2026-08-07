@@ -35,6 +35,34 @@ You do not have to take that on faith:
   If your answer to "does this tooling write to the database" has to be an
   unqualified no, delete that file and carry on.
 
+## Single-instance and RAC
+
+The pack runs on both, and it tells you which one it found rather than leaving
+you to work it out.
+
+The distinction matters because Oracle's own views split two ways. `DBA_` views
+are cluster-wide. `V$` views describe only the instance your session is
+connected to. On a standalone database there is no difference. On RAC there is,
+and the dangerous version of a health check is the one that stays quiet about
+it: a two-node cluster with a dead node yields a perfectly clean report,
+because the surviving node it connected to really is healthy.
+
+So on RAC:
+
+- **`CLUSTER_SCOPE`** states, in the report, that this is RAC and how many
+  instances there are.
+- **`CLUSTER_INSTANCES`** counts every instance through the cluster-wide view
+  and goes CRIT if any of them is not OPEN. A downed node is caught rather
+  than being invisible.
+- **These remain local to the instance you connected to:** instance status,
+  alert log scan, and the listener check. Run the pack on each node, or read
+  those three as describing one node.
+- **These are already cluster-wide:** tablespaces, invalid objects, jobs, RMAN
+  backup recency, FRA, ASM diskgroups.
+
+Everything the pack reads needs `SELECT_CATALOG_ROLE` or equivalent, including
+the `GV$` views used for the instance census.
+
 ## Quick start
 
 ```bash

@@ -1,6 +1,8 @@
 SEC|Instance & Database
 CHK|INSTANCE_STATUS|OK|Instance status|ORCLCDB OPEN, started 2026-08-01 03:14:00
 CHK|DATABASE_STATUS|OK|Database role|PRIMARY, READ WRITE
+CHK|CLUSTER_SCOPE|OK|Collection scope|RAC, 3 instances. Cluster-wide here: tablespaces, invalid objects, jobs, RMAN, FRA, ASM. Local to the instance this ran against only: instance status, alert log, listener. Run the pack on each node, or read those three as describing one node.
+CHK|CLUSTER_INSTANCES|CRIT|Cluster instances|2 of 3 instance(s) OPEN - NOT OPEN: ORCLCDB3(MOUNTED)
 SEC|Tablespace Usage
 CHK|TS_USERS|WARN|Tablespace USERS|87.3% used (100 GB max, 87.3 GB used)
 CHK|TS_SYSAUX|OK|Tablespace SYSAUX|41.2% used (32 GB max, 13.2 GB used)
@@ -31,3 +33,5 @@ MET|TS_UNDOTBS1|max_gb|16.0|GB
 MET|INVALID_OBJECTS|count|31|objects
 MET|FRA_USAGE|used_pct|88.1|percent
 MET|TS_BADLOCALE|used_pct|87,3|percent
+MET|CLUSTER_INSTANCES|instances_total|3|instances
+MET|CLUSTER_INSTANCES|instances_open|2|instances

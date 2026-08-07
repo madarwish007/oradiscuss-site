@@ -81,6 +81,54 @@ SELECT 'CHK|DATABASE_STATUS|' ||
 FROM v$database d;
 
 -- ---------------------------------------------------------------------------
+-- CLUSTER SCOPE (added v1.0)
+--
+-- Everything else in this file reads either a DBA_ view, which is cluster
+-- wide, or a V$ view, which is NOT: V$ shows the one instance this session is
+-- connected to. On a single-instance database that distinction does not
+-- exist. On RAC it very much does, and the dangerous version of this pack is
+-- the one that stays silent about it: a two-node cluster with a dead node
+-- would produce a clean report, because the surviving node it connected to is
+-- perfectly healthy and V$INSTANCE only ever describes that node.
+--
+-- So the scope is stated in the report rather than assumed, and the instance
+-- census below uses GV$, the cluster-wide form of the same view, so a downed
+-- instance is caught instead of being invisible.
+-- ---------------------------------------------------------------------------
+SELECT 'CHK|CLUSTER_SCOPE|OK|Collection scope|' ||
+       CASE WHEN c.cnt > 1
+            THEN 'RAC, ' || c.cnt || ' instances. Cluster-wide here: tablespaces, ' ||
+                 'invalid objects, jobs, RMAN, FRA, ASM. Local to the instance this ' ||
+                 'ran against only: instance status, alert log, listener. Run the pack ' ||
+                 'on each node, or read those three as describing one node.'
+            ELSE 'Single-instance database, so this report covers all of it.'
+       END
+FROM (SELECT COUNT(*) AS cnt FROM gv$instance) c;
+
+-- Instance census. On a single-instance database this is one row and always
+-- agrees with INSTANCE_STATUS above; the cost of running it anyway is one
+-- cheap query, and the benefit is that RAC users are not silently unprotected.
+SELECT 'CHK|CLUSTER_INSTANCES|' ||
+       CASE WHEN c.not_open > 0 THEN 'CRIT' ELSE 'OK' END ||
+       '|Cluster instances|' ||
+       c.open_cnt || ' of ' || c.total || ' instance(s) OPEN' ||
+       CASE WHEN c.not_open > 0 THEN ' - NOT OPEN: ' || c.bad_list ELSE '' END
+FROM (SELECT COUNT(*) AS total,
+             SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END) AS open_cnt,
+             SUM(CASE WHEN status = 'OPEN' THEN 0 ELSE 1 END) AS not_open,
+             LISTAGG(CASE WHEN status <> 'OPEN'
+                          THEN instance_name || '(' || status || ')' END, ', ')
+               WITHIN GROUP (ORDER BY instance_name) AS bad_list
+      FROM gv$instance) c;
+
+SELECT 'MET|CLUSTER_INSTANCES|instances_total|' || TO_CHAR(COUNT(*)) || '|instances'
+FROM gv$instance;
+
+SELECT 'MET|CLUSTER_INSTANCES|instances_open|' ||
+       TO_CHAR(SUM(CASE WHEN status = 'OPEN' THEN 1 ELSE 0 END)) || '|instances'
+FROM gv$instance;
+
+-- ---------------------------------------------------------------------------
 -- SECTION 2: Tablespace usage (autoextend-aware via DBA_TABLESPACE_USAGE_METRICS)
 -- ---------------------------------------------------------------------------
 SELECT 'SEC|Tablespace Usage' FROM DUAL;
