@@ -53,9 +53,11 @@ const PACKS = [
     id: 'daily-ops',
     expects: [
       'daily_analysis.sh',
+      'env_collector.sh',
       'lib/odc_briefing.sh',
       'schema/briefing.schema.json',
       'prompts/morning-triage.md',
+      'prompts/environment-review.md',
       'sql/daily_analysis.sql',
     ],
     // Empty on purpose, and it is asserted as empty. The v0.9 daily-ops set
@@ -600,6 +602,71 @@ test('daily-ops: the trend metrics are carried, and NA is not counted as healthy
   assert.ok(!doc.summary.needs_attention.includes('STALE'), 'NA must not be reported as needing attention');
   assert.ok(doc.summary.needs_attention.includes('RMAN_FULL'), 'a CRIT must reach needs_attention');
   assert.equal(doc.summary.overall_status, 'CRIT');
+});
+
+function renderEnvCollector() {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const out = mkdtempSync(join(tmpdir(), 'odc-env-'));
+  for (const f of readdirSync(join(pack.dir, 'test-fixtures/env-setup'))) {
+    writeFileSync(join(out, f), readFileSync(join(pack.dir, 'test-fixtures/env-setup', f)));
+  }
+  try {
+    execFileSync('bash', [
+      join(pack.dir, 'env_collector.sh'), '--render-only', out,
+      '--primary-home', '/u01/app/oracle/product/19c/dbhome_1',
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const json = readdirSync(out).find((f) => f.startsWith('env_briefing_') && f.endsWith('.json') && !f.includes('latest'));
+  return { out, json, doc: json ? JSON.parse(readFileSync(join(out, json), 'utf8')) : null };
+}
+
+test('env_collector: runs to completion on bash 3.2', () => {
+  // NOT a style test. v0.9 used `declare -A NODE_STATUS`, which `bash -n`
+  // reports as perfectly fine and which then dies at RUNTIME on bash 3.2,
+  // the default bash on macOS and still present on older database hosts.
+  // Under `set -e` it aborted before a single node was probed. This test runs
+  // the script through /bin/bash, which IS 3.2 here, so the whole suite is a
+  // de facto compatibility gate rather than a parse check.
+  const r = renderEnvCollector();
+  assert.ok(r.json, 'env_collector produced no briefing, so it did not finish');
+  assert.ok(r.doc.checks.length >= 3);
+});
+
+test('env_collector: a 2-node RAC with one unreachable node reports the gap, not silence', () => {
+  const { doc } = renderEnvCollector();
+  const topo = doc.checks.find((c) => c.id === 'TOPOLOGY');
+  assert.match(topo.detail, /RAC/, 'two probe files must be read as a cluster');
+  assert.equal(topo.metrics.node_count.value, 2);
+
+  const down = doc.checks.find((c) => c.id === 'NODE_racnode2');
+  // WARN not NA: the check WAS evaluated, and the answer is that a node of
+  // this cluster went undescribed and no config was generated for it.
+  assert.equal(down.status, 'WARN');
+  assert.match(down.detail, /ssh keys/, 'an unreachable node must carry its remedy');
+  assert.ok(doc.summary.needs_attention.includes('NODE_racnode2'));
+  assert.equal(doc.summary.overall_status, 'WARN');
+});
+
+test('env_collector: --primary-home settles a multi-home host with nobody to ask', () => {
+  // The fixture host carries a 19c and a 21c home. Under cron there is no TTY
+  // and no one to interview, so the flag is the only shape that is both
+  // unattended and deliberate.
+  const { out, doc } = renderEnvCollector();
+  const cfg = readFileSync(join(out, 'config-racnode1.env'), 'utf8');
+  assert.match(cfg, /ORACLE_HOME="\/u01\/app\/oracle\/product\/19c\/dbhome_1"/);
+  assert.match(cfg, /ORACLE_SID="PRODDB1"/);
+  const node = doc.checks.find((c) => c.id === 'NODE_racnode1');
+  assert.equal(node.metrics.oracle_home_count.value, 2);
+  assert.equal(node.metrics.mem_total_kb.value, 263852032);
+});
+
+test('env_collector: the briefing validates against the shipped schema', () => {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const errors = validate(schema, renderEnvCollector().doc);
+  assert.deepEqual(errors, [], `env briefing does not validate:\n${errors.join('\n')}`);
 });
 
 test('daily-ops: the briefing validates against the shipped schema', () => {

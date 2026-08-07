@@ -9,6 +9,26 @@ are the DBA.
 
 ## What it does
 
+`env_collector.sh` runs **once per host**, before anything else. It discovers
+the environment (standalone or RAC, Oracle Homes and their versions, running
+SIDs, listeners, Grid Infrastructure and ASM, kernel limits, crontabs) and
+writes a `config-<node>.env` that every other script then reads. On a cluster
+it reaches the other nodes over passwordless SSH and **continues when a node is
+unreachable**, reporting that node as a WARN with the remedy rather than
+failing the run or, worse, quietly describing a cluster it only half saw. It
+also writes two outputs:
+
+- `env_summary_<timestamp>.html` for you
+- `env_briefing_<timestamp>.json` for your own AI
+
+    ./env_collector.sh
+    ./env_collector.sh --primary-home /u01/app/oracle/product/19c/dbhome_1
+    ./env_collector.sh --render-only /path/to/setup-dir
+
+A host with several Oracle Homes is genuinely ambiguous. An interactive run
+asks; a cron run takes the pre-selected default and logs which one it took;
+`--primary-home` settles it outright so nothing has to guess.
+
 `daily_analysis.sh` is the morning briefing. It collects once and writes two
 files side by side:
 

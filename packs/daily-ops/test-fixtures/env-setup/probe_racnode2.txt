@@ -1,0 +1,2 @@
+NODE UNREACHABLE via passwordless SSH (BatchMode, 8s timeout).
+Set up ssh keys for the oracle/grid user, or run env_collector.sh locally on racnode2 and merge the setup dirs.

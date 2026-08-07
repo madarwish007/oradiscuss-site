@@ -1,0 +1,28 @@
+KERNEL=5.15.0-206.153.7.el8uek.x86_64
+OS_RELEASE=Oracle Linux Server release 8.9
+MEM_TOTAL_KB=263852032
+SHMMAX=134217728
+SHMALL=4294967296
+SEM=250 32000 100 128
+HUGEPAGES=65536
+LIMITS_NOFILE=65536
+LIMITS_NPROC=16384
+CRS_HOME=/u01/app/19.0.0/grid
+GI_VERSION=19.0.0.0.0
+GI_ACTIVE=yes
+ASM_SID=+ASM1
+<<<ORATAB>>>
+PRODDB1:/u01/app/oracle/product/19c/dbhome_1:N
+<<<PMON_SIDS>>>
++ASM1
+PRODDB1
+<<<OHOMES>>>
+/u01/app/oracle/product/19c/dbhome_1
+/u01/app/oracle/product/21c/dbhome_1
+<<<OHOME_VERSIONS>>>
+/u01/app/oracle/product/19c/dbhome_1=19.0.0.0.0
+/u01/app/oracle/product/21c/dbhome_1=21.0.0.0.0
+<<<LISTENERS>>>
+LISTENER
+<<<CRONTABS>>>
+[oracle] 0 7 * * * /opt/oradiscuss/daily-ops/daily_analysis.sh
