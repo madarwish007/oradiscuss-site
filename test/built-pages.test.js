@@ -121,6 +121,31 @@ for (const page of ['kit/index.html', 'roadmap/index.html']) {
   });
 }
 
+test('no built page collects a comment', () => {
+  // Founder ruling 7 Aug: comments are dropped. The reason is the product's
+  // central claim, not tidiness. The comments Worker stored a name, the
+  // comment text and a partial IP in KV under our control, and forwarded name
+  // and text to Telegram, which is precisely what the privacy page says we do
+  // not do. Production had no privacy page, so nothing was false; it would
+  // have become false at promote.
+  //
+  // This asserts the ABSENCE of the collecting endpoint rather than the
+  // absence of the component, because the component could come back under any
+  // name. /api/ora-error and /api/search on /tools/ are deliberately still
+  // allowed: they look things up in Oracle's docs and store nothing.
+  const offenders = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) { walk(full); continue; }
+      if (!/\.(html|js)$/.test(e.name)) continue;
+      if (readFileSync(full, 'utf8').includes('/api/comments')) offenders.push(relative(DIST, full));
+    }
+  };
+  walk(DIST);
+  assert.deepEqual(offenders, [], `these pages post to the comment store: ${offenders.join(', ')}`);
+});
+
 test('the built site ships no dotfiles', () => {
   // wrangler uploads dist/ wholesale, so anything that lands there becomes a
   // public URL. On 7 Aug a Finder-created dist/.DS_Store was uploaded to

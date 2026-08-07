@@ -2,7 +2,6 @@
 import type { CollectionEntry } from 'astro:content';
 import BaseLayout from './BaseLayout.astro';
 import ShareButtons from '../components/ShareButtons.astro';
-import Comments from '../components/Comments.astro';
 import MorePosts from '../components/MorePosts.astro';
 import Newsletter from '../components/Newsletter.astro';
 import { CATEGORY_LABEL } from '../content.config';
@@ -82,7 +81,6 @@ const tags = (data.tags ?? [])
       </div>
     )}
     <ShareButtons title={data.title} url={articleUrl} />
-    <Comments slug={slugPath} />
   </section>
 
   <style>
