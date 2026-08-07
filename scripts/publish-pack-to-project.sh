@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
 # ============================================================================
-# publish-pack-to-drive.sh
+# publish-pack-to-project.sh
 #
-# Publishes the COMMITTED pack into the Drive project folder, so everything the
-# founder looks for is under one directory without Drive becoming a second
+# Publishes the COMMITTED pack into the project folder on local disk, so everything the
+# founder looks for is under one directory without the project folder becoming a second
 # source of truth.
 #
 # WHY THIS EXISTS
-#   RUNBOOK.md:57 says the Drive folder is the docs home and code lives in git,
-#   never in Drive. The reason is not tidiness. On 7 Aug a hand-copied pack in
-#   Drive went stale inside ONE HOUR: it was missing the RAC census, both
+#   RUNBOOK.md:57 says the project folder is the docs home and code lives in git,
+#   never in the project folder. The reason is not tidiness. On 7 Aug a hand-copied pack in
+#   the project folder went stale inside ONE HOUR: it was missing the RAC census, both
 #   orchestrate fixes and the tablespace dual output, while looking complete.
 #   A stale copy that looks current is worse than no copy, because somebody
 #   eventually field-tests it and reports bugs that were fixed hours earlier.
 #
-#   So the rule is kept and the inconvenience is automated away: Drive gets a
+#   So the rule is kept and the inconvenience is automated away: the project folder gets a
 #   GENERATED mirror plus the zip, never a hand-copy, and this script is the
 #   only thing allowed to write there.
 #
 # IT PUBLISHES FROM HEAD, NOT FROM THE WORKING TREE
-#   Uncommitted edits are deliberately not published. What reaches Drive is
+#   Uncommitted edits are deliberately not published. What reaches the project folder is
 #   what is committed, which is what the tests ran against.
 #
 # Usage:
-#   ./scripts/publish-pack-to-drive.sh
+#   ./scripts/publish-pack-to-project.sh
 # ============================================================================
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-DRIVE="/Users/mahmouddarwish/Library/CloudStorage/GoogleDrive-mahmood.darweesh@gmail.com/My Drive/OraDiscuss_Website"
+PROJECT="/Users/mahmouddarwish/Working_Area/OraDiscuss_Website"
 PACK="packs/healthcheck"
 VERSION="1.0.0"
 
 log() { printf '[publish-pack] %s\n' "$*"; }
 err() { printf '[publish-pack] ERROR: %s\n' "$*" >&2; }
 
-[ -d "$DRIVE" ] || { err "Drive project folder not found: $DRIVE"; exit 2; }
+[ -d "$PROJECT" ] || { err "project folder not found: $PROJECT"; exit 2; }
 
 cd "$REPO"
 
@@ -62,7 +62,7 @@ rm -rf "$SRC/test-fixtures"
 # The customer-facing artifact.
 ( cd "$STAGE/packs" && zip -r -q "$STAGE/oradiscuss-healthcheck-v${VERSION}.zip" healthcheck )
 
-DEST="$DRIVE/packs"
+DEST="$PROJECT/packs"
 mkdir -p "$DEST"
 
 # Replace rather than merge: a merge leaves deleted files behind forever, which
@@ -77,7 +77,7 @@ cat > "$DEST/GENERATED-DO-NOT-EDIT.md" <<STAMP
 # This folder is GENERATED. Do not edit anything in it.
 
 Published from git \`$SHA\` on $(date '+%Y-%m-%d %H:%M:%S %Z')
-by \`scripts/publish-pack-to-drive.sh\` in \`madarwish007/oradiscuss-site\`.
+by \`scripts/publish-pack-to-project.sh\` in \`madarwish007/oradiscuss-site\`.
 
 **The source of truth is git, at \`packs/healthcheck/\` in that repo.** This copy
 exists so the pack is findable in the project folder alongside the docs. An edit
@@ -90,7 +90,7 @@ To check whether this copy is current:
 
 If that does not print \`$SHA\`, this folder is behind. Refresh it with:
 
-    ~/Projects/oradiscuss-site/scripts/publish-pack-to-drive.sh
+    ~/Projects/oradiscuss-site/scripts/publish-pack-to-project.sh
 
 Why this is generated rather than hand-copied: on 7 Aug a hand-copied pack in
 this folder went stale within one hour, missing the RAC instance census and
