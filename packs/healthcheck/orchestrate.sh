@@ -64,7 +64,19 @@ case "$RETENTION_DAYS" in ''|*[!0-9]*) err "RETENTION_DAYS must be an integer"; 
 mkdir -p "$OUTPUT_DIR/runs"
 
 # --- mutual exclusion: refuse to overlap with another run -------------------
+#
+# flock ships with util-linux, so it is present on the Linux hosts this pack
+# targets and absent on some minimal containers and on non-Linux Unix. When it
+# was missing, `! flock -n 9` was simply true and this reported "another run
+# holds the lock", which is a WRONG diagnosis: it sends the reader hunting for
+# a process that does not exist. A tool that is not installed and a lock that
+# is genuinely held are different problems and now say so.
 LOCK_FILE="$OUTPUT_DIR/orchestrate.lock"
+if ! command -v flock >/dev/null 2>&1; then
+  err "flock is not installed, so overlapping runs cannot be prevented safely."
+  err "install util-linux, or serialise runs yourself (cron spacing, or your scheduler's own mutex)."
+  exit 2
+fi
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
   err "another orchestrate.sh run holds the lock ($LOCK_FILE) - exiting."
