@@ -9,7 +9,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
 >
   <h2>1. The short version</h2>
   <p>
-    OraDiscuss keeps no customer database. Your email address lives with our email provider, your
+    OraDiscuss keeps no customer database in the usual sense: no table of names, addresses or emails
+    anywhere under our control. Your email address lives with our email provider, your
     payment details live with Paddle, and neither is copied into a store of our own. That is a
     deliberate design decision rather than a promise about future good behaviour: the safest way to
     never leak personal data is to never hold it.
@@ -36,12 +37,13 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     </li>
     <li>
       <strong>Membership access.</strong> To recognise a paying member without holding a customer
-      record, we store a one-way hash derived from your Paddle transaction, never your email or
-      name.
+      record, we store a one-way hash of the Paddle transaction reference. It is not derived from
+      your email or name, it cannot be reversed to them, and we delete it on request; deleting it
+      ends member access.
     </li>
     <li>
       <strong>Technical logs</strong> kept by our hosting for security and operations, including IP
-      address and request metadata, retained for a short period.
+      address and request metadata, retained for weeks, not months.
     </li>
   </ul>
   <p>
@@ -53,6 +55,10 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <p>
     To deliver what you asked for, to send the briefs and notifications you subscribed to, to grant
     and re-issue member downloads, to prevent abuse and fraud, and to meet legal obligations.
+  </p>
+  <p>
+    We rely on your consent for the email list, on contract for membership access, on legitimate
+    interest for security logging, and on legal obligation where records must be kept.
   </p>
 
   <h2>4. Who processes your data</h2>
@@ -85,8 +91,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <p>
     Your subscription to the list lasts until you unsubscribe, which you can do from any email we
     send. Transaction records are retained by Paddle under its own retention and accounting
-    obligations. Our own technical logs are short-lived. Roadmap counters are permanent but contain
-    no personal data to retain.
+    obligations. Our own technical logs are kept for weeks, not months. Roadmap counters are
+    permanent but contain no personal data to retain.
   </p>
 
   <h2>8. Your rights</h2>
@@ -94,7 +100,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
     Email <a href="mailto:support@oradiscuss.com">support@oradiscuss.com</a> to access, correct,
     export, or delete your data, or to unsubscribe. If you are in the EU or UK you have the rights
     granted by GDPR and UK GDPR; if you are in California you have those granted by CCPA. We honour
-    them regardless of where you live.
+    them regardless of where you live. You also have the right to complain to your data protection
+    authority.
   </p>
   <p>
     One honest limitation: a roadmap vote cannot be individually deleted, because nothing in that
@@ -105,7 +112,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <h2>9. International transfers</h2>
   <p>
     Your data may be processed in the United States, the United Kingdom, and elsewhere by the
-    providers listed above, under the safeguards those providers maintain.
+    providers listed above, under the safeguards those providers maintain, including adequacy
+    decisions and standard contractual clauses.
   </p>
 
   <h2>10. Security</h2>
