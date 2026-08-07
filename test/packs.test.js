@@ -49,7 +49,29 @@ const PACKS = [
     ],
     allowlist: ['sql/create_history_table.sql'],
   },
+  {
+    id: 'daily-ops',
+    expects: [
+      'daily_analysis.sh',
+      'lib/odc_briefing.sh',
+      'schema/briefing.schema.json',
+      'prompts/morning-triage.md',
+      'sql/daily_analysis.sql',
+    ],
+    // Empty on purpose, and it is asserted as empty. The v0.9 daily-ops set
+    // contained the pack's only two real mutation surfaces (tbs_manager's
+    // generated ALTER statements and redef_assistant's CREATE TABLE), and
+    // neither ships here.
+    allowlist: [],
+  },
 ];
+
+// Files that are deliberately IDENTICAL in every pack that ships them. Each
+// pack is sold and downloaded on its own, so it has to be self-contained, but
+// two copies of a file is two copies that can drift. Asserted byte for byte
+// rather than trusted, because a divergence would show up as one pack's
+// briefings quietly failing another pack's schema.
+const SHARED_FILES = ['lib/odc_briefing.sh', 'schema/briefing.schema.json'];
 
 const PACK = join(PACKS_DIR, 'healthcheck');
 
@@ -233,6 +255,57 @@ for (const pack of PACKS) {
     assert.deepEqual(offenders, [], `mutation found in sold scripts:\n${offenders.join('\n')}`);
   });
 }
+
+for (const pack of PACKS) {
+  test(`${pack.id}: the shipped SQL actually emits metrics, and every one lands on a real check`, () => {
+    // THE FIXTURE CANNOT CATCH THIS. A test fixture full of MET lines proves
+    // the PARSER handles them and says nothing about whether the collector
+    // ever writes one. daily-ops was converted with a metric-aware parser, a
+    // metric-rich fixture and a shipped .sql that emitted ZERO metrics, so
+    // every real run would have produced a briefing whose every check carried
+    // an empty "metrics": {} while the whole suite stayed green.
+    //
+    // Ids are compared by PREFIX because they are built by concatenation
+    // ('MET|TS_' || tablespace_name). A metric whose prefix matches no check
+    // prefix in the same file is a metric that will attach to nothing.
+    const ids = (src, kind) =>
+      new Set([...src.matchAll(new RegExp(`${kind}\\|([A-Z_0-9]*)`, 'g'))].map((m) => m[1]).filter(Boolean));
+
+    const sqlFiles = pack.shipped.filter((rel) => rel.endsWith('.sql') && !pack.allowlist.includes(rel));
+    assert.ok(sqlFiles.length > 0, `${pack.id} ships no collector SQL, so this guard is asleep`);
+
+    let metricsAnywhere = 0;
+    for (const rel of sqlFiles) {
+      const src = readFileSync(join(pack.dir, rel), 'utf8');
+      const checks = ids(src, 'CHK');
+      const metrics = ids(src, 'MET');
+      if (checks.size === 0) continue; // not a collector, nothing to pair
+      metricsAnywhere += metrics.size;
+      const orphans = [...metrics].filter((m) => !checks.has(m));
+      assert.deepEqual(orphans, [], `${pack.id}/${rel} emits metrics for ids it never checks: ${orphans.join(', ')}`);
+    }
+    assert.ok(
+      metricsAnywhere > 0,
+      `${pack.id} emits CHK lines but no MET lines, so every briefing it writes will have empty metrics`,
+    );
+  });
+}
+
+test('the shared dual-output layer is byte-identical in every pack that ships it', () => {
+  for (const rel of SHARED_FILES) {
+    const carriers = PACKS.filter((p) => p.shipped.includes(rel));
+    assert.ok(carriers.length >= 2, `only ${carriers.length} pack ships ${rel}, so this guard is asleep`);
+    const [first, ...rest] = carriers;
+    const want = readFileSync(join(first.dir, rel), 'utf8');
+    for (const p of rest) {
+      assert.equal(
+        readFileSync(join(p.dir, rel), 'utf8'),
+        want,
+        `${p.id}/${rel} has drifted from ${first.id}/${rel}. Change one and copy it, never edit one in place.`,
+      );
+    }
+  }
+});
 
 test('the read-only allowlist across ALL packs holds exactly one path', () => {
   // Counted across the whole product, not per pack. Three packs each holding
@@ -442,6 +515,99 @@ test('tablespace_monitor.sh also emits both outputs', () => {
   assert.equal(doc.checks.find((c) => c.id === 'TS_UNDOTBS1').metrics.used_pct.value, 96.8);
   assert.ok(doc.summary.needs_attention.includes('TS_UNDOTBS1'));
   rmSync(out, { recursive: true, force: true });
+});
+
+// ---------------------------------------------------------------------------
+// DAILY-OPS: the same dual-output contract, driven through the REAL parser.
+// ---------------------------------------------------------------------------
+
+function renderDailyOps() {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const out = mkdtempSync(join(tmpdir(), 'odc-dops-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(
+    cfg,
+    [
+      'ORACLE_SID=ORCLCDB',
+      'ORACLE_HOME=/nonexistent',
+      'ORACLE_CONNECT="/ as sysdba"',
+      `OUTPUT_DIR=${out}`,
+      'TS_WARN_PCT=80', 'TS_CRIT_PCT=90',
+      'RMAN_FULL_MAX_AGE_HOURS=36', 'RMAN_ARCH_MAX_AGE_HOURS=6',
+      'STANDBY_LAG_WARN_MIN=15', 'STALE_STATS_WARN=25',
+    ].join('\n'),
+  );
+  mkdirSync(join(out, 'briefings'), { recursive: true });
+  mkdirSync(join(out, 'state'), { recursive: true });
+  const raw = join(pack.dir, 'test-fixtures/raw_hostile.txt');
+  const before = readFileSync(raw, 'utf8');
+  try {
+    execFileSync('bash', [
+      join(pack.dir, 'daily_analysis.sh'), '--config', cfg, '--render-only', raw,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const dir = join(out, 'briefings');
+  return {
+    dir,
+    html: readdirSync(dir).find((f) => f.endsWith('.html') && !f.includes('latest')),
+    json: readdirSync(dir).find((f) => f.endsWith('.json') && !f.includes('latest')),
+    rawUnchanged: readFileSync(raw, 'utf8') === before,
+  };
+}
+
+test('daily-ops: ONE collection produces BOTH the morning briefing and the JSON', () => {
+  const r = renderDailyOps();
+  assert.ok(r.html, 'no HTML morning briefing was written');
+  assert.ok(r.json, 'the HTML was written but the briefing was not, which is half a run');
+  assert.ok(readFileSync(join(r.dir, r.html), 'utf8').includes('<!DOCTYPE html>'));
+  JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+});
+
+test('daily-ops: --render-only leaves the collection it read exactly as it found it', () => {
+  // The collect-time steps APPEND to the raw file (patch inventory, invalid
+  // delta). If they ran on a replay, every re-render would differ from the last
+  // and a read-only archived collection would fail outright.
+  assert.ok(renderDailyOps().rawUnchanged, '--render-only modified the raw collection it was given');
+});
+
+test('daily-ops: the briefing survives hostile collector output', () => {
+  const r = renderDailyOps();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const tbs = doc.checks.find((c) => c.id === 'TBS');
+  assert.match(tbs.detail, /D:\\oracle\\oradata/, 'a Windows path did not survive JSON escaping');
+  assert.match(tbs.detail, /"db_file_name_convert"/, 'a quoted name did not survive');
+  assert.match(tbs.detail, /pipe \| inside/, 'a pipe inside a detail truncated the field');
+
+  // A decimal comma is what a German-locale session emits. It must become null
+  // rather than invalidate the whole document.
+  const invalid = doc.checks.find((c) => c.id === 'INVALID');
+  assert.equal(invalid.metrics.locale_decimal_comma.value, null);
+  assert.equal(invalid.metrics.invalid_objects.value, 3);
+});
+
+test('daily-ops: the trend metrics are carried, and NA is not counted as healthy', () => {
+  // ONE call. Two calls render into two different temp directories, and
+  // pairing a directory from one with a filename from the other is a test
+  // that fails for a reason the product had nothing to do with.
+  const r = renderDailyOps();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const tbs = doc.checks.find((c) => c.id === 'TBS');
+  assert.equal(tbs.metrics.gb_per_day.value, 1.4);
+  assert.equal(tbs.metrics.days_to_90pct.value, 6);
+  assert.equal(doc.summary.counts.NA, 1);
+  assert.ok(!doc.summary.needs_attention.includes('STALE'), 'NA must not be reported as needing attention');
+  assert.ok(doc.summary.needs_attention.includes('RMAN_FULL'), 'a CRIT must reach needs_attention');
+  assert.equal(doc.summary.overall_status, 'CRIT');
+});
+
+test('daily-ops: the briefing validates against the shipped schema', () => {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const r = renderDailyOps();
+  const errors = validate(schema, JSON.parse(readFileSync(join(r.dir, r.json), 'utf8')));
+  assert.deepEqual(errors, [], `briefing does not validate:\n${errors.join('\n')}`);
 });
 
 test('every shell script in the pack parses', () => {

@@ -1,0 +1,20 @@
+SEC|Instance and database
+CHK|INST|OK|Instance status|OPEN since 2026-07-24, ARCHIVELOG, "primary" role
+MET|INST|uptime_days|14|days
+SEC|Tablespaces
+CHK|TBS|WARN|Tablespace usage|USERS at 87,3% used on D:\oracle\oradata\users01.dbf, "db_file_name_convert" set, pipe | inside the detail
+MET|TBS|used_pct|87.3|percent
+MET|TBS|gb_per_day|1.4|GB/day
+MET|TBS|days_to_90pct|6|days
+SEC|Backups
+CHK|RMAN_FULL|CRIT|Last full backup|no full backup recorded in the last 36h
+MET|RMAN_FULL|age_hours|61.5|hours
+CHK|RMAN_ARCH|OK|Archivelog backup|last archivelog backup 2.1h ago
+SEC|Optimizer statistics
+CHK|STALE|NA|Stale statistics|DBA_TAB_STATISTICS not accessible - grant SELECT_CATALOG_ROLE
+SEC|Security
+CHK|FAILLOGON|OK|Failed logins 24h|4 failed logons in the last 24h (UNIFIED_AUDIT_TRAIL)
+MET|FAILLOGON|failed_logons|4|logons
+CHK|INVALID|OK|Invalid objects|3 invalid objects
+MET|INVALID|invalid_objects|3|objects
+MET|INVALID|locale_decimal_comma|87,3|percent

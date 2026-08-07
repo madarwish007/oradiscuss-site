@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://oradiscuss.com/schema/briefing-1.0.json",
+  "title": "OraDiscuss briefing",
+  "_header": "OraDiscuss - DBA Health Check Automation Pack v1.0.0. Generated and published by OraDiscuss (oradiscuss.com). Not produced by, affiliated with, or endorsed by Oracle Corporation. READ-ONLY: this pack issues no DDL and no DML against your data. License: single-user license, modify allowed, no redistribution.",
+  "description": "The machine-readable half of an OraDiscuss collection. Written on the customer's own machine, alongside report.html, from one run of one collector. It is meant to be handed to the customer's own AI assistant together with a prompt from the pack's prompts/ directory. OraDiscuss never receives this file.",
+  "type": "object",
+  "required": ["schema_version", "generator", "collection", "summary", "checks"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version of THIS contract, not of the pack. A consumer that understands 1.0 can rely on every field below continuing to mean what it means here.",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "generator": {
+      "type": "object",
+      "required": ["vendor", "pack", "pack_version", "script"],
+      "properties": {
+        "vendor": { "type": "string" },
+        "source": { "type": "string" },
+        "pack": { "type": "string" },
+        "pack_version": { "type": "string" },
+        "script": { "type": "string" },
+        "notice": { "type": "string" }
+      }
+    },
+    "collection": {
+      "type": "object",
+      "required": ["generated_at", "oracle_sid", "read_only"],
+      "properties": {
+        "generated_at": { "type": "string" },
+        "oracle_sid": { "type": "string" },
+        "read_only": {
+          "type": "boolean",
+          "description": "Always true. The pack issues no DDL and no DML. It is stated in the data as well as in the file headers so a consumer can assert it rather than trust it."
+        },
+        "collector_exit_code": { "type": ["number", "null"] },
+        "data_residency": { "type": "string" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["overall_status", "counts", "needs_attention"],
+      "properties": {
+        "overall_status": { "type": "string", "enum": ["OK", "WARN", "CRIT"] },
+        "counts": {
+          "type": "object",
+          "required": ["OK", "WARN", "CRIT", "NA"],
+          "properties": {
+            "OK": { "type": "number" },
+            "WARN": { "type": "number" },
+            "CRIT": { "type": "number" },
+            "NA": {
+              "type": "number",
+              "description": "Checks that could not be determined. NA is not OK: a briefing with a high NA count describes an INCOMPLETE collection, and an assistant reading it should say so rather than report a clean bill of health."
+            }
+          }
+        },
+        "needs_attention": {
+          "type": "array",
+          "description": "Ids of every WARN and CRIT check, in the order collected. NA is deliberately excluded: unknown is not the same as wrong.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "thresholds": {
+      "type": "object",
+      "description": "The thresholds this run was judged against. They are the customer's own configured values, so a status of WARN means nothing without them."
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "section", "status", "title", "detail", "metrics"],
+        "properties": {
+          "id": { "type": "string" },
+          "section": { "type": "string" },
+          "status": { "type": "string", "enum": ["OK", "WARN", "CRIT", "NA"] },
+          "title": { "type": "string" },
+          "detail": {
+            "type": "string",
+            "description": "The human sentence, carried verbatim from the collector. It may contain raw ORA- text including quotes and file paths."
+          },
+          "metrics": {
+            "type": "object",
+            "description": "Measurements for this check, by name. A value of null means the collector produced something that was not a valid number; the check's detail string still holds the original text. Absent metrics mean the check is not numeric, never that the number was zero.",
+            "additionalProperties": {
+              "type": "object",
+              "required": ["value", "unit"],
+              "properties": {
+                "value": { "type": ["number", "null"] },
+                "unit": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
