@@ -18,7 +18,40 @@ import { join, relative } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const REPO = new URL('..', import.meta.url).pathname;
-const PACK = join(REPO, 'packs/healthcheck');
+const PACKS_DIR = join(REPO, 'packs');
+
+// ---------------------------------------------------------------------------
+// THE PACK REGISTRY.
+//
+// Every generic guard below runs over EVERY entry here, and the registry is
+// checked against the packs/ directory itself, so a pack that exists on disk
+// and is missing from this list FAILS rather than going quietly unguarded.
+//
+// That check is the whole point. This repo has twice shipped a fan-out step
+// that named its inputs (orchestrate.sh, both times), and both times the input
+// added afterwards was dropped in silence. The second pack is exactly when
+// that happens again, so the harness stops naming one pack before the second
+// pack exists rather than after.
+//
+//   allowlist - EXACT paths, never patterns, and its LENGTH is asserted. A
+//               pattern would silently absorb the next writer somebody adds.
+// ---------------------------------------------------------------------------
+
+const PACKS = [
+  {
+    id: 'healthcheck',
+    expects: [
+      'health_check.sh',
+      'lib/odc_briefing.sh',
+      'schema/briefing.schema.json',
+      'prompts/triage.md',
+      'sql/health_check.sql',
+    ],
+    allowlist: ['sql/create_history_table.sql'],
+  },
+];
+
+const PACK = join(PACKS_DIR, 'healthcheck');
 
 // ---------------------------------------------------------------------------
 // THE READ-ONLY GATE.
@@ -42,12 +75,79 @@ const PACK = join(REPO, 'packs/healthcheck');
 const MUTATION_VERBS = ['CREATE', 'DROP', 'ALTER', 'TRUNCATE', 'INSERT', 'UPDATE', 'DELETE', 'MERGE', 'GRANT', 'REVOKE'];
 const OBJECT_KEYWORDS = ['TABLE', 'INDEX', 'VIEW', 'DATABASE', 'TABLESPACE', 'USER', 'SEQUENCE', 'SYNONYM', 'TRIGGER', 'INTO', 'FROM', 'SET'];
 
-// The allowlist is a list of EXACT paths, never a pattern. A pattern would
-// silently absorb the next writer somebody adds; an exact path cannot.
-const READ_ONLY_ALLOWLIST = ['sql/create_history_table.sql'];
-
 function stripSqlComments(src) {
   return src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/--[^\n]*/g, ' ');
+}
+
+// ---------------------------------------------------------------------------
+// DYNAMIC SQL, AND WHY IT IS NOT SIMPLY BANNED.
+//
+// The first version of this gate flagged EXECUTE IMMEDIATE on sight. That is
+// wrong in a way that matters: daily-ops/sql/daily_analysis.sql wraps a plain
+// SELECT COUNT(*) on UNIFIED_AUDIT_TRAIL in dynamic SQL DELIBERATELY, because
+// a static reference fails to parse wherever the view is not granted and would
+// take the whole script down with it. Banning the construct would either lose
+// a legitimate read-only check or, far worse, teach somebody to switch the
+// gate off.
+//
+// So the gate reads the statement INSIDE the dynamic SQL and passes only
+// SELECT or WITH. Everything else is a finding, INCLUDING anything it cannot
+// read with certainty: a variable, a concatenation, an unterminated literal.
+// Fail closed, because a concatenated string is precisely how a check like
+// this gets fooled, and "I could not tell" must never render as "fine".
+// ---------------------------------------------------------------------------
+
+const QUOTE_PAIRS = { '[': ']', '{': '}', '(': ')', '<': '>' };
+
+// Reads ONE string literal off the front of s, in either Oracle spelling.
+// Returns null when the text is not a literal or the literal never closes,
+// which the caller treats as a finding rather than as an absence of one.
+function readSqlLiteral(s) {
+  const t = s.trimStart();
+  const lead = s.length - t.length;
+
+  const alt = /^q'(.)/i.exec(t);
+  if (alt) {
+    const close = (QUOTE_PAIRS[alt[1]] ?? alt[1]) + "'";
+    const end = t.indexOf(close, 3);
+    if (end === -1) return null;
+    return { text: t.slice(3, end), length: lead + end + close.length };
+  }
+
+  if (t.startsWith("'")) {
+    for (let i = 1; i < t.length; i++) {
+      if (t[i] !== "'") continue;
+      if (t[i + 1] === "'") { i++; continue; } // '' is an escaped quote
+      return { text: t.slice(1, i).replace(/''/g, "'"), length: lead + i + 1 };
+    }
+    return null;
+  }
+
+  return null;
+}
+
+function dynamicSqlFindings(src) {
+  const findings = [];
+  const body = stripSqlComments(src);
+  const re = /\bEXECUTE\s+IMMEDIATE\b/gi;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    const rest = body.slice(m.index + m[0].length);
+    const lit = readSqlLiteral(rest);
+    if (!lit) {
+      findings.push('EXECUTE IMMEDIATE (body is not a readable literal)');
+      continue;
+    }
+    if (rest.slice(lit.length).trimStart().startsWith('||')) {
+      findings.push('EXECUTE IMMEDIATE (built by concatenation)');
+      continue;
+    }
+    const first = (lit.text.trim().split(/\s+/)[0] ?? '').toUpperCase();
+    if (first !== 'SELECT' && first !== 'WITH') {
+      findings.push(`EXECUTE IMMEDIATE ${first || '(empty statement)'}`);
+    }
+  }
+  return findings;
 }
 
 function sqlMutations(src) {
@@ -56,7 +156,7 @@ function sqlMutations(src) {
     const first = stmt.trim().split(/\s+/)[0];
     if (first && MUTATION_VERBS.includes(first.toUpperCase())) found.push(first.toUpperCase());
   }
-  if (/\bEXECUTE\s+IMMEDIATE\b/i.test(stripSqlComments(src))) found.push('EXECUTE IMMEDIATE');
+  found.push(...dynamicSqlFindings(src));
   return found;
 }
 
@@ -69,7 +169,7 @@ function shellMutations(src) {
   return found;
 }
 
-function packFiles(dir = PACK, acc = []) {
+function packFiles(dir, acc = []) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
@@ -82,42 +182,69 @@ function packFiles(dir = PACK, acc = []) {
   return acc;
 }
 
-const SHIPPED = packFiles().map((f) => relative(PACK, f)).sort();
+// Every registered pack, resolved once: its directory and its shipped paths.
+for (const p of PACKS) {
+  p.dir = join(PACKS_DIR, p.id);
+  p.shipped = packFiles(p.dir).map((f) => relative(p.dir, f)).sort();
+}
 
-test('the pack ships the files the phase promised', () => {
-  for (const expected of [
-    'health_check.sh',
-    'lib/odc_briefing.sh',
-    'schema/briefing.schema.json',
-    'prompts/triage.md',
-    'sql/health_check.sql',
-  ]) {
-    assert.ok(SHIPPED.includes(expected), `${expected} is missing from the pack`);
-  }
+const SHIPPED = PACKS.find((p) => p.id === 'healthcheck').shipped;
+
+test('every pack on disk is registered, and every registered pack is on disk', () => {
+  // The guard on the guards. A pack that exists but is not in PACKS would run
+  // the entire read-only, header and em-dash suite over nothing at all, and
+  // report a clean pass while doing it, which is the worst failure this file
+  // can have: silent, green, and wrong.
+  const onDisk = readdirSync(PACKS_DIR, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+  assert.deepEqual(
+    PACKS.map((p) => p.id).sort(),
+    onDisk,
+    'packs/ and the PACKS registry disagree. Register the new pack, do not delete this assertion.',
+  );
 });
 
-test('the read-only allowlist holds exactly one path', () => {
-  // Asserted as a NUMBER, not just as content. If a future change adds a
-  // second writer to the pack, this fails before anybody has to notice it.
-  assert.equal(READ_ONLY_ALLOWLIST.length, 1);
-  assert.equal(READ_ONLY_ALLOWLIST[0], 'sql/create_history_table.sql');
-});
+for (const pack of PACKS) {
+  test(`${pack.id}: ships the files the phase promised`, () => {
+    for (const expected of pack.expects) {
+      assert.ok(pack.shipped.includes(expected), `${expected} is missing from ${pack.id}`);
+    }
+  });
 
-test('no shipped script mutates the database, except the one allowlisted file', () => {
-  const offenders = [];
-  for (const rel of SHIPPED) {
-    if (READ_ONLY_ALLOWLIST.includes(rel)) continue;
-    const src = readFileSync(join(PACK, rel), 'utf8');
-    const hits = rel.endsWith('.sql') ? sqlMutations(src) : rel.endsWith('.sh') ? shellMutations(src) : [];
-    if (hits.length) offenders.push(`${rel}: ${hits.join(', ')}`);
-  }
-  assert.deepEqual(offenders, [], `mutation found in sold scripts:\n${offenders.join('\n')}`);
+  test(`${pack.id}: the read-only allowlist is exactly the paths declared for it`, () => {
+    // Asserted as a NUMBER as well as as content. If a future change adds a
+    // second writer, this fails before anybody has to notice it.
+    assert.equal(pack.allowlist.length, pack.expectedAllowlistLength ?? pack.allowlist.length);
+    for (const rel of pack.allowlist) {
+      assert.ok(pack.shipped.includes(rel), `${pack.id} allowlists ${rel}, which it does not ship`);
+    }
+  });
+
+  test(`${pack.id}: no shipped script mutates the database, except allowlisted files`, () => {
+    const offenders = [];
+    for (const rel of pack.shipped) {
+      if (pack.allowlist.includes(rel)) continue;
+      const src = readFileSync(join(pack.dir, rel), 'utf8');
+      const hits = rel.endsWith('.sql') ? sqlMutations(src) : rel.endsWith('.sh') ? shellMutations(src) : [];
+      if (hits.length) offenders.push(`${rel}: ${hits.join(', ')}`);
+    }
+    assert.deepEqual(offenders, [], `mutation found in sold scripts:\n${offenders.join('\n')}`);
+  });
+}
+
+test('the read-only allowlist across ALL packs holds exactly one path', () => {
+  // Counted across the whole product, not per pack. Three packs each holding
+  // "just one exception" is four exceptions to explain on a sales page, and
+  // nobody would have to approve it, because each pack passed its own test.
+  const all = PACKS.flatMap((p) => p.allowlist.map((rel) => `${p.id}/${rel}`));
+  assert.deepEqual(all, ['healthcheck/sql/create_history_table.sql']);
 });
 
 test('SELF-TEST: the read-only gate actually fires on a mutation', () => {
   // Watch it catch each shape it claims to catch.
   assert.deepEqual(sqlMutations('SELECT 1 FROM dual;\nCREATE TABLE x (a NUMBER);'), ['CREATE']);
-  assert.deepEqual(sqlMutations("BEGIN EXECUTE IMMEDIATE 'drop table x'; END;"), ['EXECUTE IMMEDIATE']);
   assert.ok(shellMutations('GEN_SQL="ALTER DATABASE DATAFILE \'x\' RESIZE 1G;"').length > 0);
 
   // And watch it NOT fire on the prose that defeated the naive grep.
@@ -126,37 +253,64 @@ test('SELF-TEST: the read-only gate actually fires on a mutation', () => {
   assert.deepEqual(sqlMutations('-- CREATE TABLE in a comment\nSELECT 1 FROM dual;'), []);
 });
 
-test('the one allowlisted writer stays uninvoked, and the pack works without it', () => {
-  // The file is defensible only while both of these hold. If a script ever
-  // calls it, it stops being opt-in and the liability argument collapses.
-  for (const rel of SHIPPED) {
-    if (rel === READ_ONLY_ALLOWLIST[0]) continue;
-    if (!rel.endsWith('.sh')) continue;
-    const src = readFileSync(join(PACK, rel), 'utf8');
-    assert.ok(
-      !/create_history_table\.sql/.test(src.replace(/^\s*#[^\n]*/gm, '')),
-      `${rel} invokes the opt-in writer; it must only ever be run by hand`,
-    );
-  }
-  const header = readFileSync(join(PACK, READ_ONLY_ALLOWLIST[0]), 'utf8');
-  assert.match(header, /ONE EXCEPTION TO THE PACK'S READ-ONLY RULE/, 'the file must say what it is');
-  assert.match(header, /fully functional without it/i, 'the file must say the pack works without it');
+test('SELF-TEST: dynamic SQL is judged by the statement inside it, and fails closed', () => {
+  const only = (src) => dynamicSqlFindings(src);
+
+  // A read is a read, in both Oracle spellings for a literal.
+  assert.deepEqual(only("EXECUTE IMMEDIATE 'SELECT COUNT(*) FROM x' INTO n;"), []);
+  assert.deepEqual(only("EXECUTE IMMEDIATE q'[SELECT COUNT(*) FROM unified_audit_trail]' INTO n;"), []);
+  assert.deepEqual(only("EXECUTE IMMEDIATE q'{WITH t AS (SELECT 1 FROM dual) SELECT * FROM t}' INTO n;"), []);
+
+  // A write is a write, however it is spelled.
+  assert.deepEqual(only("EXECUTE IMMEDIATE 'drop table x';"), ['EXECUTE IMMEDIATE DROP']);
+  assert.deepEqual(only("EXECUTE IMMEDIATE q'[DELETE FROM x]';"), ['EXECUTE IMMEDIATE DELETE']);
+
+  // And everything it cannot read with certainty is a finding, not a pass.
+  assert.deepEqual(only('EXECUTE IMMEDIATE v_sql;'), ['EXECUTE IMMEDIATE (body is not a readable literal)']);
+  assert.deepEqual(only("EXECUTE IMMEDIATE 'SELECT ' || v_col || ' FROM x';"), ['EXECUTE IMMEDIATE (built by concatenation)']);
+  assert.deepEqual(only("EXECUTE IMMEDIATE 'SELECT 1 FROM dual"), ['EXECUTE IMMEDIATE (body is not a readable literal)']);
+
+  // The real line this was built for, quoted from daily-ops v0.9.
+  assert.deepEqual(
+    only("EXECUTE IMMEDIATE q'[\n  SELECT COUNT(*) FROM unified_audit_trail\n   WHERE action_name = 'LOGON']' INTO n"),
+    [],
+  );
 });
 
-test('every shipped pack file carries the header block', () => {
-  const missing = [];
-  for (const rel of SHIPPED) {
-    const src = readFileSync(join(PACK, rel), 'utf8');
-    const need = [/OraDiscuss/, /Not produced by/, /oradiscuss\.com/];
-    if (!need.every((re) => re.test(src))) missing.push(rel);
-  }
-  assert.deepEqual(missing, [], `files without the OraDiscuss header and non-affiliation notice: ${missing.join(', ')}`);
-});
+for (const pack of PACKS) {
+  test(`${pack.id}: every allowlisted writer stays uninvoked, and the pack works without it`, () => {
+    // An allowlisted writer is defensible only while both of these hold. If a
+    // script ever calls one, it stops being opt-in and the liability argument
+    // collapses with it.
+    for (const writer of pack.allowlist) {
+      const base = writer.split('/').pop().replace(/\./g, '\\.');
+      const invoked = new RegExp(base);
+      for (const rel of pack.shipped) {
+        if (rel === writer || !rel.endsWith('.sh')) continue;
+        const src = readFileSync(join(pack.dir, rel), 'utf8').replace(/^\s*#[^\n]*/gm, '');
+        assert.ok(!invoked.test(src), `${pack.id}/${rel} invokes ${writer}; it must only ever be run by hand`);
+      }
+      const header = readFileSync(join(pack.dir, writer), 'utf8');
+      assert.match(header, /ONE EXCEPTION TO THE PACK'S READ-ONLY RULE/, `${writer} must say what it is`);
+      assert.match(header, /fully functional without it/i, `${writer} must say the pack works without it`);
+    }
+  });
 
-test('no em dash anywhere in the pack', () => {
-  const offenders = SHIPPED.filter((rel) => readFileSync(join(PACK, rel), 'utf8').includes('\u2014'));
-  assert.deepEqual(offenders, [], `house rule: no em dashes. Found in: ${offenders.join(', ')}`);
-});
+  test(`${pack.id}: every shipped file carries the header block`, () => {
+    const missing = [];
+    for (const rel of pack.shipped) {
+      const src = readFileSync(join(pack.dir, rel), 'utf8');
+      const need = [/OraDiscuss/, /Not produced by/, /oradiscuss\.com/];
+      if (!need.every((re) => re.test(src))) missing.push(rel);
+    }
+    assert.deepEqual(missing, [], `files without the OraDiscuss header and non-affiliation notice: ${missing.join(', ')}`);
+  });
+
+  test(`${pack.id}: no em dash anywhere in the pack`, () => {
+    const offenders = pack.shipped.filter((rel) => readFileSync(join(pack.dir, rel), 'utf8').includes('\u2014'));
+    assert.deepEqual(offenders, [], `house rule: no em dashes. Found in: ${offenders.join(', ')}`);
+  });
+}
 
 // ---------------------------------------------------------------------------
 // THE DUAL-OUTPUT CONTRACT.
