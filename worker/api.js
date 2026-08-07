@@ -305,25 +305,17 @@ const ROUTES = {
   'GET /api/config': (request, env) => config(env),
   'GET /api/catalog': (request, env) => catalog(env),
   'GET /api/roadmap': (request, env) => roadmap(env),
-  'GET /api/_limiter-selftest': (request, env) => limiterSelfTest(env),
   'POST /api/subscribe': (request, env) => capture(request, env, { source: 'kit', wantsCourse: false }),
   'POST /api/roadmap/vote': (request, env) =>
     capture(request, env, { source: 'roadmap', wantsCourse: true }),
 };
 
-async function limiterSelfTest(env) {
-  // Proves the limiter actually DENIES, not merely that it is bound.
-  // A guard never seen to fire is not a guard. Temporary, removed at cutover.
-  const key = `selftest-${Date.now()}`;
-  let allowed = 0;
-  let denied = 0;
-  for (let i = 0; i < 100; i++) {
-    const r = await env.API_RATE_LIMIT.limit({ key });
-    if (r.success) allowed++;
-    else denied++;
-  }
-  return json({ key, allowed, denied, limit_config: '60 per 60s' });
-}
+/* The limiter self-test route lived here until Stage A cutover prep. It proved
+   the limiter DENIES rather than merely being bound, which was worth having
+   once. It is gone because BUILD_PLAN section 8 item 0 says it must never
+   reach production: it is unauthenticated and burns 100 rate-limiter calls per
+   hit, so it is a free amplifier for anyone who finds it. test/api-surface.test.js
+   now fails the build if that path, or any other /api/_ debug path, comes back. */
 
 export async function handleApi(request, env, pathname) {
   // Rate limit every API route before any work happens. This binding counts per
