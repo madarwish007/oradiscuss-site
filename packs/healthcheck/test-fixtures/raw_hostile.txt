@@ -1,0 +1,33 @@
+SEC|Instance & Database
+CHK|INSTANCE_STATUS|OK|Instance status|ORCLCDB OPEN, started 2026-08-01 03:14:00
+CHK|DATABASE_STATUS|OK|Database role|PRIMARY, READ WRITE
+SEC|Tablespace Usage
+CHK|TS_USERS|WARN|Tablespace USERS|87.3% used (100 GB max, 87.3 GB used)
+CHK|TS_SYSAUX|OK|Tablespace SYSAUX|41.2% used (32 GB max, 13.2 GB used)
+CHK|TS_UNDOTBS1|CRIT|Tablespace UNDOTBS1|96.8% used (16 GB max, 15.5 GB used)
+CHK|TS_BADLOCALE|WARN|Tablespace BADLOCALE|87,3% used, emitted by a session with a decimal comma
+SEC|Objects & Jobs
+CHK|INVALID_OBJECTS|WARN|Invalid objects|31 invalid object(s) in the database
+CHK|FAILED_SCHED_JOBS|OK|Failed scheduler jobs|0 failed run(s) in the last 7 days
+SEC|Alert Log (last 24h)
+CHK|ADR_LOCATION|NA|ADR diagnostic destination|/u01/app/oracle/diag/rdbms/orclcdb/ORCLCDB
+CHK|ALERT_ORA_ERRORS|CRIT|ORA- errors in alert log|4 ORA- error(s) in the last 24h
+CHK|ALERT_SAMPLE_1|NA|Recent ORA- sample|ORA-01578: ORACLE data block corrupted (file # 7, block # 1234)
+CHK|ALERT_SAMPLE_2|NA|Recent ORA- sample|ORA-19809: limit exceeded for recovery files, "db_recovery_file_dest_size" reached
+CHK|ALERT_SAMPLE_3|NA|Recent ORA- sample|ORA-27037: unable to obtain file status for D:\oracle\oradata\ORCL\undotbs01.dbf
+CHK|ALERT_SAMPLE_4|NA|Recent ORA- sample|ORA-00060: deadlock detected while waiting: session 42 held "TX" mode 6 | waiter 77 wants mode 4
+SEC|Archivelog & FRA
+CHK|ARCHIVELOG_MODE|OK|Archivelog mode|Database log_mode = ARCHIVELOG
+CHK|FRA_USAGE|WARN|FRA (DB_RECOVERY_FILE_DEST) usage|+FRA - 88.1% used (352.4 GB of 400.0 GB)
+SEC|RMAN Backup Recency
+CHK|RMAN_FULL|OK|Last full backup|completed 6.2 hours ago
+CHK|RMAN_ARCH|OK|Last archivelog backup|completed 0.7 hours ago
+MET|TS_USERS|used_pct|87.3|percent
+MET|TS_USERS|used_gb|87.3|GB
+MET|TS_USERS|max_gb|100.0|GB
+MET|TS_SYSAUX|used_pct|41.2|percent
+MET|TS_UNDOTBS1|used_pct|96.8|percent
+MET|TS_UNDOTBS1|max_gb|16.0|GB
+MET|INVALID_OBJECTS|count|31|objects
+MET|FRA_USAGE|used_pct|88.1|percent
+MET|TS_BADLOCALE|used_pct|87,3|percent
