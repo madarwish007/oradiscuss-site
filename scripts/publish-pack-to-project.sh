@@ -49,6 +49,16 @@ if [ -n "$(git status --porcelain -- "$PACK")" ]; then
 fi
 
 SHA="$(git rev-parse --short HEAD)"
+
+# The drift check anchors on the PACK's own last-touching commit, not on HEAD.
+# The first version of this script stamped HEAD, which meant a commit anywhere
+# else in the repo made a byte-identical mirror announce itself as stale. That
+# happened on 7 Aug, on the very commit that renamed this script. A drift check
+# that cries wolf is one somebody eventually stops reading, which costs more
+# than the drift it was watching for.
+PACK_SHA="$(git log -1 --format=%h -- "$PACK")"
+[ -n "$PACK_SHA" ] || { err "could not resolve the pack's last commit for $PACK"; exit 2; }
+
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 
@@ -76,8 +86,9 @@ cp -f "$STAGE/oradiscuss-healthcheck-v${VERSION}.zip" "$DEST/"
 cat > "$DEST/GENERATED-DO-NOT-EDIT.md" <<STAMP
 # This folder is GENERATED. Do not edit anything in it.
 
-Published from git \`$SHA\` on $(date '+%Y-%m-%d %H:%M:%S %Z')
-by \`scripts/publish-pack-to-project.sh\` in \`madarwish007/oradiscuss-site\`.
+Published on $(date '+%Y-%m-%d %H:%M:%S %Z') by
+\`scripts/publish-pack-to-project.sh\` in \`madarwish007/oradiscuss-site\`,
+from repo HEAD \`$SHA\`. **The pack itself last changed at \`$PACK_SHA\`.**
 
 **The source of truth is git, at \`packs/healthcheck/\` in that repo.** This copy
 exists so the pack is findable in the project folder alongside the docs. An edit
@@ -86,11 +97,15 @@ by the next publish.
 
 To check whether this copy is current:
 
-    cd ~/Projects/oradiscuss-site && git rev-parse --short HEAD
+    cd ~/Projects/oradiscuss-site && git log -1 --format=%h -- packs/healthcheck
 
-If that does not print \`$SHA\`, this folder is behind. Refresh it with:
+If that does not print \`$PACK_SHA\`, this folder is behind. Refresh it with:
 
     ~/Projects/oradiscuss-site/scripts/publish-pack-to-project.sh
+
+That command asks for the PACK's last commit, not the repo's HEAD, on purpose.
+Stamping HEAD made every unrelated commit anywhere in the repo report a current
+mirror as stale, and a drift check that cries wolf gets ignored.
 
 Why this is generated rather than hand-copied: on 7 Aug a hand-copied pack in
 this folder went stale within one hour, missing the RAC instance census and
