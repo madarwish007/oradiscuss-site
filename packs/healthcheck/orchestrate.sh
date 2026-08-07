@@ -116,9 +116,11 @@ log "tablespace_monitor.sh finished rc=$rc"
 # left every cron user, which is the documented primary usage, with a dated run
 # directory containing half of what the run made: "one collection, two outputs"
 # would have been true in reports/ and false in the artifact the customer keeps.
-for ext in html json; do
-  find "$OUTPUT_DIR/reports" -maxdepth 1 -name "health_${ORACLE_SID}_*.${ext}" -newermt '-10 minutes' \
-    -exec cp {} "$RUN_DIR/" \; 2>/dev/null || true
+for prefix in health tablespace; do
+  for ext in html json; do
+    find "$OUTPUT_DIR/reports" -maxdepth 1 -name "${prefix}_${ORACLE_SID}_*.${ext}" -newermt '-10 minutes' \
+      -exec cp {} "$RUN_DIR/" \; 2>/dev/null || true
+  done
 done
 [ -f "$OUTPUT_DIR/logs/tablespace_usage_${ORACLE_SID}.csv" ] && \
   cp "$OUTPUT_DIR/logs/tablespace_usage_${ORACLE_SID}.csv" "$RUN_DIR/" || true

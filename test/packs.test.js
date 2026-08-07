@@ -250,8 +250,44 @@ test('orchestrate.sh collects BOTH outputs into the run directory', () => {
   // writes both files correctly, and the orchestrator then keeps only one.
   // Asserted at source level because orchestrate.sh drives a real collection.
   const src = readFileSync(join(PACK, 'orchestrate.sh'), 'utf8').replace(/^\s*#[^\n]*/gm, '');
-  assert.match(src, /health_\$\{ORACLE_SID\}_\*\.\$\{ext\}/, 'the collect step must be extension-driven');
+  assert.match(src, /\$\{prefix\}_\$\{ORACLE_SID\}_\*\.\$\{ext\}/, 'the collect step must be driven by prefix and extension');
   assert.match(src, /for ext in html json/, 'the run directory must receive the briefing as well as the report');
+  // Every collector that writes a briefing must be named here, or its output
+  // silently misses the run directory. This is the second time that happened.
+  assert.match(src, /for prefix in health tablespace/, 'tablespace_monitor.sh writes a briefing too');
+});
+
+test('tablespace_monitor.sh also emits both outputs', () => {
+  const out = mkdtempSync(join(tmpdir(), 'odc-ts-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(cfg, [
+    'ORACLE_SID=ORCLCDB', 'ORACLE_HOME=/nonexistent', 'ORACLE_CONNECT="/ as sysdba"',
+    `OUTPUT_DIR=${out}`, 'TS_WARN_PCT=85', 'TS_CRIT_PCT=95', 'ASM_WARN_PCT=80',
+    'ASM_CRIT_PCT=90', 'FRA_WARN_PCT=80', 'FRA_CRIT_PCT=90',
+    'RMAN_FULL_MAX_AGE_HOURS=30', 'RMAN_ARCH_MAX_AGE_HOURS=8',
+    'INVALID_OBJ_WARN=1', 'RETENTION_DAYS=30', 'TS_HISTORY_TABLE=ORADISCUSS_TS_HISTORY',
+  ].join('\n'));
+  try {
+    execFileSync('bash', [
+      join(PACK, 'tablespace_monitor.sh'), '--config', cfg,
+      '--render-only', join(PACK, 'test-fixtures/ts_usage.csv'),
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+
+  // The CSV is the human half here; this collector has no HTML.
+  const csv = readFileSync(join(out, 'logs/tablespace_usage_ORCLCDB.csv'), 'utf8');
+  assert.match(csv, /^timestamp,tablespace,used_pct/);
+
+  const json = readdirSync(join(out, 'reports')).find((f) => f.endsWith('.json') && !f.includes('latest'));
+  assert.ok(json, 'tablespace_monitor.sh must write a briefing');
+  const doc = JSON.parse(readFileSync(join(out, 'reports', json), 'utf8'));
+  assert.deepEqual(validate(SCHEMA, doc), [], 'its briefing must satisfy the same schema');
+  assert.equal(doc.generator.script, 'tablespace_monitor.sh');
+  assert.equal(doc.checks.find((c) => c.id === 'TS_UNDOTBS1').metrics.used_pct.value, 96.8);
+  assert.ok(doc.summary.needs_attention.includes('TS_UNDOTBS1'));
+  rmSync(out, { recursive: true, force: true });
 });
 
 test('every shell script in the pack parses', () => {

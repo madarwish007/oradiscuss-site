@@ -34,6 +34,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/config.env"
 DRY_RUN=0
+VERSION="1.0.0"
+RENDER_ONLY=''
+
+# The dual-output layer, shared with health_check.sh. Sourced, never executed.
+# shellcheck source=lib/odc_briefing.sh
+. "${SCRIPT_DIR}/lib/odc_briefing.sh"
 
 log()  { printf '%s [ts_monitor] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
 err()  { printf '%s [ts_monitor] ERROR: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >&2; }
@@ -41,6 +47,7 @@ err()  { printf '%s [ts_monitor] ERROR: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY_RUN=1 ;;
+    --render-only) shift; RENDER_ONLY="${1:?--render-only requires a path}" ;;
     --config)  shift; CONFIG_FILE="${1:?--config requires a path}" ;;
     -h|--help) grep -E '^# (Usage|Cron|  [0-9])' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 2 ;;
     *) err "unknown argument: $1"; exit 2 ;;
@@ -62,7 +69,7 @@ for v in ORACLE_SID ORACLE_HOME ORACLE_CONNECT OUTPUT_DIR \
     exit 2
   fi
 done
-if [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
+if [ -z "$RENDER_ONLY" ] && [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
   err "sqlplus not found at \$ORACLE_HOME/bin/sqlplus - check ORACLE_HOME"
   exit 2
 fi
@@ -74,6 +81,7 @@ export NLS_LANG="${NLS_LANG:-AMERICAN_AMERICA.AL32UTF8}"
 mkdir -p "$OUTPUT_DIR/logs"
 CSV="$OUTPUT_DIR/logs/tablespace_usage_${ORACLE_SID}.csv"
 
+if [ -z "$RENDER_ONLY" ]; then
 rc="$(sqlplus -s -L "$ORACLE_CONNECT" <<'SQL' 2>/dev/null
 SET PAGES 0 FEEDBACK OFF HEADING OFF VERIFY OFF
 SELECT 'ODC_OK' FROM dual;
@@ -85,6 +93,9 @@ if [ "$rc" != "ODC_OK" ]; then
   exit 2
 fi
 log "connectivity OK"
+else
+  log "render-only: rebuilding outputs from $RENDER_ONLY, the database is not contacted"
+fi
 
 if [ "$DRY_RUN" -eq 1 ]; then
   log "dry-run: config valid, database reachable."
@@ -95,6 +106,15 @@ if [ "$DRY_RUN" -eq 1 ]; then
 fi
 
 # --- current usage snapshot ------------------------------------------------
+PROJ="$(mktemp)"
+if [ -n "$RENDER_ONLY" ]; then
+  if [ ! -r "$RENDER_ONLY" ]; then
+    err "raw usage file not readable: $RENDER_ONLY"
+    exit 2
+  fi
+  RAW="$RENDER_ONLY"
+  trap 'rm -f "${PROJ:-}"' EXIT
+else
 RAW="$(mktemp)"
 trap 'rm -f "${RAW:-}" "${PROJ:-}"' EXIT
 SQL_RC=0
@@ -104,11 +124,13 @@ if [ "$SQL_RC" -ne 0 ] || [ ! -s "$RAW" ]; then
   err "usage query failed (sqlplus rc=$SQL_RC)."
   exit 2
 fi
+fi
 
 # --- optional growth projection (graceful fallback) -------------------------
-PROJ="$(mktemp)"
+if [ -z "$RENDER_ONLY" ]; then
 sqlplus -s -L "$ORACLE_CONNECT" @"$SCRIPT_DIR/sql/tablespace_projection.sql" \
   "$TS_HISTORY_TABLE" "$PROJ" >/dev/null 2>&1 || true
+fi
 if grep -q '^#HISTORY_MISSING' "$PROJ" 2>/dev/null; then
   log "history table '${TS_HISTORY_TABLE}' not present - current-only mode (no projection)."
   : > "$PROJ"
@@ -124,6 +146,8 @@ if [ ! -s "$CSV" ]; then
   echo "timestamp,tablespace,used_pct,status,used_gb,max_gb,autoextend,gb_per_day,days_to_90pct" > "$CSV"
 fi
 
+odc_br_reset
+
 while IFS=',' read -r ts pct status used_gb max_gb autoext; do
   [ -z "${ts:-}" ] && continue
   gpd="-"; d90="-"
@@ -135,6 +159,20 @@ while IFS=',' read -r ts pct status used_gb max_gb autoext; do
     fi
   fi
   echo "${NOW_ISO},${ts},${pct},${status},${used_gb},${max_gb},${autoext},${gpd},${d90}" >> "$CSV"
+
+  # The same row, for the AI. The growth numbers are the interesting part
+  # here: a percentage is a snapshot, gb_per_day and days_to_90pct are the
+  # only things in this pack that describe a TREND, and they are exactly what
+  # an assistant needs to answer a capacity question rather than a status one.
+  # They are absent, not zero, when no history table exists.
+  odc_br_metric "TS_${ts}" "used_pct" "$pct" "percent"
+  odc_br_metric "TS_${ts}" "used_gb" "$used_gb" "GB"
+  odc_br_metric "TS_${ts}" "max_gb" "$max_gb" "GB"
+  [ "$gpd" != "-" ] && odc_br_metric "TS_${ts}" "gb_per_day" "$gpd" "GB/day"
+  [ "$d90" != "-" ] && odc_br_metric "TS_${ts}" "days_to_90pct" "$d90" "days"
+  odc_br_check "TS_${ts}" "Tablespace Usage" "$status" "Tablespace ${ts}" \
+    "${pct}% used (${used_gb} GB of ${max_gb} GB max, autoextend ${autoext})"
+
   case "$status" in
     CRIT) [ "$EXIT_CODE" -lt 2 ] && EXIT_CODE=2 ;;
     WARN) [ "$EXIT_CODE" -lt 1 ] && EXIT_CODE=1 ;;
@@ -142,4 +180,30 @@ while IFS=',' read -r ts pct status used_gb max_gb autoext; do
 done < "$RAW"
 
 log "snapshot appended to $CSV (exit $EXIT_CODE)"
+
+# --- the second output: the briefing ---------------------------------------
+case "$EXIT_CODE" in
+  0) OVERALL="OK" ;;
+  1) OVERALL="WARN" ;;
+  *) OVERALL="CRIT" ;;
+esac
+
+mkdir -p "$OUTPUT_DIR/reports"
+TS_NOW="$(date '+%Y%m%d-%H%M%S')"
+BRIEFING="$OUTPUT_DIR/reports/tablespace_${ORACLE_SID}_${TS_NOW}.json"
+THRESHOLDS_JSON="{\"tablespace_warn_pct\":$(odc_json_num "$TS_WARN_PCT"),\"tablespace_crit_pct\":$(odc_json_num "$TS_CRIT_PCT")}"
+
+BRIEFING_TMP="${BRIEFING}.partial"
+if ! odc_br_document \
+      "healthcheck" "$VERSION" "tablespace_monitor.sh" "$ORACLE_SID" \
+      "$NOW_ISO" "$OVERALL" "$EXIT_CODE" "$THRESHOLDS_JSON" > "$BRIEFING_TMP"; then
+  rm -f "$BRIEFING_TMP"
+  err "the CSV was appended but the AI briefing was not: $BRIEFING"
+  err "this run produced only half of its outputs, so it is being reported as a failure."
+  exit 2
+fi
+mv -f "$BRIEFING_TMP" "$BRIEFING"
+ln -sf "$BRIEFING" "$OUTPUT_DIR/reports/tablespace_${ORACLE_SID}_latest.json"
+log "briefing written: $BRIEFING"
+
 exit "$EXIT_CODE"
