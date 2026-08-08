@@ -1147,6 +1147,38 @@ test('rca: a tier that could not run is recorded as NA, never as absent', () => 
   assert.match(os.detail, /sudo|root/i);
 });
 
+test('rca: an INCOMPLETE collection never reports itself as OK', () => {
+  // Found by LOOKING at the rendered output rather than by a failing assertion.
+  // The document said overall_status OK over two tiers that were never read,
+  // while the exit code said 1, because the degradation flag was applied after
+  // the summary was computed and was never set at all under --render-only.
+  // Two outputs of one run disagreeing about whether the run succeeded is the
+  // exact class of defect this pack exists to expose in other people's tools.
+  //
+  // For a STATE briefing an NA among thirty OK checks should not move the
+  // summary, and it does not. For an INCIDENT collection it must, because the
+  // pack's whole thesis is that a tier nobody read is not a tier that was clean.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.ok(doc.summary.counts.NA > 0, 'the fixture has no NA checks, so this guard is asleep');
+  assert.equal(doc.summary.overall_status, 'WARN');
+  assert.equal(doc.collection.collector_exit_code, 1, 'the summary and the exit code disagree');
+
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+  assert.match(html, /2 of 6 checks could not be read/, 'the report does not state its own incompleteness');
+});
+
+test('rca: a count of one does not read as "1 times"', () => {
+  // Customer-facing prose in a paid product. Caught by reading the output.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const top = doc.incident.ordering_facts.find((f) => f.id === 'top_ora_codes');
+  assert.ok(top, 'no top-codes fact, so this guard is asleep');
+  assert.doesNotMatch(top.statement, /\b1 times\b/);
+  assert.match(top.statement, /ORA-01578 x3/);
+  assert.match(top.statement, /ORA-00600 x1/);
+});
+
 test('rca: the window and how it was resolved are both recorded', () => {
   // A triage that examined a different window than the operator meant is the
   // failure that matters most here, so the window is carried in the data.

@@ -251,7 +251,6 @@ fi
 
 TS_NOW="$(date '+%Y%m%d-%H%M%S')"
 SEQ=0
-DEGRADED=0
 
 # ---------------------------------------------------------------------------
 # COLLECT. Everything lands in ONE raw stream file, which is the only thing
@@ -306,7 +305,6 @@ EOF
     emit "CHK|ADR|OK|ADR paths|ADR home ${ADR_HOME}"
   else
     emit "CHK|ADR|NA|ADR paths|V\$DIAG_INFO returned no ADR home, so ADR-based collection is degraded. Needs SELECT on V\$DIAG_INFO."
-    DEGRADED=1
   fi
 
   # Alert log. Probe once, then take whichever route is actually available.
@@ -325,11 +323,9 @@ EOF
       SEQ=$((SEQ + ${EVT_ADDED:-0}))
     else
       emit "CHK|ALERT_ROWS|NA|Alert log rows|the alert log query returned nothing readable for this window"
-      DEGRADED=1
     fi
   else
     emit "CHK|ALERT|NA|Alert log source|X\$DBGALERTEXT is not readable, which needs SYS or an explicit X\$ grant. Falling back to the text alert log, whose timestamps are parsed rather than queried."
-    DEGRADED=1
     ALERT_TXT="${DIAG_TRACE:-}/alert_${ORACLE_SID}.log"
     if [ -r "$ALERT_TXT" ]; then
       cp "$ALERT_TXT" "$APPENDIX_DIR/alert_text.log" 2>/dev/null || true
@@ -350,12 +346,10 @@ EOF
         grep -E '^(SEC|CHK|MET)\|' "$TMP_AWR" >> "$RAW_FILE" || true
       else
         emit "CHK|AWR|NA|Workload evidence|the AWR query returned nothing for this window. AWR retention may not reach back this far."
-        DEGRADED=1
       fi
       ;;
     *)
       emit "CHK|AWR|NA|Workload evidence|control_management_pack_access is '${CMPA:-unset}', so DBA_HIST views were not read. Those views are licensed with the Oracle Diagnostics Pack. Stated as a fact about what was not read, not as advice about your licensing."
-      DEGRADED=1
       ;;
   esac
 
@@ -370,7 +364,6 @@ EOF
     emit "MET|LSNR|tns_errors|${LC}|lines"
   else
     emit "CHK|LSNR|NA|Listener log|not readable at the resolved ADR path, so listener evidence is absent rather than empty"
-    DEGRADED=1
   fi
 
   # OS tier. Reads only, and only when the account can actually read them.
@@ -382,7 +375,6 @@ EOF
     emit "CHK|OSTIER|OK|Operating system tier|system logs captured to the appendix"
   else
     emit "CHK|OSTIER|NA|Operating system tier|skipped. Running as $(id -un), which cannot read the system logs, and no passwordless sudo is available. Run as root, or grant passwordless sudo, to include this tier."
-    DEGRADED=1
   fi
 
   # The appendix manifest is written at collect time, so a replay describes the
@@ -520,7 +512,10 @@ if [ -n "$FIRST_OS" ] && [ -n "$FIRST_ORA" ]; then
   fi
 fi
 
-TOP_ORA="$(awk -F'|' '{ if (match($7, /ORA-[0-9]+/)) print substr($7, RSTART, RLENGTH) }' "$SORTED" 2>/dev/null | sort | uniq -c | sort -rn | head -3 | awk '{printf "%s (%s times), ", $2, $1}' | sed 's/, $//' || true)"
+# "x3" rather than "(3 times)", because the obvious phrasing emits "(1 times)"
+# for every code that appeared once, and a customer-facing paid report should
+# not need a reader to forgive its grammar.
+TOP_ORA="$(awk -F'|' '{ if (match($7, /ORA-[0-9]+/)) print substr($7, RSTART, RLENGTH) }' "$SORTED" 2>/dev/null | sort | uniq -c | sort -rn | head -3 | awk '{printf "%s x%s, ", $2, $1}' | sed 's/, $//' || true)"
 if [ -n "$TOP_ORA" ]; then
   add_fact "top_ora_codes" \
     "Most frequent database error codes in the window: ${TOP_ORA}" \
@@ -535,11 +530,37 @@ if [ -z "$FACTS_JSON" ]; then
     "Which of the checks above returned NA, and what each of them says would make it runnable."
 fi
 
+# ---------------------------------------------------------------------------
+# AN INCOMPLETE COLLECTION IS NOT AN OK COLLECTION, AND THIS IS DERIVED HERE
+# RATHER THAN DURING COLLECTION SO THAT A REPLAY AGREES WITH A FRESH RUN.
+#
+# The first version tracked a DEGRADED flag while collecting and applied it
+# after the summary had already been computed, so the document said
+# "overall_status: OK" while the exit code said 1, and under --render-only the
+# flag was never set at all. Two outputs of one run disagreeing about whether
+# the run succeeded is exactly the class of defect this pack exists to expose.
+#
+# For a state briefing an NA among thirty OK checks should not flip the summary.
+# For an INCIDENT collection it must: the pack's whole thesis is that a tier
+# nobody read is not a tier that was clean, and printing OK over two unread
+# tiers would be the report making that mistake itself.
+# ---------------------------------------------------------------------------
+CHECK_TOTAL=$((ODC_BR_COUNT_OK + ODC_BR_COUNT_WARN + ODC_BR_COUNT_CRIT + ODC_BR_COUNT_NA))
+if [ "$ODC_BR_COUNT_NA" -gt 0 ] && [ "$EXIT_CODE" -lt 1 ]; then
+  EXIT_CODE=1
+fi
+
 case "$EXIT_CODE" in
   0) OVERALL="OK";   OVERALL_CLASS="ok" ;;
   1) OVERALL="WARN"; OVERALL_CLASS="warn" ;;
   2) OVERALL="CRIT"; OVERALL_CLASS="crit" ;;
 esac
+
+if [ "$ODC_BR_COUNT_NA" -gt 0 ]; then
+  COMPLETENESS="${ODC_BR_COUNT_NA} of ${CHECK_TOTAL} checks could not be read, so this collection is incomplete"
+else
+  COMPLETENESS="all ${CHECK_TOTAL} checks were read"
+fi
 
 APPENDIX_JSON=''
 while IFS='|' read -r tag aname abytes adesc; do
@@ -592,7 +613,7 @@ cat > "$REPORT" <<HTML
 <div class="wrap">
   <h1>Incident Report</h1>
   <div class="meta">SID <strong>${ORACLE_SID}</strong> &middot; window <strong>${WINDOW_FROM}</strong> to <strong>${WINDOW_TO}</strong> (${WINDOW_RESOLVED_FROM}) &middot; generated $(date '+%Y-%m-%d %H:%M:%S %Z') &middot; OraDiscuss RCA Generator Pack v${VERSION} &middot; read-only</div>
-  <div class="summary"><span class="badge ${OVERALL_CLASS}">${OVERALL}</span><span class="big">Collection status: ${OVERALL}</span></div>
+  <div class="summary"><span class="badge ${OVERALL_CLASS}">${OVERALL}</span><span class="big">Collection status: ${OVERALL}</span><span>${COMPLETENESS}</span></div>
   ${ROWS_HTML}
   <h2>Reconstructed timeline (${EVENT_COUNT} events)</h2>
   <table><thead><tr><th>When</th><th>Source</th><th>Severity</th><th>Message</th></tr></thead><tbody>${TIMELINE_HTML}</tbody></table>
@@ -629,6 +650,6 @@ ln -sf "$BRIEFING" "$OUTPUT_DIR/rca/rca_${ORACLE_SID}_latest.json"
 log "report written: $REPORT"
 log "briefing written: $BRIEFING"
 log "window ${WINDOW_FROM} to ${WINDOW_TO}, ${EVENT_COUNT} events, collection status ${OVERALL}"
+log "collection completeness: ${COMPLETENESS}"
 log "hand the briefing to your own AI with prompts/incident-review.md - nothing left this machine."
-[ "$DEGRADED" -eq 1 ] && [ "$EXIT_CODE" -lt 1 ] && EXIT_CODE=1
 exit "$EXIT_CODE"
