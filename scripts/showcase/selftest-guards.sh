@@ -156,6 +156,28 @@ p.write_text(json.dumps(d,indent=2))\""
 expect_fail retouched-report "the shipped report is the pack template, unedited" \
   bash -c "perl -pi -e 's/Field-test release - validate in non-production first\.//' showcase/samples/healthcheck/report.html"
 
+# The dropped colour, put back where it used to be. The paint lands in the
+# header strip of a shipped PNG, which is where the old red dot sat, and the
+# mutation re-reads the pixel it just wrote: a break that did not land looks
+# exactly like a guard that passed. It also changes the file size, so the size
+# drift guard fires alongside. That is fine, expect_fail wants its own guard in
+# the list and does not care what else is there.
+expect_fail red-chrome-pixel "no Oracle red in the chrome of any shipped showcase image" \
+  bash -c "python3 -c \"
+from PIL import Image
+p = 'showcase/samples/healthcheck/images/healthcheck-report-summary@2x.png'
+im = Image.open(p).convert('RGB')
+for x in range(200, 240):
+    for y in range(150, 170):
+        im.putpixel((x, y), (199, 70, 52))
+im.save(p)
+back = Image.open(p).convert('RGB').getpixel((210, 160))
+assert back == (199, 70, 52), 'the paint did not land, it reads %r' % (back,)
+\""
+
+expect_fail red-in-template "no showcase template carries the dropped Oracle red" \
+  bash -c "perl -pi -e 's/#8A4B12/#C74634/g' scripts/templates/frame.html && grep -q C74634 scripts/templates/frame.html"
+
 echo
 echo "=== self test summary: $PASS observed, $FAIL not observed ==="
 [ "$FAIL" -eq 0 ]

@@ -113,8 +113,9 @@ The frame template is `scripts/showcase/templates/frame.html`. It is a real page
 
 - **Background**: brand Field `#FAFBFD` from `DESIGN.md`. Flat. No gradient, no aurora, no texture. The artefact is the subject; the frame is a mount.
 - **The artefact panel**: 1px hairline `#DFE5EE`, 14px radius, `0 18px 44px rgba(11,27,52,.11)` shadow. The Health Check report is a dark surface on a light mount, and that contrast is the point: it reads as a product screenshot on a brand page rather than as a page that cannot decide on a theme.
-- **Header strip**: an Oracle red `#C74634` dot, then the wordmark `OraDiscuss` at 19px/700, tracking -.018em. On the right, the artefact tag in mono, 11px, uppercase, .12em tracking, ink 3 `#626C80`. Format: `PACK NAME vX.Y.Z · FILENAME`.
-- **Caption strip**: a `SYNTHETIC LAB DATA` pill outlined in Oracle red, then the provenance sentence in bold ink, then one or two sentences of plain description in ink 2 `#4D5A74`. Max 78ch.
+- **Header strip**: an accent `#8A4B12` dot, then the wordmark `OraDiscuss` at 19px/700, tracking -.018em. On the right, the artefact tag in mono, 11px, uppercase, .12em tracking, ink 3 `#626C80`. Format: `PACK NAME vX.Y.Z · FILENAME`.
+- **Caption strip**: a `SYNTHETIC LAB DATA` pill outlined in the same accent `#8A4B12`, then the provenance sentence in bold ink, then one or two sentences of plain description in ink 2 `#4D5A74`. Max 78ch.
+- **Oracle red `#C74634` is dropped entirely, and that is a CLOSED founder decision, re-confirmed 8 Aug 2026.** The reason: PRODUCT.md names Oracle's own marketing as an anti-reference and the Terms disclaim affiliation, so borrowing Oracle's red contradicts both. The showcase accent is `#8A4B12`, which measures 6.23:1 on this frame background. **`DESIGN.md` still carries the old red and is STALE against that decision**, so a future seat must not re-derive the accent from it: this defect reached shipped PNGs exactly that way, and red baked into a binary asset is red that has to be re-rendered later. The rest of the ratified palette (ground `#F7F5F1`, ink `#1C1917`, signal `#E0A020` as marks only and never as a word) is the Design seat's Phase 2b work and is deliberately NOT applied to this frame. The frame background, hairline, shadow and ink values below are unchanged and stay that way until that seat lands.
 - **No webfonts.** An asset that renders differently depending on whether a font server answered is not a reproducible asset. Sora, Archivo and JetBrains Mono are the site's brand faces; the showcase frame uses the system UI and system mono stacks so the same command produces the same pixels on any machine. If brand fonts are ever wanted here, they must be checked in as files first.
 - **No inline `<script>` in any showcase template.** None is needed, and a dead inline script is invisible in markup: a single `//` comment inside a one-line emitted script has killed a whole page in this project before. Reveal sequences are produced by generating one file per state, not by animating in the page.
 - **No Oracle logo, ever.** The ACE Associate badge is the only Oracle programme mark permitted anywhere in this project, under the personal use limits.
@@ -143,6 +144,7 @@ scripts/showcase/
   build.mjs                     the one entry point
   capture.mjs                   the Chrome/CDP rig
   stitch.py                     PIL: stitch tiles, pan frames, LANCZOS resize
+  check-chrome-colour.py        PIL: the frame chrome of a shipped PNG, measured
   render-sample.sh              drives the REAL pack through --render-only
   verify-tiling.mjs             proves the tiling path against the single shot path
   selftest-guards.sh            breaks one thing per case and watches each guard fire
@@ -221,7 +223,9 @@ The data path is a flag. The honesty strings are hand edits on purpose: they are
 - the provenance sentence is present verbatim in this file and on every manifest entry, and the frame template that burns it into the pixels still contains it;
 - image dimensions on disk match the manifest, are exactly 2560 device px wide, and are even in both axes;
 - the capture constants in the manifest match the numbers in section 3 of this file;
-- sanitization: only the allowed SIDs appear, every IPv4 literal is in a documentation range, and every dotted token in the lab inputs is on the declared allowlist.
+- sanitization: only the allowed SIDs appear, every IPv4 literal is in a documentation range, and every dotted token in the lab inputs is on the declared allowlist;
+- **no Oracle red family pixel in the frame chrome of any shipped image**, measured in the PIXELS of the delivered PNG by `scripts/showcase/check-chrome-colour.py` rather than in the CSS, because a stylesheet can be corrected while a red asset stays on disk. It is scoped to the header strip above the artefact panel and the caption strip below it, so the pack's own dark report theme inside the panel, whose CRIT badge `#FF6B4A` is pack output rather than brand chrome, is not caught. The panel is found by locating the longest run of dark rows, never assumed at a fixed row, and every derived boundary is sanity checked loudly: a detector that silently finds no panel would report clean for a fully red image;
+- no showcase template names the dropped Oracle red, which is the only check that reaches the terminal frames the video is cut from, since those never become a framed PNG.
 
 **Every one of these must be watched failing against deliberately broken input before it is trusted.** That is not a manual ritual anybody has to remember. The test reads its roots from `SHOWCASE_DIR` and `SHOWCASE_SCRIPTS`, and there is a harness that copies both, breaks exactly one thing per case, and fails unless the guard built to catch it actually fires:
 
@@ -229,7 +233,7 @@ The data path is a flag. The honesty strings are hand edits on purpose: they are
 npm run test:showcase-guards
 ```
 
-It also asserts that an untouched copy passes, because a suite that fails on everything catches nothing. Every case is one line, so adding a guard means adding its breakage in the same commit. Twenty one cases were observed on 8 Aug 2026: twenty guards fired, and the untouched copy passed.
+It also asserts that an untouched copy passes, because a suite that fails on everything catches nothing. A case is short enough to write in the same commit as the guard it exercises, and adding a guard without its breakage is how a guard nobody has watched fire gets shipped. Twenty three cases were observed on 8 Aug 2026: twenty two guards fired, and the untouched copy passed. That count is the number this harness prints, so update it here when a case is added.
 
 Two things that harness has already caught, both invisible by reading:
 
