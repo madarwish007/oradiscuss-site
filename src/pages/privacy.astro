@@ -11,7 +11,8 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <p>
     OraDiscuss keeps no customer database in the usual sense: no table of names, addresses or emails
     anywhere under our control. Your email address lives with our email provider, your
-    payment details live with Paddle, and neither is copied into a store of our own. That is a
+    payment details live with the Merchant of Record that processed your purchase, and neither is
+    copied into a store of our own. That is a
     deliberate design decision rather than a promise about future good behaviour: the safest way to
     never leak personal data is to never hold it.
   </p>
@@ -32,12 +33,14 @@ import LegalLayout from '../layouts/LegalLayout.astro';
       cannot be traced back to a person, including by us.
     </li>
     <li>
-      <strong>Purchase data</strong>, handled entirely by Paddle as Merchant of Record. We never see
-      or store your card details. Paddle does, as a PCI DSS compliant processor.
+      <strong>Purchase data</strong>, handled entirely by a Merchant of Record, either Paddle or
+      Lemon Squeezy as shown at checkout. We never see or store your card details. They do, as PCI
+      DSS compliant processors.
     </li>
     <li>
       <strong>Membership access.</strong> To recognise a paying member without holding a customer
-      record, we store a one-way hash of the Paddle transaction reference. It is not derived from
+      record, we store a one-way hash of the transaction reference from the Merchant of Record. It
+      is not derived from
       your email or name, it cannot be reversed to them, and we delete it on request; deleting it
       ends member access.
     </li>
@@ -65,13 +68,15 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <ul>
     <li><strong>Cloudflare</strong>: hosting, storage, security, and the bot check on our forms (global).</li>
     <li><strong>Paddle</strong>: payments, tax, invoicing and Merchant of Record (UK and global).</li>
+    <li><strong>Lemon Squeezy</strong>: payments, tax, invoicing and Merchant of Record (USA and global).</li>
     <li><strong>beehiiv</strong>: the email list and member sends (USA and global).</li>
     <li><strong>Google</strong>: the mailbox behind our support address, so anything you email us is stored there (USA and global).</li>
     <li><strong>Microsoft</strong>: the mail client used to read that mailbox synchronises through its servers (USA and global).</li>
   </ul>
   <p>
-    That is the whole list. If it grows, this page changes before the provider is used, not
-    afterwards.
+    That is the whole list. Only one payment provider handles any given purchase: the one shown at
+    checkout and on your receipt. If the list grows, this page changes before the provider is used,
+    not afterwards.
   </p>
 
   <h2>5. Bot protection on forms</h2>
@@ -90,8 +95,9 @@ import LegalLayout from '../layouts/LegalLayout.astro';
   <h2>7. Retention</h2>
   <p>
     Your subscription to the list lasts until you unsubscribe, which you can do from any email we
-    send. Transaction records are retained by Paddle under its own retention and accounting
-    obligations. Our own technical logs are kept for weeks, not months. Roadmap counters are
+    send. Transaction records are retained by the Merchant of Record that processed your purchase,
+    under its own retention and accounting obligations. Our own technical logs are kept for weeks,
+    not months. Roadmap counters are
     permanent but contain no personal data to retain.
   </p>
 
