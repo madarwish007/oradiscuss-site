@@ -23,6 +23,8 @@ import { handleApi } from './worker/api.js';
 import { changelogPage } from './worker/changelog.js';
 import { handleRetryBatch } from './worker/webhook.js';
 import { withSecurityHeaders } from './worker/http.js';
+import { watchIndexPage, watchBriefPage } from './worker/watch-pages.js';
+import { runWatch } from './worker/watch.js';
 
 const BLOCKED = [
   /^\/wp-login\.php$/i,
@@ -86,6 +88,28 @@ export default {
       }
     }
 
+    // The Security Watch archive, on the same principle as the changelog: the
+    // built page carries the design, D1 carries the briefs. Only PUBLISHED
+    // briefs are ever read; see worker/watch-pages.js.
+    if (pathname === '/watch' || pathname === '/watch/') {
+      try {
+        return withSecurityHeaders(await watchIndexPage(request, env));
+      } catch (err) {
+        console.error('watch_index_error', err?.stack ?? err);
+        return withSecurityHeaders(await env.ASSETS.fetch(request));
+      }
+    }
+
+    if (pathname.startsWith('/watch/')) {
+      const slug = pathname.slice('/watch/'.length).replace(/\/+$/, '');
+      try {
+        return withSecurityHeaders(await watchBriefPage(request, env, slug));
+      } catch (err) {
+        console.error('watch_brief_error', err?.stack ?? err);
+        return withSecurityHeaders(await env.ASSETS.fetch(request));
+      }
+    }
+
     return withSecurityHeaders(await env.ASSETS.fetch(request));
   },
 
@@ -93,5 +117,30 @@ export default {
   // queue must exist before a deploy carrying this binding will succeed.
   async queue(batch, env) {
     await handleRetryBatch(batch, env);
+  },
+
+  // THE SECURITY WATCH CRON. It drafts and it stops.
+  //
+  // It cannot publish and it cannot mail anybody: publishing a brief is a
+  // founder gate (RUNBOOK, THE STANDING GATES), and the only code that flips a
+  // brief live or calls the list lives in worker/watch-publish.js behind a
+  // token, reached only by an HTTP request a person makes. Nothing in the call
+  // graph below touches either.
+  async scheduled(event, env) {
+    try {
+      const summary = await runWatch(env);
+      const failed = summary.sources.filter((s) => !s.ok).map((s) => s.id);
+      console.log(
+        'watch_run_complete',
+        `sources=${summary.sources.length}`,
+        `failed=${failed.join(',') || 'none'}`,
+        `items_new=${summary.items_new}`,
+        `draft=${summary.brief?.slug ?? 'none'}`,
+      );
+    } catch (err) {
+      // A scheduled run that throws leaves no reply anybody would see, so the
+      // log line is the whole record. The next run is a week away.
+      console.error('watch_run_failed', err?.stack ?? err);
+    }
   },
 };

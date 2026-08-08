@@ -30,6 +30,12 @@ const PAGES = [
   // actually renders, which is a different document.
   'reissue/index.html',
   'changelog/index.html',
+  // Phase 8. Both /watch/ pages are covered TWICE, for the same reason
+  // /changelog/ is: this guard reads the built shell, and test/watch.test.js
+  // reads the page the Worker actually renders out of D1, which is a different
+  // document and is where a database row could put an em dash on the page.
+  'watch/index.html',
+  'watch/brief/index.html',
 ];
 
 function read(page) {
