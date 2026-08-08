@@ -1,0 +1,136 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+/* THE TEMPLATE FOR ONE BRIEF, and it deliberately holds no brief.
+
+   Astro builds static pages, and a brief does not exist until a person
+   publishes one, so there is no build time list to generate pages from. This
+   file is built once as the SHELL, and the Worker serves every /watch/<slug>/
+   URL by filling its slot from D1 and rewriting the title, description and
+   canonical to the brief being served. See worker/watch-pages.js.
+
+   IT SHIPS noindex, AND THAT IS LOAD BEARING. The shell is a real URL at
+   /watch/brief/ that anybody could request, and on its own it says nothing. The
+   Worker STRIPS the robots meta when it injects a published brief, so a real
+   brief is indexable and the empty shell never is. If the Worker fails, the
+   page that survives is the one telling search engines to ignore it, which is
+   the safe direction to fail in.
+
+   Only status = 'live' rows are ever served here. A draft is not reachable by
+   guessing its slug: the query does not select it. */
+---
+<BaseLayout
+  title="Security Watch brief"
+  description="A published Security Watch brief, rendered from the brief record."
+  noindex={true}
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv"><a href="/watch/">Security Watch</a></p>
+      <div id="watch-brief" class="wb-slot" data-slot="watch-brief">
+        <h1 class="rv">Security Watch</h1>
+        <p class="capp-lede rv">
+          This brief is read from the database when the page is served, and it could not be read
+          just now. Nothing is shown rather than something out of date.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <div class="i-shell wb-wrap">
+    <section class="capp-sec wb-note rv">
+      <h2>Reading this brief</h2>
+      <p>
+        Every item above links to Oracle&#39;s own page, which is the authority. This brief points at
+        it and never reproduces it. My Oracle Support is not covered here: it needs an authenticated
+        session, so anything from it is added by a person or not at all.
+      </p>
+      <p>
+        <a href="/watch/">Every published brief</a> is listed in the archive.
+      </p>
+    </section>
+  </div>
+
+</div>
+</BaseLayout>
+
+<style is:global>
+  /* Global rather than scoped: the Worker injects this content, and a scoped
+     rule compiles to an attribute selector that would match none of it. */
+  .wb-wrap {
+    display: grid;
+    gap: clamp(40px, 5vw, 64px);
+    padding-bottom: clamp(64px, 8vw, 104px);
+    min-width: 0;
+  }
+
+  .wb-meta {
+    margin-top: 10px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+
+  .wb-body {
+    margin-top: 18px;
+    max-width: 68ch;
+  }
+
+  .wb-body p {
+    margin-top: 12px;
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--ink2);
+  }
+
+  .wb-body p:first-child {
+    margin-top: 0;
+  }
+
+  .wb-cites {
+    margin-top: 26px;
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .wb-cite {
+    padding: 18px 0;
+    border-bottom: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .wb-cite a {
+    font-family: var(--jb);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid var(--hair);
+    word-break: break-word;
+  }
+
+  .wb-cite a:hover {
+    border-bottom-color: currentColor;
+  }
+
+  .wb-cite p {
+    margin-top: 6px;
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+</style>

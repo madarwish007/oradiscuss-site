@@ -21,7 +21,19 @@
 
 import { json } from './http.js';
 
-const SLOT_OPEN = /<div[^>]*data-slot="changelog"[^>]*>/;
+// The slot name is a parameter rather than a constant, because /watch/ fills
+// slots of its own with the same injector. It was a literal "changelog" until
+// Phase 8, and the first watch page silently served its fallback because of it:
+// the injector found no slot, returned null, and the page that reached the
+// browser was the honest one saying the record could not be read. That failure
+// mode is the right one, and it is also why the guard that caught it asserts
+// the CONTENT rather than the status code.
+const SLOT_NAME = /^[a-z][a-z0-9-]{2,40}$/;
+
+function slotOpener(name) {
+  if (!SLOT_NAME.test(name)) throw new Error(`unusable slot name: ${name}`);
+  return new RegExp(`<div[^>]*data-slot="${name}"[^>]*>`);
+}
 
 export async function readChangelog(env) {
   const { results } = await env.DB.prepare(
@@ -78,7 +90,7 @@ export function renderNotes(bodyMd) {
 // marker, while an ISO string from the release pipeline carries one. Both are
 // handled, and anything else is escaped and shown as it was stored rather than
 // silently becoming "Invalid Date".
-function formatDate(value) {
+export function formatDate(value) {
   if (typeof value !== 'string' || value.length === 0) return '';
   const iso = value.replace(' ', 'T');
   const zoned = /([Zz]|[+-]\d{2}:?\d{2})$/.test(iso) ? iso : `${iso}Z`;
@@ -123,8 +135,8 @@ export function renderEntries(entries) {
 // around it alone. It refuses rather than guesses: if the slot is absent, or if
 // somebody has nested a div inside it so the closing tag is ambiguous, this
 // returns null and the caller serves the static page.
-export function injectIntoSlot(html, replacement) {
-  const open = SLOT_OPEN.exec(html);
+export function injectIntoSlot(html, replacement, name = 'changelog') {
+  const open = slotOpener(name).exec(html);
   if (!open) return null;
   const innerStart = open.index + open[0].length;
   const end = html.indexOf('</div>', innerStart);

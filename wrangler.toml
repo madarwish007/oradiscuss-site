@@ -31,7 +31,12 @@ not_found_handling = "404-page"
 # /changelog/ is listed for the opposite reason: the built page DOES exist as an
 # asset, so without this the Worker never runs and the page ships with its
 # "could not be read" fallback instead of the releases from D1.
-run_worker_first = ["/api/*", "/changelog", "/changelog/"]
+#
+# /watch/* is listed for BOTH reasons at once. The archive index exists as an
+# asset and needs the Worker to fill it, and a per brief URL does not exist as
+# an asset at all: it is rendered into the built /watch/brief/ shell from D1, so
+# without this line every published brief would answer with the 404 page.
+run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/", "/watch/*"]
 
 [observability]
 enabled = true
@@ -104,6 +109,28 @@ max_batch_size = 10
 max_batch_timeout = 30
 max_retries = 5
 
+# ------------------------------------------------------- SECURITY WATCH CRON
+#
+# READ THIS BEFORE THE NEXT PRODUCTION DEPLOY. This trigger is DECLARED here and
+# ARMING IT IS A FOUNDER ACTION, because a production deploy is one. Nothing in
+# this branch armed it: no seat deployed anything.
+#
+# 0 6 * * 1 is 06:00 UTC every Monday. It runs the DRAFTING job and only the
+# drafting job: worker.js `scheduled` calls runWatch, which fetches the registry
+# sources and writes a draft. It cannot publish and it cannot mail the list.
+# Publishing the weekly brief is a founder gate (RUNBOOK, THE STANDING GATES),
+# so the schedule decides when a draft is READY, never when one goes out.
+#
+# WHAT THIS SCHEDULE DOES AND DOES NOT PROMISE, stated plainly because a live
+# legal page uses the word "weekly": a weekly cron guarantees a weekly DRAFT. It
+# cannot guarantee a weekly PUBLISHED brief, because a person publishes. See the
+# session report and open item SC4 in SESSION_HANDOFF.md.
+#
+# Verifying the pipeline needs NO cron at all: POST /api/watch/run takes exactly
+# the same path behind the same token.
+[triggers]
+crons = ["0 6 * * 1"]
+
 # ------------------------------------------------------------------- PREVIEW
 
 [env.preview]
@@ -113,7 +140,7 @@ name = "oradiscuss-site-preview"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/api/*", "/changelog", "/changelog/"]
+run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/", "/watch/*"]
 
 [env.preview.observability]
 enabled = true
@@ -152,3 +179,14 @@ queue = "webhook-retry-preview"
 max_batch_size = 10
 max_batch_timeout = 30
 max_retries = 5
+
+# NO CRON ON PREVIEW, stated explicitly rather than left to inheritance.
+# `triggers` is an inheritable key, so an empty top level would not have been
+# enough: a preview deploy would have silently armed the production schedule
+# against the preview database. An empty list is the difference between "we
+# decided not to" and "nobody thought about it".
+#
+# To watch the pipeline run on preview, call POST /api/watch/run with the
+# WATCH_ADMIN_TOKEN. It is the same code path the cron takes.
+[env.preview.triggers]
+crons = []

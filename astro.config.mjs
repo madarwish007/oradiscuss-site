@@ -9,7 +9,15 @@ import react from '@astrojs/react';
 
 export default defineConfig({
   site: 'https://oradiscuss.com',
-  integrations: [mdx(), sitemap(), react()],
+  integrations: [
+    mdx(),
+    /* /watch/brief/ is a SHELL, not a page. Every published brief is rendered
+       into it from D1 at request time, so the built file has no content of its
+       own and must never be offered to a crawler as one. It also ships noindex;
+       the Worker strips that meta only when it injects a real brief. */
+    sitemap({ filter: (page) => !page.endsWith('/watch/brief/') }),
+    react(),
+  ],
   /* The membership page was reviewed at /instrument/ before it became the home.
      Anyone holding that URL should land on the real page, not a 404. */
   redirects: {

@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+/* THE ARCHIVE PAGE CARRIES NO BRIEFS, exactly as the changelog page carries no
+   releases. Founder ruling, 5 Aug: truth lives in data, pages render from it,
+   automation writes it.
+
+   So this file holds the design and the promises, and the list of published
+   briefs is read from the D1 `watch_brief` table by the Worker, which fills the
+   data-slot element below on the way past. See worker/watch-pages.js.
+
+   ONLY PUBLISHED BRIEFS EXIST HERE. The query behind that slot filters on
+   status = 'live' by equality, so a draft cannot appear on this page even by
+   accident, and a status word invented in future is invisible to it until
+   somebody deliberately teaches the query about it.
+
+   The fallback sentence inside the slot is written to be TRUE in both cases
+   where it survives to the browser: when the Worker did not run at all, and
+   when it ran and the database could not be read. */
+
+const facts = [
+  ['01', 'Official Oracle sources only', "The watcher reads Oracle's own advisory index: Critical Patch Updates, the monthly Critical Security Patch Updates, out of cycle Security Alerts, and the Solaris third party bulletins. Public pages, cited and linked, never copied."],
+  ['02', 'My Oracle Support is not covered', 'MOS needs an authenticated session and cannot be read by a machine. Nothing here claims MOS coverage. A MOS note reaches a brief only when a person puts it there.'],
+  ['03', 'A person publishes, never the machine', 'The job writes drafts and stops. Every brief on this page was read by a human being before it appeared, and nothing here goes out on a schedule.'],
+];
+---
+<BaseLayout
+  title="Security Watch: Oracle advisories, read and cited"
+  description="Published Security Watch briefs. Each one cites Oracle's own Critical Patch Update advisories and security alerts, with a link to the source. Drafted automatically from official Oracle sources, published only after a person has read it."
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Security Watch</p>
+      <h1 class="rv" style="--d:70ms">Security Watch</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        What Oracle published, what it touches, and where to read the original. The list below is
+        generated from the brief record at request time, so it cannot quietly disagree with what was
+        actually published.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell wa-wrap">
+    <div id="watch-stream" class="wa-stream" data-slot="watch-index">
+      <p class="wa-empty">
+        The brief list is read from the database when this page is served, and it could not be read
+        just now. Nothing is shown rather than a stale list.
+      </p>
+    </div>
+
+    <section class="capp-sec wa-note rv">
+      <h2>How this list is made</h2>
+      <ol class="capp-ledger">
+        {facts.map(([n, name, what]) => (
+          <li><b>{n}</b><span><strong>{name}</strong>{what}</span></li>
+        ))}
+      </ol>
+      <p>
+        Oracle is the authority on its own advisories. Every item links to Oracle&#39;s page, and if
+        this brief and that page ever disagree, that page is right.
+      </p>
+    </section>
+  </div>
+
+</div>
+</BaseLayout>
+
+<style is:global>
+  /* Global rather than scoped, for the same reason the changelog page is: Astro
+     scoped styles compile to attribute selectors that match only elements Astro
+     rendered, and the entries here are injected by the Worker, so every scoped
+     rule would miss exactly the content this page exists to show. */
+  .wa-wrap {
+    display: grid;
+    gap: clamp(40px, 5vw, 64px);
+    padding-bottom: clamp(64px, 8vw, 104px);
+    min-width: 0;
+  }
+
+  .wa-stream {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .wa-empty {
+    padding: 26px 0;
+    max-width: 60ch;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink3);
+  }
+
+  .wa-entry {
+    padding: 26px 0;
+    border-bottom: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .wa-title {
+    font-family: var(--jb);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+  }
+
+  .wa-title a {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid var(--hair);
+  }
+
+  .wa-title a:hover {
+    border-bottom-color: currentColor;
+  }
+
+  .wa-meta {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+</style>
