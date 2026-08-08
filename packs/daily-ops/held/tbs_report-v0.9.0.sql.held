@@ -1,0 +1,65 @@
+-- ============================================================================
+-- OraDiscuss - Daily Operations Pack v0.9.0 (field-test release)
+-- sql/tbs_report.sql - tablespace usage/autoextend/shrink-candidate report.
+-- READ-ONLY: SELECT only.
+--
+-- Args: &1=TS_WARN &2=TS_CRIT &3=VIEW_PREFIX (DBA|CDB) &4=RAW_OUTPUT_FILE
+-- Emits SEC|/CHK| lines spooled to &4.
+-- ============================================================================
+
+SET PAGES 0 FEEDBACK OFF HEADING OFF VERIFY OFF LINES 4000 TRIMSPOOL ON
+WHENEVER SQLERROR EXIT SQL.SQLCODE
+
+DEFINE ts_warn = &1
+DEFINE ts_crit = &2
+DEFINE vp      = &3
+
+SPOOL &4
+
+PROMPT SEC|Tablespace usage & bigfile flag
+-- bigfile matters: 23ai NEW databases default SYSTEM/SYSAUX/USER to BIGFILE
+-- (fewer, larger files) - resize, don't add, on bigfile tablespaces.
+SELECT 'CHK|TS_' || t.tablespace_name || '|' ||
+       CASE WHEN m.used_percent >= &ts_crit THEN 'CRIT'
+            WHEN m.used_percent >= &ts_warn THEN 'WARN' ELSE 'OK' END || '|' ||
+       'Tablespace ' || t.tablespace_name || '|' ||
+       ROUND(m.used_percent,1) || '% used, ' || t.bigfile || ' bigfile, status ' || t.status
+  FROM &vp._tablespaces t
+  JOIN dba_tablespace_usage_metrics m ON m.tablespace_name = t.tablespace_name
+ ORDER BY m.used_percent DESC;
+
+PROMPT SEC|Autoextend policy per datafile
+SELECT 'CHK|AE|' || CASE autoextensible WHEN 'YES' THEN 'OK' ELSE 'WARN' END || '|' ||
+       'Autoextend ' || tablespace_name || '|' || file_name || ': autoextensible=' ||
+       autoextensible ||
+       CASE WHEN autoextensible = 'YES'
+            THEN ', next ' || ROUND(increment_by * (SELECT value FROM v$parameter WHERE name='db_block_size')/1048576) ||
+                 ' MB, max ' || ROUND(maxbytes/1073741824,1) || ' GB'
+            ELSE ' (fixed size ' || ROUND(bytes/1073741824,1) || ' GB - plan capacity manually)' END
+  FROM &vp._data_files
+ ORDER BY tablespace_name, file_name;
+
+PROMPT SEC|Shrink & fragmentation candidates (hints, not advice)
+-- Datafiles with substantial free space: candidates for RESIZE smaller.
+SELECT 'CHK|SHRINK_' || ROWNUM || '|OK|Shrink candidate|' || file_name || ': ' ||
+       ROUND(bytes/1073741824,1) || ' GB allocated, ' ||
+       ROUND((bytes - NVL((SELECT SUM(f.bytes) FROM &vp._free_space f WHERE f.file_id = d.file_id),0))/1073741824,1) ||
+       ' GB in use - review before any RESIZE (check high-water mark first)'
+  FROM &vp._data_files d
+ WHERE bytes > 1073741824
+   AND NVL((SELECT SUM(f.bytes) FROM &vp._free_space f WHERE f.file_id = d.file_id),0) / bytes > 0.30
+   AND ROWNUM <= 20;
+
+-- Tables chained into many extents: mild fragmentation hint on dictionary-
+-- managed or heavily extended segments. Informational only.
+SELECT 'CHK|FRAG_' || ROWNUM || '|OK|Fragmentation hint|' || owner || '.' || segment_name ||
+       ' (' || tablespace_name || '): ' || extents || ' extents, ' ||
+       ROUND(bytes/1073741824,2) || ' GB - consider SHRINK SPACE or MOVE ONLINE (12.2+) during a window'
+  FROM (SELECT owner, segment_name, segment_type, tablespace_name, extents, bytes
+          FROM &vp._segments
+         WHERE segment_type IN ('TABLE','INDEX')
+         ORDER BY extents DESC)
+ WHERE extents > 1000 AND ROWNUM <= 20;
+
+SPOOL OFF
+EXIT

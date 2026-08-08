@@ -56,19 +56,42 @@ const PACKS = [
     expects: [
       'daily_analysis.sh',
       'env_collector.sh',
+      'tbs_manager.sh',
       'lib/odc_briefing.sh',
       'schema/briefing.schema.json',
       'prompts/morning-triage.md',
       'prompts/environment-review.md',
+      'prompts/tablespace-capacity.md',
       'sql/daily_analysis.sql',
+      'sql/tbs_report.sql',
     ],
     // Empty on purpose, and it is asserted as empty. The v0.9 daily-ops set
     // contained the pack's only two real mutation surfaces (tbs_manager's
-    // generated ALTER statements and redef_assistant's CREATE TABLE), and
-    // neither ships here.
+    // generated statements and redef_assistant's CREATE TABLE), and neither
+    // ships here. tbs_manager ships REPORT-ONLY: the generator paths are held
+    // in held/, out of the product, rather than allowlisted into it.
     allowlist: [],
   },
 ];
+
+// ---------------------------------------------------------------------------
+// EVERY CONFIG VARIABLE A SHIPPED SCRIPT REFUSES TO RUN WITHOUT.
+//
+// Read out of the scripts themselves below, never hand-listed here, because a
+// hand-list is the thing that goes stale. The pack's documented primary path is
+// "run env_collector.sh, it writes you a config", so a script that starts
+// requiring a new variable while the generator does not write it produces a
+// config that makes that script exit 2 on the very first run.
+//
+// That is the fan-out-by-name trap this repo has now hit three times in
+// orchestrate.sh and once here. The guard is the fix; remembering is not.
+// ---------------------------------------------------------------------------
+function requiredConfigVars(src) {
+  // Matches the house idiom: for v in A B C ...; do ... required ... done
+  const m = /\bfor\s+v\s+in\s+([\s\S]*?);?\s*do\b/.exec(src);
+  if (!m) return [];
+  return m[1].split(/[\s\\]+/).filter((t) => /^[A-Z][A-Z0-9_]*$/.test(t));
+}
 
 // Files that are deliberately IDENTICAL in every pack that ships them. Each
 // pack is sold and downloaded on its own, so it has to be self-contained, but
@@ -176,9 +199,49 @@ function dynamicSqlFindings(src) {
   return findings;
 }
 
+// ---------------------------------------------------------------------------
+// A SQL*Plus DIRECTIVE LINE IS A STATEMENT BOUNDARY, AND THE GATE DID NOT KNOW.
+//
+// FOUND 8 Aug while self-testing the tbs_manager conversion, and it is the most
+// serious defect this file has carried. The gate checked the FIRST token after
+// each semicolon. SQL*Plus directives (PROMPT, SET, SPOOL, DEFINE, WHENEVER,
+// EXIT) are not semicolon terminated, so any mutation written after one sat in
+// the SAME chunk, behind a first token of PROMPT or SET, and was invisible:
+//
+//   PROMPT SEC|Usage
+//   ALTER TABLESPACE users ADD DATAFILE '/tmp/x.dbf' SIZE 1G;   <- reported clean
+//
+// Every collector .sql in this product is built out of PROMPT lines, so the
+// blind spot sat directly over the files the gate exists to protect. It was not
+// caught earlier because the gate's own self-tests all used BARE statements,
+// which is the one shape it did handle. A self-test that only feeds a guard the
+// input it was written for proves nothing about the input it will meet.
+//
+// THE FIX ADDS BOUNDARIES, IT NEVER DELETES TEXT. Deleting the directive line
+// would have been simpler and would have opened a second hole, because
+// `PROMPT starting; DROP TABLE x;` carries a real statement on a directive
+// line. Appending a semicolon to the end of the line creates the boundary and
+// keeps every byte, so nothing can hide in what was removed.
+// ---------------------------------------------------------------------------
+
+const SQLPLUS_DIRECTIVES = [
+  'SET', 'DEFINE', 'UNDEFINE', 'SPOOL', 'PROMPT', 'WHENEVER', 'EXIT', 'QUIT',
+  'REM', 'REMARK', 'COLUMN', 'COL', 'VARIABLE', 'VAR', 'ACCEPT', 'TTITLE',
+  'BTITLE', 'CONNECT', 'DISCONNECT', 'HOST', 'START', 'PAUSE', 'CLEAR',
+];
+
+function markStatementBoundaries(src) {
+  const directive = new RegExp(`^([ \\t]*(?:${SQLPLUS_DIRECTIVES.join('|')})\\b[^\\n]*)$`, 'gim');
+  return src
+    .replace(directive, '$1;')
+    // A lone / runs the buffered block, and @ or @@ calls another script. Both
+    // end whatever came before them.
+    .replace(/^([ \t]*(?:@{1,2}|\/)[^\n]*)$/gm, '$1;');
+}
+
 function sqlMutations(src) {
   const found = [];
-  for (const stmt of stripSqlComments(src).split(';')) {
+  for (const stmt of markStatementBoundaries(stripSqlComments(src)).split(';')) {
     const first = stmt.trim().split(/\s+/)[0];
     if (first && MUTATION_VERBS.includes(first.toUpperCase())) found.push(first.toUpperCase());
   }
@@ -195,17 +258,32 @@ function shellMutations(src) {
   return found;
 }
 
+const NOT_SHIPPED_DIRS = [
+  'test-fixtures', // drives this repo's tests, not part of the product
+  'held', // code the founder ruled DISABLED NOT DELETED; see any pack's held/README.md
+];
+
 function packFiles(dir, acc = []) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
     if (statSync(full).isDirectory()) {
-      if (name === 'test-fixtures') continue; // fixtures are not shipped
+      if (NOT_SHIPPED_DIRS.includes(name)) continue;
       packFiles(full, acc);
     } else {
       acc.push(full);
     }
   }
   return acc;
+}
+
+// Held files, enumerated separately BECAUSE they are excluded above. An
+// exclusion with nothing checking it is how a directory quietly rejoins the
+// product: somebody moves a file, the shipped-set guards never look at it, and
+// the read-only gate reports green over code it was never shown.
+function heldFiles(packDir) {
+  const dir = join(packDir, 'held');
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir).filter((n) => n !== 'README.md');
 }
 
 // Every registered pack, resolved once: its directory and its shipped paths.
@@ -330,6 +408,40 @@ test('SELF-TEST: the read-only gate actually fires on a mutation', () => {
   assert.deepEqual(sqlMutations('-- CREATE TABLE in a comment\nSELECT 1 FROM dual;'), []);
 });
 
+test('SELF-TEST: a mutation hiding behind a SQL*Plus directive line is caught', () => {
+  // EVERY ONE OF THESE WAS MISSED before 8 Aug, and every collector .sql in
+  // this product is built out of PROMPT lines, so the hole sat directly over
+  // the files the gate exists to protect. The old self-test passed throughout,
+  // because it only ever fed the gate a bare statement.
+  //
+  // Nothing was actually hiding: the strengthened gate was run across both
+  // packs before this test was written and reported them clean. The defect was
+  // a latent one, which is the only kind worth fixing before it is used.
+  const cases = [
+    ['after PROMPT',   "PROMPT SEC|Usage\nALTER TABLESPACE users ADD DATAFILE '/tmp/x.dbf' SIZE 1G;", ['ALTER']],
+    ['after SPOOL/EXIT', 'SELECT 1 FROM dual;\nSPOOL OFF\nEXIT\nDROP TABLE victim;', ['DROP']],
+    ['after SET',      'SET PAGES 0\nDROP TABLE victim;', ['DROP']],
+    ['after WHENEVER', 'WHENEVER SQLERROR EXIT SQL.SQLCODE\nCREATE TABLE t (a NUMBER);', ['CREATE']],
+    ['after DEFINE',   'DEFINE x = 1\nDELETE FROM audit_trail;', ['DELETE']],
+    ['after a lone /', 'BEGIN NULL; END;\n/\nTRUNCATE TABLE t;', ['TRUNCATE']],
+  ];
+  for (const [label, src, want] of cases) {
+    assert.deepEqual(sqlMutations(src), want, `a mutation ${label} was not caught`);
+  }
+
+  // The boundary is ADDED, never substituted for the line, so a real statement
+  // sharing a line with a directive is still read. Deleting the line instead
+  // would have closed one hole and opened this one.
+  assert.deepEqual(sqlMutations('PROMPT starting; DROP TABLE x;'), ['DROP']);
+
+  // And the added boundaries must not invent findings in ordinary collector
+  // shape, or the gate becomes one somebody switches off.
+  assert.deepEqual(
+    sqlMutations("PROMPT SEC|Usage\nSELECT 'CHK|A|OK|t|d' FROM dual;\nSPOOL OFF\nEXIT"),
+    [],
+  );
+});
+
 test('SELF-TEST: dynamic SQL is judged by the statement inside it, and fails closed', () => {
   const only = (src) => dynamicSqlFindings(src);
 
@@ -388,6 +500,117 @@ for (const pack of PACKS) {
     assert.deepEqual(offenders, [], `house rule: no em dashes. Found in: ${offenders.join(', ')}`);
   });
 }
+
+// ---------------------------------------------------------------------------
+// HELD CODE: in git, out of the product.
+//
+// The operating plan says DISABLE, DO NOT DELETE. A removed script stays in git
+// so it can be reviewed and revived, and must never reach a customer. Those two
+// requirements pull in opposite directions, and the only thing holding them
+// apart is an exclusion in two places: NOT_SHIPPED_DIRS above and one rm in
+// scripts/publish-pack-to-project.sh. Either one being lost is silent.
+// ---------------------------------------------------------------------------
+
+for (const pack of PACKS) {
+  const held = heldFiles(pack.dir);
+  if (held.length === 0) continue;
+
+  test(`${pack.id}: held code is documented, inert, and outside the shipped set`, () => {
+    assert.ok(
+      existsSync(join(pack.dir, 'held', 'README.md')),
+      `${pack.id}/held exists with no README saying what is held and why`,
+    );
+
+    for (const name of held) {
+      // The suffix is what makes these inert. A file still named like the
+      // script it came from is a file somebody eventually runs by accident.
+      assert.match(name, /\.held$/, `${pack.id}/held/${name} must end in .held so it cannot be run`);
+
+      const rel = join('held', name);
+      assert.ok(
+        !pack.shipped.includes(rel),
+        `${pack.id} ships ${rel}. Held code must never reach a customer.`,
+      );
+    }
+  });
+
+  test(`${pack.id}: nothing shipped invokes anything held`, () => {
+    // A shipped script that calls into held/ would make the exclusion above a
+    // lie in the only way that matters: the customer would not have the file.
+    for (const rel of pack.shipped) {
+      if (!rel.endsWith('.sh')) continue;
+      const src = readFileSync(join(pack.dir, rel), 'utf8').replace(/^\s*#[^\n]*/gm, '');
+      assert.ok(!/\bheld\//.test(src), `${pack.id}/${rel} references held/, which does not ship`);
+    }
+  });
+}
+
+test('SELF-TEST: the publish script strips held code from the customer package', () => {
+  // Asserted against the PUBLISHER, not against the source tree, because the
+  // artefact that matters is the one the customer keeps. This repo has already
+  // shipped a defect where the collector wrote both outputs correctly and the
+  // ORCHESTRATOR then discarded one, with the whole suite green throughout.
+  const src = readFileSync(join(REPO, 'scripts/publish-pack-to-project.sh'), 'utf8');
+  assert.match(
+    src,
+    /rm -rf "\$SRC\/held"/,
+    'publish-pack-to-project.sh no longer strips held/. Held code would ship inside the customer zip.',
+  );
+  // It must be stripped BEFORE the zip is built, or the mirror is clean and the
+  // zip is not, which is the harder of the two to notice.
+  assert.ok(
+    src.indexOf('rm -rf "$SRC/held"') < src.indexOf('zip -r -q'),
+    'held/ is stripped after the zip is built, so the customer zip still contains it',
+  );
+});
+
+// ---------------------------------------------------------------------------
+// THE GENERATED CONFIG MUST SATISFY EVERY SHIPPED SCRIPT.
+// ---------------------------------------------------------------------------
+
+test('daily-ops: env_collector generates a config every shipped script can run from', () => {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const generator = readFileSync(join(pack.dir, 'env_collector.sh'), 'utf8');
+
+  const required = new Set();
+  for (const rel of pack.shipped) {
+    if (!rel.endsWith('.sh') || rel === 'env_collector.sh') continue;
+    for (const v of requiredConfigVars(readFileSync(join(pack.dir, rel), 'utf8'))) required.add(v);
+  }
+  assert.ok(required.size > 0, 'no required config variables were parsed, so this guard is asleep');
+
+  // Read the heredoc the generator writes, not the whole file, so a variable
+  // merely MENTIONED in a comment cannot pass for one that is written.
+  const heredoc = /cat > "\$CFG" <<CFG\n([\s\S]*?)\nCFG\n/.exec(generator);
+  assert.ok(heredoc, 'could not find the config heredoc in env_collector.sh');
+  const emitted = new Set(
+    [...heredoc[1].matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]),
+  );
+
+  const missing = [...required].filter((v) => !emitted.has(v)).sort();
+  assert.deepEqual(
+    missing,
+    [],
+    `env_collector.sh writes a config missing ${missing.join(', ')}. ` +
+      'The pack tells the customer to generate the config with it, so those scripts would exit 2 on a first run.',
+  );
+});
+
+test('daily-ops: config.env itself carries every required variable', () => {
+  // The other documented path. A customer who copies config.env by hand must
+  // land somewhere runnable too.
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const shipped = readFileSync(join(pack.dir, 'config.env'), 'utf8');
+  const declared = new Set([...shipped.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]));
+
+  const required = new Set();
+  for (const rel of pack.shipped) {
+    if (!rel.endsWith('.sh')) continue;
+    for (const v of requiredConfigVars(readFileSync(join(pack.dir, rel), 'utf8'))) required.add(v);
+  }
+  const missing = [...required].filter((v) => !declared.has(v)).sort();
+  assert.deepEqual(missing, [], `config.env is missing ${missing.join(', ')}`);
+});
 
 // ---------------------------------------------------------------------------
 // THE DUAL-OUTPUT CONTRACT.
@@ -604,6 +827,135 @@ test('daily-ops: the trend metrics are carried, and NA is not counted as healthy
   assert.ok(!doc.summary.needs_attention.includes('STALE'), 'NA must not be reported as needing attention');
   assert.ok(doc.summary.needs_attention.includes('RMAN_FULL'), 'a CRIT must reach needs_attention');
   assert.equal(doc.summary.overall_status, 'CRIT');
+});
+
+// ---------------------------------------------------------------------------
+// tbs_manager, the tablespace deep read. Report-only in v1.0.
+// ---------------------------------------------------------------------------
+
+function renderTbsManager() {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const out = mkdtempSync(join(tmpdir(), 'odc-tbs-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(
+    cfg,
+    [
+      'ORACLE_SID=ORCLCDB',
+      'ORACLE_HOME=/nonexistent',
+      'ORACLE_CONNECT="/ as sysdba"',
+      `OUTPUT_DIR=${out}`,
+      'TS_WARN_PCT=80', 'TS_CRIT_PCT=90',
+      'TS_SHRINK_FREE_PCT=30', 'TS_FRAG_EXTENTS=1000',
+    ].join('\n'),
+  );
+  const raw = join(pack.dir, 'test-fixtures/tbs_raw_hostile.txt');
+  const before = readFileSync(raw, 'utf8');
+  try {
+    execFileSync('bash', [
+      join(pack.dir, 'tbs_manager.sh'), '--config', cfg, '--render-only', raw,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const dir = join(out, 'tbs');
+  return {
+    dir,
+    html: readdirSync(dir).find((f) => f.endsWith('.html') && !f.includes('latest')),
+    json: readdirSync(dir).find((f) => f.endsWith('.json') && !f.includes('latest')),
+    rawUnchanged: readFileSync(raw, 'utf8') === before,
+  };
+}
+
+test('tbs_manager: ONE collection produces BOTH the report and the briefing', () => {
+  const r = renderTbsManager();
+  assert.ok(r.html, 'no HTML report was written');
+  assert.ok(r.json, 'the HTML was written but the briefing was not, which is half a run');
+  assert.ok(readFileSync(join(r.dir, r.html), 'utf8').includes('<!DOCTYPE html>'));
+  JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+});
+
+test('tbs_manager: --render-only leaves the collection it read exactly as it found it', () => {
+  assert.ok(renderTbsManager().rawUnchanged, '--render-only modified the raw collection it was given');
+});
+
+test('tbs_manager: the briefing validates against the shipped schema', () => {
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.deepEqual(validate(schema, doc), []);
+});
+
+test('tbs_manager: the briefing survives hostile collector output', () => {
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const weird = doc.checks.find((c) => c.id === 'TSU_TS_WEIRD');
+  assert.ok(weird, 'the hostile check is missing, so this guard proved nothing');
+  assert.match(weird.detail, /D:\\oracle\\oradata/, 'a Windows path did not survive JSON escaping');
+  assert.match(weird.detail, /"db_file_name_convert"/, 'a quoted name did not survive');
+  assert.match(weird.detail, /pipe \| inside/, 'a pipe inside a detail truncated the field');
+  // A decimal comma is what a German-locale session emits. It must become null
+  // rather than invalidate the whole document.
+  assert.equal(weird.metrics.used_pct.value, null);
+});
+
+test('tbs_manager: metrics are keyed by check id, never by position', () => {
+  // The fixture puts every MET line in a block AFTER every CHK line in its
+  // section, and interleaves sections. Position-keyed pooling would misfile
+  // every one of them.
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const byId = (id) => doc.checks.find((c) => c.id === id);
+  assert.equal(byId('TSU_USERS').metrics.used_pct.value, 87.3);
+  assert.equal(byId('TSU_SYSAUX').metrics.used_pct.value, 94.8);
+  assert.equal(byId('AE_STATIC').metrics.headroom_gb.value, 0);
+  assert.equal(byId('AE_USERS').metrics.headroom_gb.value, 46);
+  assert.equal(byId('SHRINK_7').metrics.free_pct.value, 47);
+  assert.equal(byId('FRAG_APP.ORDER_LINES').metrics.extents.value, 4210);
+});
+
+test('tbs_manager: the shrink and extent rows carry NO verdict', () => {
+  // The product's position is ranked facts, never verdicts. Free space inside a
+  // datafile is not automatically reclaimable, and a high extent count is not a
+  // defect, so neither may be coloured as a finding. Enforced by a guard rather
+  // than by anybody's intention, in the same way awr_triage's efficiency ratios
+  // are.
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const observations = doc.checks.filter((c) => c.id.startsWith('SHRINK_') || c.id.startsWith('FRAG_'));
+  assert.ok(observations.length > 0, 'no observation rows in the fixture, so this guard is asleep');
+  for (const c of observations) {
+    assert.equal(c.status, 'OK', `${c.id} carries status ${c.status}; an observation must not read as a finding`);
+    assert.ok(
+      !doc.summary.needs_attention.includes(c.id),
+      `${c.id} reached needs_attention, which turns an observation into a verdict`,
+    );
+  }
+});
+
+test('tbs_manager: the report states its container scope on its own face', () => {
+  // An unstated scope is indistinguishable from a bug: a clean report from a
+  // CDB root says nothing about the pluggable database that is actually full.
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const scope = doc.checks.find((c) => c.id === 'SCOPE');
+  assert.ok(scope, 'the briefing carries no SCOPE check');
+  assert.match(scope.detail, /container/i);
+
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+  assert.match(html, /Report scope/, 'the HTML report does not show the scope section');
+});
+
+test('tbs_manager: v1.0 ships no path that writes to the database', () => {
+  // The whole point of the conversion. Asserted on the shipped source rather
+  // than inferred from the absence of a flag in the docs.
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const src = readFileSync(join(pack.dir, 'tbs_manager.sh'), 'utf8');
+  for (const flag of ['--add-datafile', '--resize', '--set-autoextend', '--execute']) {
+    const live = src.replace(/^\s*#[^\n]*/gm, '');
+    assert.ok(!live.includes(flag), `tbs_manager.sh still accepts ${flag}`);
+  }
+  assert.deepEqual(shellMutations(src), [], 'tbs_manager.sh contains a mutation pair');
 });
 
 function renderEnvCollector() {

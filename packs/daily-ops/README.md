@@ -44,10 +44,33 @@ archivelog backup recency, standby apply lag, stale optimizer statistics,
 failed logons from the unified audit trail, invalid objects with a delta
 against yesterday, and a patch inventory summary.
 
+`tbs_manager.sh` is the tablespace deep read. The morning briefing answers "is
+anything full". This one answers the three questions you ask once something is:
+can the file grow by itself, how much room is actually reachable before a human
+has to act, and is any of this space recoverable rather than purchasable.
+
+- `tbs_report_<SID>_<timestamp>.html` for you
+- `tbs_report_<SID>_<timestamp>.json` for **your own** AI assistant
+
+Covered: usage with the bigfile flag stated rather than implied, autoextend
+policy and reachable headroom per tablespace, datafiles carrying free space
+inside them, and segments with high extent counts.
+
+**The last two are observations, not recommendations, and the document is built
+that way.** They carry status OK because they describe where space is sitting,
+not a threshold anybody breached. Free space inside a datafile is not
+automatically reclaimable: the high-water mark decides that and is not in the
+view, which the report says on its face rather than leaving to be assumed.
+
+**It reports on ONE container**, the one your session is connected to, and names
+that container in its first row. To cover a whole CDB, run it once per
+container.
+
 ## Running it
 
     cp config.env config-mydb.env      # edit ORACLE_SID, ORACLE_HOME, thresholds
     ./daily_analysis.sh --config config-mydb.env
+    ./tbs_manager.sh --config config-mydb.env
 
     ./daily_analysis.sh --dry-run      # prints the plan, contacts nothing
     ./daily_analysis.sh --render-only /path/to/daily_raw_SID_ts.txt
@@ -73,8 +96,9 @@ the collection is unaffected.
 
 ## Handing the briefing to your AI
 
-`prompts/morning-triage.md` contains a prompt to paste alongside the JSON. It
-teaches your assistant the SHAPE of the document and deliberately does not
+`prompts/morning-triage.md` and `prompts/tablespace-capacity.md` contain prompts
+to paste alongside the JSON. Each teaches your assistant the SHAPE of the
+document it goes with, and deliberately does not
 recite Oracle version behaviour, because a prompt reciting half-remembered
 facts is how a confident wrong answer gets made. It also does not ask your
 assistant for commands to paste at a production database.
@@ -84,6 +108,12 @@ anything anywhere, and OraDiscuss never receives your output.
 
 ## What is not here, and why
 
-`tbs_manager` and `redef_assistant` from the earlier field-test set are not in
-this pack. Both generate statements that change a database, and everything sold
-here is read-only.
+`redef_assistant` from the earlier field-test set is not in this pack. It
+creates a table, and everything sold here is read-only.
+
+`tbs_manager` IS here, but only its report. The earlier version also generated
+statements to add a datafile, resize one, or change an autoextend policy. Those
+paths printed by default and ran only with an explicit flag, so they were
+careful, and they were removed anyway. The sentence this pack is sold on is
+"read every line and you will find no way for this to touch your database", and
+that sentence with a footnote attached is worth less than the feature was.

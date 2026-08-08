@@ -102,6 +102,13 @@ while IFS= read -r PACK_ID; do
   # test-fixtures drive the repo's own tests and are not part of the product.
   rm -rf "$SRC/test-fixtures"
 
+  # held/ is code the founder ruled DISABLED, NOT DELETED. It stays in git so it
+  # can be reviewed and revived; it must never reach a customer. Stripping it
+  # here strips it from the mirror AND from the zip below, because both are built
+  # from this same staged directory. A test asserts that no held path survives
+  # into either one, so this line cannot be quietly lost.
+  rm -rf "$SRC/held"
+
   # The version is DERIVED from the pack's own scripts and cross-checked, never
   # passed in. Two scripts in one pack disagreeing about their version is a real
   # drift that nothing else would catch, and it would name the customer's zip

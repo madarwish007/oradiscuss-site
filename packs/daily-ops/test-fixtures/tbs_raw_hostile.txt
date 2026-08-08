@@ -1,0 +1,30 @@
+SEC|Report scope
+CHK|SCOPE|OK|Report scope|container PDB1 only. Tablespaces belonging to other pluggable databases are NOT in this report.
+SEC|Tablespace usage and shape
+CHK|TSU_USERS|WARN|Tablespace USERS|87.3% used, bigfile=NO, status ONLINE, extent management LOCAL. Capacity here is a resize or an additional-file question.
+CHK|TSU_SYSAUX|CRIT|Tablespace SYSAUX|94.8% used, bigfile=YES, status ONLINE, extent management LOCAL. A bigfile tablespace holds one datafile, so capacity here is a resize question.
+CHK|TSU_TS_WEIRD|OK|Tablespace TS_WEIRD|12.0% used on D:\oracle\oradata\weird01.dbf, "db_file_name_convert" set, pipe | inside the detail
+MET|TSU_USERS|used_pct|87.3|percent
+MET|TSU_USERS|used_gb|43.65|GB
+MET|TSU_USERS|max_gb|50.00|GB
+MET|TSU_SYSAUX|used_pct|94.8|percent
+MET|TSU_SYSAUX|used_gb|18.96|GB
+MET|TSU_SYSAUX|max_gb|20.00|GB
+MET|TSU_TS_WEIRD|used_pct|12,0|percent
+SEC|Autoextend policy and reachable headroom
+CHK|AE_USERS|OK|Autoextend USERS|3 datafiles, 3 autoextensible, 50.0 GB allocated, 96.0 GB reachable without intervention.
+CHK|AE_STATIC|WARN|Autoextend STATIC|2 datafiles, 0 autoextensible, 8.0 GB allocated, 8.0 GB reachable without intervention. No file here can grow by itself, so capacity is a planned action rather than an automatic one.
+MET|AE_USERS|datafiles|3|files
+MET|AE_USERS|autoextensible|3|files
+MET|AE_USERS|headroom_gb|46.00|GB
+MET|AE_STATIC|datafiles|2|files
+MET|AE_STATIC|autoextensible|0|files
+MET|AE_STATIC|headroom_gb|0.00|GB
+SEC|Shrink candidates (hints, not advice)
+CHK|SHRINK_7|OK|Shrink candidate|D:\oracle\oradata\users02.dbf in USERS: 20.0 GB allocated, 9.4 GB free inside the file. Check the high-water mark first, because free space below it cannot be released.
+MET|SHRINK_7|allocated_gb|20.00|GB
+MET|SHRINK_7|free_pct|47.0|percent
+SEC|Extent count hints (facts, not advice)
+CHK|FRAG_APP.ORDER_LINES|OK|Extent count|APP.ORDER_LINES (TABLE in USERS): 4210 extents across 31.50 GB. A high extent count is a fact about allocation history, not a defect in itself.
+MET|FRAG_APP.ORDER_LINES|extents|4210|extents
+MET|FRAG_APP.ORDER_LINES|size_gb|31.50|GB

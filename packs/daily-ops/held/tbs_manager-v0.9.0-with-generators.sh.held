@@ -1,0 +1,284 @@
+#!/usr/bin/env bash
+# ============================================================================
+# OraDiscuss - Daily Operations Pack v0.9.0 (field-test release)
+# tbs_manager.sh - tablespace day-to-day operations.
+#
+# Written for Oracle 19c/21c/23ai on Linux - FIELD-TEST BEFORE PRODUCTION USE.
+# --report is READ-ONLY (SELECT only).
+# MUTATIONS (--add-datafile/--resize/--set-autoextend) are PRINT-ONLY by
+# default and run ONLY with an explicit --execute flag. Bigfile-aware:
+# 23ai new databases default SYSTEM/SYSAUX/USER to BIGFILE, where you RESIZE
+# rather than ADD a datafile - the generated SQL reflects that.
+#
+# Usage:
+#   ./tbs_manager.sh --report [--dry-run] [--config cfg]
+#   ./tbs_manager.sh --add-datafile <tablespace> <size>M|G [--execute] [--config cfg]
+#   ./tbs_manager.sh --resize <tablespace> <size>M|G [--file <path>] [--execute]
+#   ./tbs_manager.sh --set-autoextend <tablespace> on|off [<next>M <max>G] [--execute]
+#
+# Exit codes: 0 = OK / preview printed / executed OK, 1 = WARN rows in report,
+#             2 = CRIT/error.
+#
+# License: single-user license, modify allowed, no redistribution.
+# ============================================================================
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/config.env"
+DRY_RUN=0
+EXECUTE=0
+ACTION=""
+VERSION="0.9.0"
+TS="" ; SIZE="" ; FILE_ARG="" ; AE_MODE="" ; AE_NEXT="" ; AE_MAX=""
+
+log()  { printf '%s [tbs_manager] %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*"; }
+err()  { printf '%s [tbs_manager] ERROR: %s\n' "$(date '+%Y-%m-%dT%H:%M:%S%z')" "$*" >&2; }
+esc()  { sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g' ; }
+
+usage() { grep -E '^# (Usage|  \./)' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 2; }
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --report)        ACTION="report" ;;
+    --add-datafile)  ACTION="add";  shift; TS="${1:?tablespace}"; shift; SIZE="${1:?size e.g. 1024M or 10G}" ;;
+    --resize)        ACTION="resize"; shift; TS="${1:?tablespace}"; shift; SIZE="${1:?size}" ;;
+    --set-autoextend) ACTION="ae";  shift; TS="${1:?tablespace}"; shift; AE_MODE="${1:?on|off}"
+                      if [ "$AE_MODE" = "on" ]; then
+                        shift; AE_NEXT="${1:?next size e.g. 100M}"; shift; AE_MAX="${1:?max size e.g. 30G or UNLIMITED}"
+                      fi ;;
+    --file)          shift; FILE_ARG="${1:?--file requires a path}" ;;
+    --execute)       EXECUTE=1 ;;
+    --dry-run)       DRY_RUN=1 ;;
+    --config)        shift; CONFIG_FILE="${1:?--config requires a path}" ;;
+    -h|--help)       usage ;;
+    *) err "unknown argument: $1"; usage ;;
+  esac
+  shift
+done
+[ -n "$ACTION" ] || usage
+
+# ---------------------------------------------------------------------------
+# Load and validate configuration (fail closed).
+# ---------------------------------------------------------------------------
+if [ ! -r "$CONFIG_FILE" ]; then
+  err "config file not found or not readable: $CONFIG_FILE"
+  err "run env_collector.sh first, or copy config.env and edit it."
+  exit 2
+fi
+# shellcheck source=/dev/null
+source "$CONFIG_FILE"
+
+for v in ORACLE_SID ORACLE_HOME ORACLE_CONNECT OUTPUT_DIR TS_WARN_PCT TS_CRIT_PCT; do
+  if [ -z "${!v:-}" ]; then
+    err "required config variable $v is empty - edit $CONFIG_FILE"
+    exit 2
+  fi
+done
+if [ "$ACTION" != "report" ] && [ -z "${DATAFILE_NAME_STANDARD:-}" ]; then
+  err "DATAFILE_NAME_STANDARD is empty - edit $CONFIG_FILE (site naming standard for new datafiles)"
+  exit 2
+fi
+
+if [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
+  err "sqlplus not found at \$ORACLE_HOME/bin/sqlplus ($ORACLE_HOME)"
+  exit 2
+fi
+
+export ORACLE_SID ORACLE_HOME
+export PATH="$ORACLE_HOME/bin:$PATH"
+export NLS_LANG="${NLS_LANG:-AMERICAN_AMERICA.AL32UTF8}"
+mkdir -p "$OUTPUT_DIR/tbs"
+
+sq() {
+  sqlplus -s -L "$ORACLE_CONNECT" 2>/dev/null <<SQL
+SET PAGES 0 FEEDBACK OFF HEADING OFF VERIFY OFF LINES 4000 TRIMSPOOL ON
+WHENEVER SQLERROR EXIT SQL.SQLCODE
+$1
+EXIT
+SQL
+}
+
+if ! sq "SELECT 'ODC_OK' FROM dual;" | grep -q ODC_OK; then
+  err "cannot connect to ORACLE_SID=$ORACLE_SID."
+  exit 2
+fi
+
+# CDB-detect (matrix checklist 2): CDB_* in CDB root, DBA_* otherwise.
+IS_CDB="$(sq "SELECT cdb FROM v\$database;" | tail -1)"
+VIEW_PREFIX="DBA" ; [ "$IS_CDB" = "YES" ] && VIEW_PREFIX="CDB"
+
+# ---------------------------------------------------------------------------
+# --report: read-only HTML usage/autoextend/shrink-candidate report.
+# ---------------------------------------------------------------------------
+if [ "$ACTION" = "report" ]; then
+  if [ "$DRY_RUN" -eq 1 ]; then
+    log "dry-run: WOULD run sql/tbs_report.sql (SELECT-only) with thresholds ${TS_WARN_PCT}/${TS_CRIT_PCT}% and ${VIEW_PREFIX}_* views, write HTML under $OUTPUT_DIR/tbs/"
+    exit 0
+  fi
+  TS_NOW="$(date '+%Y%m%d-%H%M%S')"
+  RAW_FILE="$OUTPUT_DIR/tbs/tbs_raw_${ORACLE_SID}_${TS_NOW}.txt"
+  SQL_RC=0
+  sqlplus -s -L "$ORACLE_CONNECT" @"$SCRIPT_DIR/sql/tbs_report.sql" \
+    "$TS_WARN_PCT" "$TS_CRIT_PCT" "$VIEW_PREFIX" "$RAW_FILE" >/dev/null || SQL_RC=$?
+  if [ "$SQL_RC" -ne 0 ] || [ ! -s "$RAW_FILE" ]; then
+    err "report SQL failed (rc=$SQL_RC)."
+    exit 2
+  fi
+  EXIT_CODE=0 ; ROWS_HTML="" ; SECTION_HTML=""
+  while IFS= read -r line; do
+    case "$line" in
+      SEC\|*)
+        title="${line#SEC|}"
+        [ -n "$SECTION_HTML" ] && ROWS_HTML="${ROWS_HTML}</tbody></table>"
+        SECTION_HTML=1
+        ROWS_HTML="${ROWS_HTML}<h2>$(printf '%s' "$title" | esc)</h2><table><thead><tr><th>Status</th><th>Check</th><th>Detail</th></tr></thead><tbody>" ;;
+      CHK\|*)
+        IFS='|' read -r _ cid status title detail <<<"$line"
+        badge_class="$(printf '%s' "$status" | tr 'A-Z' 'a-z')"
+        case "$badge_class" in ok|warn|crit|na) ;; *) badge_class="na" ;; esac
+        ROWS_HTML="${ROWS_HTML}<tr><td><span class=\"badge ${badge_class}\">${status}</span></td><td>$(printf '%s' "$title" | esc)</td><td>$(printf '%s' "$detail" | esc)</td></tr>"
+        case "$status" in
+          CRIT) [ "$EXIT_CODE" -lt 2 ] && EXIT_CODE=2 ;;
+          WARN) [ "$EXIT_CODE" -lt 1 ] && EXIT_CODE=1 ;;
+        esac ;;
+    esac
+  done < "$RAW_FILE"
+  [ -n "$SECTION_HTML" ] && ROWS_HTML="${ROWS_HTML}</tbody></table>"
+  REPORT="$OUTPUT_DIR/tbs/tbs_report_${ORACLE_SID}_${TS_NOW}.html"
+  cat > "$REPORT" <<HTML
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tablespace Report - ${ORACLE_SID} - ${TS_NOW}</title>
+<style>
+  :root{color-scheme:dark}
+  body{background:#0A0B0D;color:#E8E9EB;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;margin:0;padding:32px;line-height:1.5}
+  .wrap{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:15px;margin:28px 0 8px;color:#9BA1A9;text-transform:uppercase;letter-spacing:.06em}
+  .meta{color:#9BA1A9;font-size:13px;margin-bottom:20px}
+  table{width:100%;border-collapse:collapse;background:#121316;border:1px solid #262A31;border-radius:10px;overflow:hidden;font-size:13px}
+  th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #262A31;vertical-align:top}
+  th{color:#9BA1A9;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+  .badge{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600}
+  .badge.ok{background:#12351f;color:#4ade80}
+  .badge.warn{background:#3d2f10;color:#fbbf24}
+  .badge.crit{background:#3d1512;color:#FF6B4A}
+  .badge.na{background:#1c1f24;color:#9BA1A9}
+  .foot{color:#9BA1A9;font-size:12px;margin-top:24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Tablespace Report</h1>
+  <div class="meta">SID <strong>${ORACLE_SID}</strong> (CDB=${IS_CDB}) &middot; generated $(date '+%Y-%m-%d %H:%M:%S %Z') &middot; OraDiscuss Daily Operations Pack v${VERSION} &middot; read-only report</div>
+  ${ROWS_HTML}
+  <div class="foot">Thresholds ${TS_WARN_PCT}/${TS_CRIT_PCT}%. Shrink/fragmentation rows are HINTS - verify high-water marks and object dependencies before any RESIZE, SHRINK, or MOVE. Field-test release.</div>
+</div>
+</body>
+</html>
+HTML
+  ln -sf "$REPORT" "$OUTPUT_DIR/tbs/tbs_report_${ORACLE_SID}_latest.html"
+  log "report written: $REPORT (exit $EXIT_CODE)"
+  exit "$EXIT_CODE"
+fi
+
+# ---------------------------------------------------------------------------
+# Mutation path helpers. Everything below builds SQL TEXT first; the only
+# execution point is run_ddl(), reached solely when --execute is given.
+# ---------------------------------------------------------------------------
+
+# Tablespace facts (bigfile flag + datafiles).
+TS_UP="$(printf '%s' "$TS" | tr 'a-z' 'A-Z')"
+TS_INFO="$(sq "SELECT bigfile || '|' || status FROM ${VIEW_PREFIX}_tablespaces WHERE tablespace_name = '$TS_UP';" | tail -1)"
+if [ -z "$TS_INFO" ]; then
+  err "tablespace '$TS_UP' not found in ${VIEW_PREFIX}_tablespaces (check the name; in a CDB run from the right container)."
+  exit 2
+fi
+BIGFILE="${TS_INFO%%|*}"
+
+DATAFILES="$(sq "SELECT file_name FROM ${VIEW_PREFIX}_data_files WHERE tablespace_name = '$TS_UP' ORDER BY file_name;")"
+FILE_COUNT="$(printf '%s\n' "$DATAFILES" | grep -c . || true)"
+
+gen_add_datafile() {
+  if [ "$BIGFILE" = "YES" ]; then
+    log "NOTE: $TS_UP is a BIGFILE tablespace (23ai new DBs default SYSTEM/SYSAUX/USER to bigfile)."
+    log "Bigfile tablespaces have exactly one datafile - you RESIZE it instead of adding a file."
+    EXISTING="$(printf '%s\n' "$DATAFILES" | head -1)"
+    GEN_SQL="ALTER DATABASE DATAFILE '${EXISTING}' RESIZE ${SIZE};"
+  else
+    # next sequence number per site naming standard (%TS%, %NN% tokens)
+    NN="$(sq "SELECT NVL(MAX(TO_NUMBER(REGEXP_SUBSTR(file_name,'[0-9]+(?=\.dbf)'))),0) + 1 FROM ${VIEW_PREFIX}_data_files WHERE tablespace_name = '$TS_UP';" 2>/dev/null | tail -1)"
+    case "$NN" in ''|*[!0-9]*) NN=1 ;; esac
+    NN_PADDED="$(printf '%02d' "$NN")"
+    NEWFILE="$(printf '%s' "$DATAFILE_NAME_STANDARD" | sed "s/%TS%/$(printf '%s' "$TS_UP" | tr 'A-Z' 'a-z')/g; s/%NN%/$NN_PADDED/g")"
+    GEN_SQL="ALTER TABLESPACE ${TS_UP} ADD DATAFILE '${NEWFILE}' SIZE ${SIZE};"
+  fi
+}
+
+gen_resize() {
+  if [ -n "$FILE_ARG" ]; then
+    TARGET="$FILE_ARG"
+  else
+    if [ "$FILE_COUNT" -ne 1 ]; then
+      err "$TS_UP has $FILE_COUNT datafiles - pass --file <path> to choose which one to resize."
+      printf '%s\n' "$DATAFILES" >&2
+      exit 2
+    fi
+    TARGET="$(printf '%s\n' "$DATAFILES" | head -1)"
+  fi
+  GEN_SQL="ALTER DATABASE DATAFILE '${TARGET}' RESIZE ${SIZE};"
+}
+
+gen_autoextend() {
+  if [ "$AE_MODE" = "on" ]; then
+    CLAUSE="AUTOEXTEND ON NEXT ${AE_NEXT} MAXSIZE ${AE_MAX}"
+  else
+    CLAUSE="AUTOEXTEND OFF"
+  fi
+  GEN_SQL=""
+  while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    GEN_SQL="${GEN_SQL}ALTER DATABASE DATAFILE '${f}' ${CLAUSE};"$'\n'
+  done <<<"$DATAFILES"
+}
+
+case "$ACTION" in
+  add)    gen_add_datafile ;;
+  resize) gen_resize ;;
+  ae)     gen_autoextend ;;
+esac
+
+log "preview - generated DDL for tablespace $TS_UP (bigfile=$BIGFILE):"
+printf '%s\n' "------------------------------------------------------------"
+printf '%s\n' "$GEN_SQL"
+printf '%s\n' "------------------------------------------------------------"
+
+if [ "$DRY_RUN" -eq 1 ] || [ "$EXECUTE" -eq 0 ]; then
+  log "PRINT-ONLY. Re-run with --execute to apply. Review the SQL above first - you are the DBA of record."
+  exit 0
+fi
+
+run_ddl() {
+  local rc=0
+  sqlplus -L "$ORACLE_CONNECT" <<SQL 2>&1
+SET ECHO ON FEEDBACK ON
+WHENEVER SQLERROR EXIT SQL.SQLCODE
+$GEN_SQL
+EXIT
+SQL
+  rc=$?
+  return $rc
+}
+
+log "--execute given: applying DDL now"
+if run_ddl; then
+  log "DDL executed successfully."
+  exit 0
+else
+  err "DDL failed (sqlplus rc=$?). Review the error above; no retry was attempted."
+  exit 2
+fi
