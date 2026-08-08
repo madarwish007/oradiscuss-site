@@ -233,7 +233,7 @@ The data path is a flag. The honesty strings are hand edits on purpose: they are
 npm run test:showcase-guards
 ```
 
-It also asserts that an untouched copy passes, because a suite that fails on everything catches nothing. Every case is one line, so adding a guard means adding its breakage in the same commit. Twenty one cases were observed on 8 Aug 2026: twenty guards fired, and the untouched copy passed.
+It also asserts that an untouched copy passes, because a suite that fails on everything catches nothing. A case is short enough to write in the same commit as the guard it exercises, and adding a guard without its breakage is how a guard nobody has watched fire gets shipped. Twenty three cases were observed on 8 Aug 2026: twenty two guards fired, and the untouched copy passed. That count is the number this harness prints, so update it here when a case is added.
 
 Two things that harness has already caught, both invisible by reading:
 
