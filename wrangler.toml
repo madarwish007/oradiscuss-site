@@ -36,7 +36,7 @@ not_found_handling = "404-page"
 # asset and needs the Worker to fill it, and a per brief URL does not exist as
 # an asset at all: it is rendered into the built /watch/brief/ shell from D1, so
 # without this line every published brief would answer with the 404 page.
-run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/", "/watch/*"]
+run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/*"]
 
 [observability]
 enabled = true
@@ -140,7 +140,7 @@ name = "oradiscuss-site-preview"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/", "/watch/*"]
+run_worker_first = ["/api/*", "/changelog", "/changelog/", "/watch", "/watch/*"]
 
 [env.preview.observability]
 enabled = true
@@ -181,10 +181,14 @@ max_batch_timeout = 30
 max_retries = 5
 
 # NO CRON ON PREVIEW, stated explicitly rather than left to inheritance.
-# `triggers` is an inheritable key, so an empty top level would not have been
-# enough: a preview deploy would have silently armed the production schedule
-# against the preview database. An empty list is the difference between "we
-# decided not to" and "nobody thought about it".
+#
+# Cloudflare's own documentation is why this is written out rather than omitted:
+# "if the crons property is an empty array then all the Cron Triggers are
+# removed", and "if the triggers or crons property are undefined then the
+# currently deployed Cron Triggers are left in-place". Omitting it therefore
+# means "whatever is already deployed, plus whatever the top level says", which
+# is not a decision. An empty list is the difference between "we decided not to"
+# and "nobody thought about it".
 #
 # To watch the pipeline run on preview, call POST /api/watch/run with the
 # WATCH_ADMIN_TOKEN. It is the same code path the cron takes.
