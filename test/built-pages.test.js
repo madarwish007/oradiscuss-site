@@ -99,30 +99,28 @@ function allBuiltPages() {
 const ALL_PAGES = allBuiltPages();
 
 // ---------------------------------------------------------------------------
-// THE EM DASH EXEMPTIONS, NAMED AND COUNTED RATHER THAN SKIPPED.
+// THE EM DASH EXEMPTION, NOW DOWN TO ONE PAGE.
 //
-// The article bodies break the house no-em-dash rule, up to eighteen times on a
-// single article, and they are NOT swept here. That is a registered decision
-// and not an oversight: they are the founder's own published writing, a blind
-// purge would edit thirteen articles' voice, and the scope of that edit is his
-// call. It is recorded as an open decision in SESSION_HANDOFF.
+// The article bodies used to sit outside this rule. That was a registered
+// decision rather than an oversight: they are the founder's own published
+// writing, and the scope of editing thirteen articles' voice was his call to
+// make. He made it on 9 Aug 2026, verbatim, "em dashes should be entirely
+// removed everywhere in the website and from my published articles". The
+// article, index and tag prefixes are therefore gone from this list, the
+// purge is done in source, and the guard now runs over the whole site bar one
+// page.
 //
-// So the exemption is written down, with a reason, and its SIZE IS ASSERTED.
-// A silent skip would mean the fourteenth article inherits the exemption
-// without anybody choosing that. With the count asserted, a new article fails
-// this test until somebody decides which side of the line it is on, and the
-// founder's eventual ruling closes it by deleting entries rather than by
-// remembering that entries existed.
+// That one page is not ours to write. What survives the closure is the SIZE
+// ASSERTION below: a silent skip would let a new page inherit an exemption
+// nobody chose, so the count is named. A page that arrives carrying an em dash
+// fails this test until somebody decides which side of the line it is on, and
+// closing an exemption means deleting an entry, never remembering that one
+// existed.
 // ---------------------------------------------------------------------------
-const EM_DASH_EXEMPT_PREFIXES = [
-  // Article bodies, and the index and tag pages that display their titles.
-  'articles/', 'asm/', 'community/', 'dba/', 'goldengate/', 'oci/', 'scripts/', 'tags/',
-];
 const EM_DASH_EXEMPT_EXACT = [
   'admin/index.html', // Sveltia CMS, third party markup this project does not author
 ];
-const isEmDashExempt = (p) =>
-  EM_DASH_EXEMPT_EXACT.includes(p) || EM_DASH_EXEMPT_PREFIXES.some((pre) => p.startsWith(pre));
+const isEmDashExempt = (p) => EM_DASH_EXEMPT_EXACT.includes(p);
 
 test('page discovery finds the built site, and covers every hand-named page', () => {
   // Without this, a discovery bug that matched nothing would report every
@@ -137,15 +135,18 @@ test('the em dash exemption list has not grown by itself', () => {
   const exempt = ALL_PAGES.filter(isEmDashExempt);
   assert.equal(
     exempt.length,
-    62,
-    `${exempt.length} pages are exempt from the em dash rule, not 62.\n` +
-      'If an article was added, decide whether it follows the house rule before changing this number.\n' +
+    1,
+    `${exempt.length} pages are exempt from the em dash rule, not 1.\n` +
+      'Since the 9 Aug 2026 ruling the only exempt page is the third party CMS shell.\n' +
+      'A page listed here that we author is a decision somebody has to make out loud.\n' +
       exempt.join('\n'),
   );
-  // And the guard must still be covering the pages that matter. 15 today,
-  // against the 7 that were hand-named before page discovery replaced the list.
+  // And the guard must still be covering the pages that matter. 80 of the 81
+  // pages this build produces, against the 15 that survived the old article
+  // exemption and the 7 that were hand-named before page discovery replaced
+  // the list. Adding pages must not be able to shrink this.
   const guarded = ALL_PAGES.filter((p) => !isEmDashExempt(p));
-  assert.ok(guarded.length >= 15, `only ${guarded.length} pages are actually guarded`);
+  assert.ok(guarded.length >= 80, `only ${guarded.length} pages are actually guarded`);
 });
 
 for (const page of ALL_PAGES.filter((p) => !isEmDashExempt(p))) {
