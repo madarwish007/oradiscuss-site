@@ -24,6 +24,12 @@ const PAGES = [
   'privacy/index.html',
   'refund/index.html',
   'contact/index.html',
+  // Phase 6. This list enumerates its inputs, so a new page is uncovered until
+  // it is named here. /changelog/ is covered TWICE on purpose: this guard reads
+  // the built shell, and test/changelog.test.js reads the page the Worker
+  // actually renders, which is a different document.
+  'reissue/index.html',
+  'changelog/index.html',
 ];
 
 function read(page) {
@@ -120,6 +126,33 @@ for (const page of ['kit/index.html', 'roadmap/index.html']) {
     assert.deepEqual(offenders, [], 'a .cap rule sets opacity');
   });
 }
+
+test('the re-issue form ships closed', () => {
+  // Same law as the capture form, and the same reason: what lands in dist/ is
+  // what a visitor gets with no JavaScript, with a failed fetch, or before the
+  // signing key exists. In every one of those states the form must be unable to
+  // take a reference it could not act on.
+  const html = read('reissue/index.html');
+  assert.match(html, /<fieldset class="rei-fields" disabled=""/, 'the fieldset must ship disabled');
+  assert.match(
+    html,
+    /This form is disabled until the download service confirms it is open/,
+    'the closed form must say so in the static HTML',
+  );
+  assert.match(html, /<noscript>/, 'the no-JavaScript case must be addressed in prose');
+  assert.match(html, /noindex/, 'a members utility page must not be indexed');
+});
+
+test('the re-issue form does not dim its disabled state with opacity', () => {
+  const css = allCss(read('reissue/index.html'));
+  const rules = [...css.matchAll(/\.rei[^{}]*\{[^}]*\}/g)].map((m) => m[0]);
+  assert.ok(rules.length >= 10, `only ${rules.length} .rei rules found, so this guard is asleep`);
+  assert.deepEqual(
+    rules.filter((r) => /opacity\s*:/.test(r)),
+    [],
+    'a .rei rule sets opacity, which multiplies text toward its ground and defeats a contrast check',
+  );
+});
 
 test('no built page collects a comment', () => {
   // Founder ruling 7 Aug: comments are dropped. The reason is the product's
