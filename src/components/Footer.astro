@@ -1,5 +1,18 @@
 ---
 const year = new Date().getFullYear();
+
+/* The footer carries four columns and `.FI` declares exactly four, so a fifth
+   wraps under the brand block. That is the constraint every change here works
+   inside.
+
+   The old "Resources" column was four EXTERNAL Oracle links (ACE programme, My
+   Oracle Support, the 26ai docs, Ask TOM). It was replaced by the Membership
+   column rather than kept, for two reasons: the footer previously linked NONE
+   of what the site sells, and those four were generic bookmarks that send a
+   visitor away. `/tools/` is our own on-site Oracle error lookup and docs
+   search, so pointing at it is a straight upgrade on two of the four rather
+   than a loss. If the founder wants the external list back it belongs on a
+   page, not in the furniture. */
 ---
 <footer>
   <div class="FI">
@@ -15,28 +28,24 @@ const year = new Date().getFullYear();
       </p>
     </div>
     <div class="FC">
-      <h4>Content</h4>
+      <h4>Membership</h4>
       <ul>
-        <li><a href="/dba/">Advanced DBA</a></li>
-        <li><a href="/goldengate/">GoldenGate</a></li>
-        <li><a href="/scripts/">Scripts Library</a></li>
-        <li><a href="/asm/">ASM</a></li>
-        <li><a href="/oci/">Exadata / OCI</a></li>
+        <li><a href="/pricing/">Tiers and pricing</a></li>
+        <li><a href="/kit/">Free DBA First Aid Kit</a></li>
+        <li><a href="/roadmap/">Course roadmap</a></li>
+        <li><a href="/tools/">Error lookup and search</a></li>
+        <li><a href="/services/">Consulting</a></li>
       </ul>
     </div>
     <div class="FC">
-      <h4>Resources</h4>
+      <h4>Writing</h4>
       <ul>
-        <li><a href="https://ace.oracle.com/" target="_blank" rel="noopener">Oracle ACE Program</a></li>
-        <li><a href="https://support.oracle.com/" target="_blank" rel="noopener">My Oracle Support</a></li>
-        <li>
-          <a
-            href="https://docs.oracle.com/en/database/oracle/oracle-database/26/index.html"
-            target="_blank"
-            rel="noopener">Oracle 26ai Docs</a
-          >
-        </li>
-        <li><a href="https://asktom.oracle.com/" target="_blank" rel="noopener">Ask TOM</a></li>
+        <li><a href="/articles/">All articles</a></li>
+        <li><a href="/dba/">Advanced DBA</a></li>
+        <li><a href="/oci/">Exadata and OCI</a></li>
+        <li><a href="/goldengate/">GoldenGate</a></li>
+        <li><a href="/scripts/">Scripts Library</a></li>
+        <li><a href="/asm/">ASM</a></li>
       </ul>
     </div>
     <div class="FC">

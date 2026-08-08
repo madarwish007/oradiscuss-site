@@ -7,21 +7,30 @@ function isActive(prefix: string): boolean {
 }
 
 type NavItem = { href: string; label: string };
+
+/* The nav names what the site SELLS first, then what it publishes.
+   It used to be the old blog's category list, and it was measurably wrong for
+   this site: four of nine slots went to article categories, TWO of which hold
+   exactly ONE article each (/scripts/ and /goldengate/), "Exadata" pointed at
+   /oci/ so the label did not match its own URL, and the three pages that
+   describe the product, /pricing/ /kit/ /roadmap/, appeared NOWHERE.
+
+   Moving the categories out orphans nothing: /articles/ links every one of
+   them and so does the footer, which is two doors rather than one.
+
+   "Home" is gone as an item because the logo already goes there. Carrying both
+   spends a nav slot on a link the visitor already has. */
 const items: NavItem[] = [
-  { href: '/', label: 'Home' },
-  /* The article index moved off "/" when the membership page became the home,
-     so the writing needs its own door here or it stops being reachable. */
+  { href: '/pricing/', label: 'Membership' },
+  { href: '/kit/', label: 'Free kit' },
   { href: '/articles/', label: 'Articles' },
-  { href: '/dba/', label: 'Advanced DBA' },
-  { href: '/scripts/', label: 'Scripts' },
-  { href: '/goldengate/', label: 'GoldenGate' },
-  { href: '/oci/', label: 'Exadata' },
   { href: '/tools/', label: 'Tools' },
-  { href: '/services/', label: 'Services' },
+  { href: '/roadmap/', label: 'Roadmap' },
   { href: '/about/', label: 'About' },
 ];
-// Note: matches existing header: ASM + Community intentionally omitted from main nav
-// (ASM reachable via /asm/ tag page and footer; Community via footer)
+/* /services/ moves to the FOOTER rather than out of the site. It is the
+   founder's consulting channel; removing it entirely is his decision and not
+   a seat's, so it stays reachable and is only demoted. */
 ---
 <header>
   <div class="HI">
