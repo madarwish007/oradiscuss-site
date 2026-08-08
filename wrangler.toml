@@ -27,7 +27,11 @@ not_found_handling = "404-page"
 # 404 page before the Worker ever runs, while fetch()-shaped requests fall
 # through correctly. Verified by replaying both request shapes with curl.
 # This is not cosmetic: the Phase 6 download link is a navigation.
-run_worker_first = ["/api/*"]
+#
+# /changelog/ is listed for the opposite reason: the built page DOES exist as an
+# asset, so without this the Worker never runs and the page ships with its
+# "could not be read" fallback instead of the releases from D1.
+run_worker_first = ["/api/*", "/changelog", "/changelog/"]
 
 [observability]
 enabled = true
@@ -58,8 +62,47 @@ bucket_name = "oradiscuss-assets"
 # printed at deploy time, which is the only trustworthy confirmation.
 [unsafe]
 bindings = [
-  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } }
+  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } },
+  # A second, much tighter limiter for the endpoints that take a transaction
+  # reference: /api/download, /api/reissue and /api/entitlement/delete. They are
+  # the only routes where a caller can test whether a reference exists, so they
+  # get five attempts a minute rather than sixty. The code FAILS CLOSED when
+  # this binding is absent: an unlimited reference oracle is a worse failure
+  # than a download counter that says it is shut.
+  { name = "REISSUE_RATE_LIMIT", type = "ratelimit", namespace_id = "1002", simple = { limit = 5, period = 60 } }
 ]
+
+# ------------------------------------------------------------- WEBHOOK RETRY
+#
+# READ THIS BEFORE THE NEXT DEPLOY. These queues are DECLARED here and do NOT
+# exist on the account yet. A deploy carrying a queue binding whose remote queue
+# is missing FAILS. Create them once, per environment:
+#
+#   npx wrangler queues create webhook-retry
+#   npx wrangler queues create webhook-retry-preview
+#
+# Nothing in this branch created them, deliberately: creating remote resources
+# is not this seat's to do. If the consolidated preview deploy must go out
+# before they exist, comment out the four queue blocks (here and under
+# [env.preview]) and the retry path degrades honestly, because worker/webhook.js
+# treats the binding as optional: a webhook that cannot be queued is still
+# written to the D1 `webhook_failure` table and then answered with a 500, so the
+# Merchant of Record redelivers it. Nothing is dropped either way.
+#
+# There is no dead letter QUEUE on purpose. `webhook_failure` in D1 is the dead
+# letter record, it is written on the first failure rather than after the last
+# retry, and it is queryable. A second queue would add a resource that has to be
+# created and watched to tell us something D1 already holds.
+
+[[queues.producers]]
+binding = "WEBHOOK_RETRY"
+queue = "webhook-retry"
+
+[[queues.consumers]]
+queue = "webhook-retry"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 5
 
 # ------------------------------------------------------------------- PREVIEW
 
@@ -70,7 +113,7 @@ name = "oradiscuss-site-preview"
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "404-page"
-run_worker_first = ["/api/*"]
+run_worker_first = ["/api/*", "/changelog", "/changelog/"]
 
 [env.preview.observability]
 enabled = true
@@ -93,5 +136,19 @@ bucket_name = "oradiscuss-assets-preview"
 
 [env.preview.unsafe]
 bindings = [
-  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } }
+  { name = "API_RATE_LIMIT", type = "ratelimit", namespace_id = "1001", simple = { limit = 60, period = 60 } },
+  { name = "REISSUE_RATE_LIMIT", type = "ratelimit", namespace_id = "1002", simple = { limit = 5, period = 60 } }
 ]
+
+# The preview queue is a SEPARATE remote resource, the same way preview has its
+# own D1, KV and R2. See the note above: neither queue exists yet.
+
+[[env.preview.queues.producers]]
+binding = "WEBHOOK_RETRY"
+queue = "webhook-retry-preview"
+
+[[env.preview.queues.consumers]]
+queue = "webhook-retry-preview"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 5
