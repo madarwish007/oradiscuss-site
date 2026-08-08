@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  /*
+    One frame of the terminal sequence. The reveal is done by GENERATING one
+    file per state rather than by animating in the page: a still capture of a
+    running animation is a race, and a dead inline script is invisible in
+    markup. Every line rendered here came out of the real run, see
+    Showcase/samples/healthcheck/run.log.
+    No inline script. No webfonts.
+  */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#FAFBFD}
+  body{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+  .stage{width:{{STAGE_W}}px;height:{{STAGE_H}}px;padding:52px 64px;display:flex;flex-direction:column;justify-content:center}
+  .cap{
+    font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:#626C80;margin-bottom:14px;display:flex;gap:10px;align-items:center;
+  }
+  .cap .dot{width:8px;height:8px;border-radius:50%;background:#C74634;display:inline-block}
+  .term{
+    flex:none;height:{{TERM_H}}px;background:#0A0B0D;border:1px solid #262A31;border-radius:12px;overflow:hidden;
+    box-shadow:0 18px 44px rgba(11,27,52,.13);display:flex;flex-direction:column;
+  }
+  .chrome{
+    display:flex;align-items:center;gap:8px;padding:11px 16px;border-bottom:1px solid #1C1F24;
+    font-size:11px;color:#9BA1A9;letter-spacing:.02em;
+  }
+  .chrome i{width:9px;height:9px;border-radius:50%;display:inline-block;background:#2A2F36}
+  .chrome .path{margin-left:8px}
+  .body{
+    padding:18px 20px;font-size:{{FONT_PX}}px;line-height:1.62;color:#C9CDD3;
+    white-space:pre-wrap;word-break:break-word;
+    /* Two hyphens must LOOK like two hyphens. A coding font that ligates
+       them into one long dash puts a mark on the screen that the source
+       text does not contain, and a screenshot is the only place that shows
+       up. */
+    font-variant-ligatures:none;font-feature-settings:"liga" 0,"calt" 0;
+  }
+  .body .p{color:#4ade80}
+  .body .c{color:#E8E9EB}
+  .body .m{color:#9BA1A9}
+  .body .crit{color:#FF6B4A}
+  .body .cur{background:#E8E9EB;color:#0A0B0D}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="cap"><span class="dot"></span>{{CAPTION}}</div>
+  <div class="term">
+    <div class="chrome"><i></i><i></i><i></i><span class="path">{{PATH}}</span></div>
+    <div class="body">{{LINES}}</div>
+  </div>
+</div>
+</body>
+</html>
