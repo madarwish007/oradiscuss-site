@@ -33,13 +33,18 @@
 # The briefing carries "kind": "incident", which is how a consumer tells this
 # document apart from a state-of-the-database briefing without guessing.
 #
-# Collects, for one incident window:
+# Collects, for one incident window, ON THE NODE IT RUNS ON:
 #   - alert log entries (X$DBGALERTEXT when readable, text alert log when not)
-#   - ADR incident list via adrci
+#   - ADR incident list, via adrci, when adrci is on the PATH
 #   - workload evidence from AWR, ONLY when the Diagnostics Pack is available
 #   - listener log errors
-#   - clusterware alert log on RAC, local node
-#   - OS tier (messages, dmesg), ONLY as root or with passwordless sudo
+#   - OS tier (system logs), ONLY as root or with passwordless sudo
+#
+# IT DOES NOT COLLECT FROM OTHER RAC NODES, and it says so in the data rather
+# than leaving it to be assumed. The v0.9 release reached remote nodes over SSH;
+# that is a larger change and a positioning decision rather than a bug fix, and
+# it is an open founder question shared with the other packs. Until it is
+# answered, the honest answer is "run it on each node", stated in the report.
 # Every tier that cannot run becomes an NA check naming what would make it run.
 # A tier that is silently absent is indistinguishable from a tier that found
 # nothing, and those are very different answers during an incident.
@@ -233,12 +238,15 @@ DRY-RUN - RCA collection plan
       any assumed diagnostic_dest layout.
    2. Alert log in the window. Probes X\$DBGALERTEXT once; falls back to
       reading the text alert log when that is not readable.
-   3. ADR incidents, via adrci show incident.
-   4. Workload evidence from AWR, ONLY if control_management_pack_access
+   3. ADR incidents, via adrci show incident, when adrci is on the PATH.
+      Otherwise an NA check naming what would make it run.
+   4. Node scope, recorded so the report states which node it describes.
+   5. Workload evidence from AWR, ONLY if control_management_pack_access
       allows it. Otherwise an NA check naming the Diagnostics Pack.
-   5. Listener log errors in the window.
-   6. Clusterware alert log, local node, when this is RAC.
+   6. Listener log errors in the window.
    7. OS tier, ONLY as root or with passwordless sudo. Otherwise an NA check.
+
+  WOULD NOT reach any other RAC node. Run it on each node you own.
 
   WOULD then reconstruct a timeline, derive ordering FACTS from it, and write
   one HTML report and one briefing.json.
@@ -334,6 +342,32 @@ EOF
       emit "CHK|ALERT_TEXT|NA|Text alert log|not readable at ${ALERT_TXT}"
     fi
   fi
+
+  # ADR incidents. An incident is Oracle's own record that something went wrong
+  # badly enough to dump diagnostics, so it is the highest-signal, lowest-volume
+  # thing in the whole collection.
+  emit "SEC|ADR incidents"
+  if command -v adrci >/dev/null 2>&1 && [ -n "$ADR_HOME" ]; then
+    ADR_OUT="$APPENDIX_DIR/adr_incidents.txt"
+    if adrci exec="set base ${ADR_HOME%/*/*/*}; set homepath ${ADR_HOME#*/diag/}; show incident" \
+         > "$ADR_OUT" 2>/dev/null; then
+      ADR_N="$(grep -cE '^[0-9]+ +[0-9]+ ' "$ADR_OUT" 2>/dev/null || true)"
+      ADR_N="${ADR_N:-0}"
+      emit "CHK|ADRINC|OK|ADR incidents|${ADR_N} incident rows captured to the appendix. An incident is Oracle's own record that it dumped diagnostics, so these are worth reading before anything else here."
+      emit "MET|ADRINC|incidents|${ADR_N}|incidents"
+    else
+      emit "CHK|ADRINC|NA|ADR incidents|adrci is present but returned nothing readable for this ADR home. The alert log tier above is unaffected."
+    fi
+  else
+    emit "CHK|ADRINC|NA|ADR incidents|adrci was not found on the PATH, or no ADR home resolved, so Oracle's own incident records were not read. Run this as the oracle OS user with \$ORACLE_HOME/bin on the PATH to include them."
+  fi
+
+  # NODE SCOPE, stated in the data. Same pattern as the Health Check pack's
+  # cluster scope check, and for the same reason: on RAC this collection
+  # describes the node it ran on, and an unstated scope is indistinguishable
+  # from a complete one.
+  emit "SEC|Collection scope"
+  emit "CHK|NODESCOPE|OK|Node scope|This collection describes the node it ran on: $(hostname -s 2>/dev/null || hostname). Alert log, listener and operating system evidence are LOCAL TO THIS NODE. On RAC, run it on each node you are responsible for, because an incident that evicted a different node leaves its evidence there."
 
   # Workload evidence, licence gated.
   emit "SEC|Workload evidence"

@@ -5,6 +5,10 @@ MET|IDENT|uptime_hours|412,5|hours
 CHK|ADR|OK|ADR paths|ADR home D:\oracle\diag\rdbms\labdb\labdb1
 CHK|OSTIER|NA|Operating system tier|skipped. Running as oracle, which cannot read the system logs, and no passwordless sudo is available.
 CHK|AWR|NA|Workload evidence|control_management_pack_access is "NONE", so DBA_HIST views were not read. Those views are licensed with the Oracle Diagnostics Pack. Stated as a fact about what was not read, not as advice about your licensing.
+SEC|ADR incidents
+CHK|ADRINC|NA|ADR incidents|adrci was not found on the PATH, or no ADR home resolved, so Oracle's own incident records were not read. Run this as the oracle OS user with $ORACLE_HOME/bin on the PATH to include them.
+SEC|Collection scope
+CHK|NODESCOPE|OK|Node scope|This collection describes the node it ran on: dbnode1. Alert log, listener and operating system evidence are LOCAL TO THIS NODE. On RAC, run it on each node you are responsible for.
 SEC|Alert log
 CHK|ALERT|OK|Alert log source|read through X$DBGALERTEXT, filtered on the window in the database
 EVT|4|1754640042|2026-08-08 03:20:42|alert-log|SEVERE|ORA-01578: ORACLE data block corrupted (file # 7, block # 1234)

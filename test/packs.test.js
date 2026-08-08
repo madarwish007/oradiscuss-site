@@ -1164,8 +1164,18 @@ test('rca: an INCOMPLETE collection never reports itself as OK', () => {
   assert.equal(doc.summary.overall_status, 'WARN');
   assert.equal(doc.collection.collector_exit_code, 1, 'the summary and the exit code disagree');
 
+  // Derived from the document rather than hardcoded, so adding a check to the
+  // fixture cannot fail this test for a reason the product had nothing to do
+  // with. The first version asserted "2 of 6" and broke the moment a tier was
+  // added, which says nothing about whether the report is honest.
+  const c = doc.summary.counts;
+  const total = c.OK + c.WARN + c.CRIT + c.NA;
   const html = readFileSync(join(r.dir, r.html), 'utf8');
-  assert.match(html, /2 of 6 checks could not be read/, 'the report does not state its own incompleteness');
+  assert.match(
+    html,
+    new RegExp(`${c.NA} of ${total} checks could not be read`),
+    'the report does not state its own incompleteness in the words the document supports',
+  );
 });
 
 test('rca: a count of one does not read as "1 times"', () => {
@@ -1266,6 +1276,58 @@ test('rca: it REFUSES rather than guessing, and each refusal exits non-zero', ()
     assert.equal(r.status, 2, `${args.join(' ') || '(no args)'} should exit 2, exited ${r.status}`);
     assert.match(r.out, re);
   }
+});
+
+test('rca: the README, the dry-run plan and the collector agree about the tiers', () => {
+  // THE DEFECT THIS EXISTS FOR SHIPPED IN THIS PACK'S FIRST DRAFT. The header,
+  // the dry-run plan and the README all described an ADR incident tier via
+  // adrci and a clusterware tier, and the collector had neither. A customer
+  // reading --dry-run would have been told a tier would run that never ran.
+  //
+  // That is the same family as "every catalog blurb must be true the day a buy
+  // button appears", one level down. Documentation is a claim; a claim needs a
+  // guard, not a good intention.
+  const pack = PACKS.find((p) => p.id === 'rca');
+  const script = readFileSync(join(pack.dir, 'rca_generator.sh'), 'utf8');
+  const readme = readFileSync(join(pack.dir, 'README.md'), 'utf8');
+
+  // Ids the README's tier table promises, read out of the table itself.
+  const promised = [...readme.matchAll(/^\|[^|]+\|\s*`([A-Z_]+)`\s*\|/gm)].map((m) => m[1]);
+  assert.ok(promised.length >= 5, `only ${promised.length} tier ids found in the README table`);
+
+  // Ids the collector can actually emit.
+  const emitted = new Set([...script.matchAll(/emit "CHK\|([A-Z_]+)\|/g)].map((m) => m[1]));
+  assert.ok(emitted.size > 0, 'no CHK ids found in the collector, so this guard is asleep');
+
+  const missing = promised.filter((id) => !emitted.has(id));
+  assert.deepEqual(missing, [], `the README promises tiers the collector never emits: ${missing.join(', ')}`);
+
+  // And the reverse: nothing the collector emits as a TIER may be undocumented.
+  // Scoped to the tier table's ids rather than every check, because identity
+  // and scope checks are not tiers.
+  for (const id of ['ALERT', 'ADRINC', 'AWR', 'LSNR', 'OSTIER']) {
+    assert.ok(emitted.has(id), `the collector cannot emit ${id}, which the README documents`);
+    assert.ok(readme.includes(`\`${id}\``), `${id} is emitted but absent from the README tier table`);
+  }
+
+  // The clusterware claim was removed rather than left to rot. If somebody
+  // reinstates SSH fan-out they must reinstate the words too, deliberately.
+  assert.ok(
+    !/clusterware/i.test(script),
+    'the collector mentions clusterware again. Either it collects it, or the claim goes.',
+  );
+});
+
+test('rca: the report states which NODE it describes', () => {
+  // On RAC an incident that evicted a different node leaves its evidence on
+  // that node. A single-node picture mistaken for a cluster-wide one is the
+  // same failure the Health Check pack already fixed with its cluster scope.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const scope = doc.checks.find((c) => c.id === 'NODESCOPE');
+  assert.ok(scope, 'the briefing carries no NODESCOPE check');
+  assert.match(scope.detail, /LOCAL TO THIS NODE/);
+  assert.match(scope.detail, /each node/i);
 });
 
 test('rca: the appendix is listed rather than embedded', () => {
