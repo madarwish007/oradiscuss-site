@@ -128,6 +128,19 @@ log "tablespace_monitor.sh finished rc=$rc"
 # left every cron user, which is the documented primary usage, with a dated run
 # directory containing half of what the run made: "one collection, two outputs"
 # would have been true in reports/ and false in the artifact the customer keeps.
+#
+# awr_triage IS DELIBERATELY ABSENT FROM THIS LIST AND FROM THE RUN STEPS ABOVE.
+# This comment exists because the alternative is somebody finding the omission
+# later and being unable to tell whether it was a decision or the same fan-out
+# bug a third time. It is a decision. awr_triage is on-demand triage, not a
+# daily job: it needs a snapshot window chosen by a human, and it reads
+# DBA_HIST_* views, which require the Diagnostics Pack licence that not every
+# customer holds. Run unattended it would either guess a window or fail nightly
+# on an unlicensed database. Its outputs still land in reports/ like everything
+# else; they simply do not belong to an orchestrated run.
+#
+# IF awr_triage IS EVER ADDED TO THE RUN ABOVE, ADD ITS PREFIX HERE IN THE SAME
+# COMMIT. That is the whole lesson this file has already taught twice.
 for prefix in health tablespace; do
   for ext in html json; do
     find "$OUTPUT_DIR/reports" -maxdepth 1 -name "${prefix}_${ORACLE_SID}_*.${ext}" -newermt '-10 minutes' \
