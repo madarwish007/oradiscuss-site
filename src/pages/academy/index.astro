@@ -1,0 +1,190 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+/* THE ACADEMY INDEX, AND THE RULE THAT KEEPS IT HONEST.
+
+   A course is listed here only when it has at least one published lesson. That
+   is enforced below, in code, rather than trusted to whoever adds the next
+   course record. The reason is specific: a course file with no lessons is a
+   PLAN, and a page that lists plans as if they were courses is a catalogue of
+   things that do not exist. This site already describes things it has not
+   built yet, which is survivable only while there is nothing to click and buy.
+   Every blurb has to be true the day a buy button appears, so the shelf shows
+   what is on it and nothing else.
+
+   With zero courses the page says so plainly. It does not apologise, it does
+   not name a date, and it does not stand a list of titles in for the courses
+   that have not been written. When the first course lands the same file
+   renders the list branch, so nothing here needs editing or retracting. */
+
+const allCourses = await getCollection('academyCourses', ({ data }) => !data.draft);
+const lessons = await getCollection('academy', ({ data }) => !data.draft);
+
+const lessonsFor = (courseId: string) =>
+  lessons.filter((lesson) => lesson.data.course.id === courseId);
+
+const courses = allCourses
+  .filter((course) => lessonsFor(course.id).length > 0)
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+
+const empty = courses.length === 0;
+
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+
+/* Title and description follow the same branch as the body. A description that
+   advertised courses while the shelf was empty would be the same lie, moved
+   into a meta tag where nobody would notice it. */
+const title = empty ? 'Academy' : 'Academy: text lab manuals for working Oracle DBAs';
+const description = empty
+  ? 'The Academy has no courses in it yet. This page lists them when they exist.'
+  : 'Text lab manuals worked through at a terminal. Every lesson states the Oracle releases it was written against and the date it was last reviewed.';
+---
+<BaseLayout title={title} description={description} noindex={empty}>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Academy</p>
+      {empty ? (
+        <h1 class="rv" style="--d:70ms">There are no courses here yet.</h1>
+      ) : (
+        <h1 class="rv" style="--d:70ms">Lab manuals, worked at a terminal.</h1>
+      )}
+      {empty ? (
+        <p class="capp-lede rv" style="--d:140ms">
+          This page lists what the Academy holds. It holds nothing, so it lists nothing. There is no
+          list of titles below standing in for courses that have not been written, and nothing on
+          this page is still loading.
+        </p>
+      ) : (
+        <p class="capp-lede rv" style="--d:140ms">
+          Each course is a text lab manual, in modules, meant to be worked through with a database
+          in front of you. A course appears on this page once it has lessons in it.
+        </p>
+      )}
+    </div>
+  </section>
+
+  <div class="i-shell">
+    <div class="capp-body">
+
+      {empty ? (
+        <div data-academy-state="empty">
+          <section class="capp-sec rv">
+            <h2>What a course here is</h2>
+            <p>
+              A text lab manual. Written to be worked through at a terminal rather than watched, in
+              modules, one lesson at a time, with a database in front of you that you are allowed to
+              break.
+            </p>
+            <p>
+              Every lesson states the Oracle releases it was written against, roughly how long the
+              work takes, what you need ready before you start, and the date it was last reviewed.
+              Those are not editorial habits that a tired writer can skip. They are required fields,
+              so a lesson that will not state them cannot be published here at all.
+            </p>
+          </section>
+
+          <section class="capp-sec rv">
+            <h2>How the first one gets chosen</h2>
+            <p>
+              By what people ask for. The <a href="/roadmap/">roadmap</a> carries the courses under
+              consideration and takes registrations, and those registrations rank the build order.
+              That is the entire mechanism, and it is the only thing on this site that decides which
+              course is written next.
+            </p>
+            <p>
+              This page will list a course when there is a course to list. Until then it says so,
+              which is the only thing it can say that is true.
+            </p>
+          </section>
+
+          <section class="capp-sec rv">
+            <h2>How access works</h2>
+            <p>
+              Academy access is included with the membership. Nothing on this page is for sale, and
+              what the <a href="/pricing/">membership</a> costs is stated there, read from the
+              catalogue rather than from anybody's memory.
+            </p>
+          </section>
+
+          <a class="capp-onward rv" href="/roadmap/">Rank the courses on the roadmap</a>
+        </div>
+      ) : (
+        <section class="capp-sec rv" data-academy-state="courses">
+          <h2>Courses</h2>
+          <ul class="acad-list">
+            {courses.map((course) => {
+              const count = lessonsFor(course.id).length;
+              return (
+                <li class="acad-card">
+                  <a class="acad-link" href={`/academy/${course.id}/`}>{course.data.title}</a>
+                  <p class="acad-summary">{course.data.summary}</p>
+                  <p class="acad-meta">
+                    <span>{course.data.oracleVersions.join(', ')}</span>
+                    <span>{count === 1 ? '1 lesson' : `${count} lessons`}</span>
+                    <span>Reviewed {fmtDate(course.data.lastReviewed)}</span>
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+
+    </div>
+  </div>
+
+</div>
+
+<style>
+  /* Only the course list needs anything new. The empty state is built entirely
+     from the shared capp system, so the page it renders today introduces no
+     CSS of its own. */
+  .acad-list {
+    margin-top: 22px;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--hair);
+  }
+  .acad-card {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--hair);
+  }
+  .acad-link {
+    font-family: var(--sora);
+    font-size: clamp(1.15rem, 1.9vw, 1.4rem);
+    font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.025em;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .acad-link:hover {
+    color: var(--act);
+    border-color: var(--act);
+  }
+  .acad-summary {
+    margin-top: 10px;
+    max-width: 66ch;
+    font-size: 15.5px;
+    line-height: 1.7;
+    color: var(--ink2);
+  }
+  .acad-meta {
+    margin-top: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+</style>
+</BaseLayout>
