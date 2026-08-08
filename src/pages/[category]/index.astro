@@ -25,15 +25,15 @@ function sizeFor(i: number): 'PCF' | 'PCT' | 'PCW' | 'PCN' {
 }
 
 const intro = {
-  dba: 'Advanced Oracle DBA deep-dives — RAC wait events, AWR interpretation, online partitioning, and the tuning work you actually do on production systems.',
-  oci: 'Oracle Cloud Infrastructure and Exadata Cloud — migrations to ExaCS/ExaCC, cross-platform moves, and running Oracle databases at real scale on OCI.',
+  dba: 'Advanced Oracle DBA deep-dives, RAC wait events, AWR interpretation, online partitioning, and the tuning work you actually do on production systems.',
+  oci: 'Oracle Cloud Infrastructure and Exadata Cloud, migrations to ExaCS/ExaCC, cross-platform moves, and running Oracle databases at real scale on OCI.',
   goldengate: 'Oracle GoldenGate patterns, bidirectional replication, and zero-downtime schema changes.',
   scripts: 'Ready-to-run SQL and shell scripts for monitoring, diagnostics, and routine DBA work.',
-  community: 'Oracle community posts — ACE programme notes, conference writeups, and career-side thoughts.',
+  community: 'Oracle community posts, ACE programme notes, conference writeups, and career-side thoughts.',
 }[cat];
 ---
 <BaseLayout
-  title={`${label} — OraDiscuss`}
+  title={`${label} · OraDiscuss`}
   description={`${label} articles on OraDiscuss: ${intro}`}
 >
   <section class="art-hero">
@@ -53,7 +53,7 @@ const intro = {
                 month: 'short',
                 day: 'numeric',
               })
-            : '—'}
+            : '-'}
         </span>
       </div>
     </div>
