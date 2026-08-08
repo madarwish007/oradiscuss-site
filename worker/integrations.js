@@ -38,6 +38,15 @@ const SECRETS = {
     shape: /^[0-9a-f]{64}$/,
     expect: '64 hex characters, from openssl rand -hex 32',
   },
+  // The Security Watch publish gate. Publishing a brief is a founder action
+  // (RUNBOOK, THE STANDING GATES), so the endpoint that flips a draft live is
+  // useless without this and REFUSES without it: an absent token means no
+  // publish is possible, never that no token is required.
+  WATCH_ADMIN_TOKEN: {
+    min: 32,
+    shape: /^[0-9a-f]{64}$/,
+    expect: '64 hex characters, from openssl rand -hex 32',
+  },
 };
 
 export function readSecret(env, name) {
@@ -65,6 +74,12 @@ export function integrationStatus(env) {
   // so the re-issue page can open on the day the signing key lands rather than
   // waiting on a processor decision that has nothing to do with it.
   const delivery = detail.R2_SIGNING_KEY.set;
+  // Two separate answers on purpose. The founder can publish a brief to the
+  // website the day the token exists; sending it to the list additionally needs
+  // beehiiv AND a named segment, and waiting for the second would keep the
+  // archive shut for a reason that has nothing to do with it.
+  const watch_publish = detail.WATCH_ADMIN_TOKEN.set;
+  const watch_send = beehiiv && memberSegmentId(env) !== null;
 
   return {
     configured: {
@@ -75,6 +90,8 @@ export function integrationStatus(env) {
       turnstile,
       paddle,
       delivery,
+      watch_publish,
+      watch_send,
     },
     detail,
     // Names only. A secret name is configuration state, never a credential.
@@ -194,4 +211,83 @@ export async function beehiivSubscribe(env, { email, source, courseSlug }) {
   // and the page tells them to check their inbox.
   const raw = typeof data?.data?.status === 'string' ? data.data.status : '';
   return { ok: true, status: raw === 'active' ? 'active' : 'pending' };
+}
+
+/* ------------------------------------------------- the member send (Watch) */
+
+// The beehiiv segment the weekly brief goes to. A plain configuration value
+// rather than a secret, and REQUIRED rather than defaulted, which is the point:
+// with no segment named, beehiiv's own default audience is everybody, and the
+// free kit list is not the member list. Sending a members-only brief to every
+// address we ever collected is a mistake that cannot be taken back, so the
+// absence of this value stops the send instead of widening it.
+export function memberSegmentId(env) {
+  const raw = typeof env?.BEEHIIV_MEMBERS_SEGMENT_ID === 'string' ? env.BEEHIIV_MEMBERS_SEGMENT_ID.trim() : '';
+  return raw.length >= 4 ? raw : null;
+}
+
+// THE ONLY FUNCTION IN THIS REPOSITORY THAT CAN MAIL THE LIST, and it is called
+// from exactly one place: the founder's authenticated publish action in
+// worker/watch-publish.js. Nothing scheduled calls it, and a test sweeps the
+// source tree to keep that true.
+//
+// UNVERIFIED AGAINST A LIVE ACCOUNT, and this comment is the honest record of
+// that. No beehiiv publication exists yet (BUILD_PLAN integration 04 status:
+// "account/publication NOT yet created"), so the field names below come from
+// beehiiv's published v2 schema for POST /publications/{id}/posts, read on
+// 8 Aug 2026, and have never been exercised against the API. The first real
+// send is a verification step, not a formality.
+//
+// It fails CLOSED in every direction: no key, no publication, no segment, a
+// non 2xx answer or an unreachable host all return `sent: false` with a reason
+// word. The brief stays published either way, because the website is the
+// product and the email is the notification.
+export async function beehiivSendBrief(env, { title, subject, body_html }) {
+  const key = readSecret(env, 'BEEHIIV_API_KEY');
+  const publication = readSecret(env, 'BEEHIIV_PUBLICATION_ID');
+  if (!key.set || !publication.set) {
+    return { sent: false, status: 'not_configured', detail: 'BEEHIIV_API_KEY or BEEHIIV_PUBLICATION_ID is not set' };
+  }
+
+  const segment = memberSegmentId(env);
+  if (!segment) {
+    return { sent: false, status: 'no_segment', detail: 'BEEHIIV_MEMBERS_SEGMENT_ID is not set' };
+  }
+
+  let res;
+  try {
+    res = await fetch(
+      `${BEEHIIV_API_ROOT}/publications/${encodeURIComponent(publication.value)}/posts`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key.value}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          body_content: body_html,
+          status: 'confirmed',
+          recipients: { email: { include_segment_ids: [segment] } },
+          email_settings: { email_subject_line: subject },
+        }),
+      },
+    );
+  } catch {
+    return { sent: false, status: 'unreachable', detail: null };
+  }
+
+  if (!res.ok) {
+    let code = 'http_error';
+    try {
+      const data = await res.json();
+      const first = Array.isArray(data?.errors) ? data.errors[0] : null;
+      if (first && typeof first.code === 'string') code = first.code.slice(0, 64);
+    } catch {
+      /* a non-JSON error body tells us nothing beyond the status */
+    }
+    return { sent: false, status: 'failed', detail: `${res.status}:${code}` };
+  }
+
+  return { sent: true, status: 'sent', detail: null };
 }

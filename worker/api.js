@@ -20,6 +20,7 @@ import {
 import { postDownload, getDownload, postReissue, postDelete } from './delivery.js';
 import { handleWebhook } from './webhook.js';
 import { changelogJson } from './changelog.js';
+import { postPublish, getWatchStatus, postWatchRun } from './watch-publish.js';
 
 /* ------------------------------------------------------------------ read */
 
@@ -325,6 +326,15 @@ const ROUTES = {
   /* One line per Merchant of Record. The verification core and everything after
      it is shared; only worker/adapters/<name>.js differs. */
   'POST /api/paddle/webhook': (request, env) => handleWebhook(request, env, 'paddle'),
+
+  /* Phase 8 Security Watch. All three are behind WATCH_ADMIN_TOKEN and all
+     three refuse when it is not set, because an absent token must mean
+     publishing is impossible rather than unguarded. Publishing is a founder
+     gate: nothing scheduled reaches postPublish, and postWatchRun runs the
+     drafting job that cannot publish. */
+  'POST /api/watch/publish': (request, env) => postPublish(request, env),
+  'GET /api/watch/status': (request, env) => getWatchStatus(request, env),
+  'POST /api/watch/run': (request, env) => postWatchRun(request, env),
 };
 
 /* The limiter self-test route lived here until Stage A cutover prep. It proved
