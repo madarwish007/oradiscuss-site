@@ -169,7 +169,16 @@ odc_br_check() {
 # ---------------------------------------------------------------------------
 odc_br_document() {
   local pack="$1" pack_version="$2" script="$3" sid="$4" generated_at="$5"
-  local overall="$6" exit_code="$7" thresholds="${8:-{\}}"
+  local overall="$6" exit_code="$7" thresholds="${8-}"
+
+  # DEFAULTED HERE, NOT INLINE, AND THIS IS A FIXED BUG RATHER THAN A STYLE
+  # CHOICE. It used to read ${8:-{\}}, which expands to the literal three
+  # characters {\} and emits INVALID JSON. Every collector shipped so far
+  # happens to pass this argument, so the broken default was never reached and
+  # never noticed. The first script that omitted it (awr_triage.sh) produced a
+  # briefing that would not parse at all. A default nobody exercises is not a
+  # default, it is a trap waiting for the next caller.
+  [ -n "$thresholds" ] || thresholds='{}'
 
   cat <<JSON
 {

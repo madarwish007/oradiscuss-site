@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AWR triage UNKNOWN 20260808_191534</title>
+<style>
+body{font:15px/1.6 ui-sans-serif,system-ui,sans-serif;margin:0;padding:32px;color:#1c1917;background:#f7f5f1}
+h1{font-size:1.6rem;margin:0 0 6px}h2{font-size:1.1rem;margin:32px 0 8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th{text-align:left;padding:8px 10px 8px 0;border-bottom:2px solid #1c1917;font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+td{padding:9px 10px 9px 0;border-bottom:1px solid #e0d9cd;vertical-align:top}
+.badge{font:600 10px ui-monospace,monospace;letter-spacing:.06em;padding:3px 7px;border-radius:4px}
+.badge.ok{background:#e4efe8;color:#1f6b45}.badge.warn{background:#f6eeda;color:#8a6a12}
+.badge.crit{background:#f7e7e2;color:#a3341f}.badge.na{background:#ede8e0;color:#787065}
+.note{background:#efeae2;border-left:3px solid #e0a020;padding:12px 15px;margin:18px 0;font-size:14px}
+.meta{color:#4a443d;font-size:13px}
+</style></head><body>
+<h1>AWR triage</h1>
+<p class="meta">UNKNOWN &middot; generated 2026-08-08T16:15:35Z &middot; overall OK</p>
+<div class="note"><strong>Diagnostics Pack license required.</strong> This report was
+produced by reading DBA_HIST_* views, which requires the Oracle Diagnostics Pack
+license. The requirement is stated as a fact; whether you hold the license is
+yours to know.</div>
+<div class="note">No thresholds are applied to the efficiency ratios. Compare
+them against this database's own baseline. This report states what the database
+recorded and does not tell you what to change.</div>
+<h2>AWR triage window</h2><table><thead><tr><th>Status</th><th>Item</th><th>Detail</th></tr></thead><tbody><tr class="st-ok"><td><span class="badge ok">OK</span></td><td>Snapshot pair resolves</td><td>Snapshots 41201 and 41205 both exist for dbid 1234567890.</td></tr><tr class="st-na"><td><span class="badge na">NA</span></td><td>Window boundaries</td><td>Begins 2026-08-08 02:00, ends 2026-08-08 06:00.</td></tr></tbody></table><h2>Top timed events</h2><table><thead><tr><th>Status</th><th>Item</th><th>Detail</th></tr></thead><tbody><tr class="st-na"><td><span class="badge na">NA</span></td><td>db file sequential read (User I/O)</td><td>18422.7 s across 9910233 waits, average 1.86 ms.</td></tr><tr class="st-na"><td><span class="badge na">NA</span></td><td>log file sync (Commit)</td><td>4110.2 s across 2201884 waits, average 1.87 ms.</td></tr></tbody></table><h2>Top SQL by elapsed time</h2><table><thead><tr><th>Status</th><th>Item</th><th>Detail</th></tr></thead><tbody><tr class="st-na"><td><span class="badge na">NA</span></td><td>sql_id 62sn3tws31xtf</td><td>9911.4 s over 41022 executions, 0.242 s each, 2 distinct plan hash value(s). SELECT /*+ FULL */ x FROM t WHERE c = :b1</td></tr><tr class="st-na"><td><span class="badge na">NA</span></td><td>sql_id 0agwpg9n6cdmw</td><td>801.0 s over unknown executions, n/a s each, 1 distinct plan hash value(s). MERGE INTO &quot;D:\odd\name&quot; USING dual</td></tr><tr class="st-na"><td><span class="badge na">NA</span></td><td>SQL with more than one plan in the window</td><td>1 statement(s) in the window used more than one plan hash value. A plan change is a fact here, not a fault.</td></tr></tbody></table><h2>Instance efficiency</h2><table><thead><tr><th>Status</th><th>Item</th><th>Detail</th></tr></thead><tbody><tr class="st-na"><td><span class="badge na">NA</span></td><td>Buffer Hit</td><td>98.71 percent. No threshold is applied: compare against this database's own baseline.</td></tr><tr class="st-na"><td><span class="badge na">NA</span></td><td>Soft Parse</td><td>not available. No threshold is applied: compare against this database's own baseline.</td></tr></tbody></table>
+<p class="meta">OraDiscuss (oradiscuss.com). Not produced by, affiliated with,
+or endorsed by Oracle Corporation. Read-only: this pack issues no DDL and no DML
+against your data.</p>
+</body></html>

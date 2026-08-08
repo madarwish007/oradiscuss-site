@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "generator": {
+    "vendor": "OraDiscuss",
+    "source": "https://oradiscuss.com",
+    "pack": "healthcheck",
+    "pack_version": "1.0.0",
+    "script": "awr_triage.sh",
+    "notice": "Generated locally by OraDiscuss tooling. Not produced by, affiliated with, or endorsed by Oracle Corporation."
+  },
+  "collection": {
+    "generated_at": "2026-08-08T16:15:35Z",
+    "oracle_sid": "UNKNOWN",
+    "read_only": true,
+    "collector_exit_code": 0,
+    "data_residency": "This file was written on the machine that ran the collector. OraDiscuss never receives it."
+  },
+  "summary": {
+    "overall_status": "OK",
+    "counts": {
+      "OK": 1,
+      "WARN": 0,
+      "CRIT": 0,
+      "NA": 8
+    },
+    "needs_attention": []
+  },
+  "thresholds": {},
+  "checks": [{"id":"awr_window","section":"AWR triage window","status":"OK","title":"Snapshot pair resolves","detail":"Snapshots 41201 and 41205 both exist for dbid 1234567890.","metrics":{"begin_snap":{"value":41201,"unit":"snap_id"},"end_snap":{"value":41205,"unit":"snap_id"},"window_minutes":{"value":240.0,"unit":"minutes"}}},{"id":"awr_window_times","section":"AWR triage window","status":"NA","title":"Window boundaries","detail":"Begins 2026-08-08 02:00, ends 2026-08-08 06:00.","metrics":{}},{"id":"awr_event_1","section":"Top timed events","status":"NA","title":"db file sequential read (User I/O)","detail":"18422.7 s across 9910233 waits, average 1.86 ms.","metrics":{"time_waited":{"value":18422.7,"unit":"seconds"}}},{"id":"awr_event_2","section":"Top timed events","status":"NA","title":"log file sync (Commit)","detail":"4110.2 s across 2201884 waits, average 1.87 ms.","metrics":{"time_waited":{"value":4110.2,"unit":"seconds"}}},{"id":"awr_sql_1","section":"Top SQL by elapsed time","status":"NA","title":"sql_id 62sn3tws31xtf","detail":"9911.4 s over 41022 executions, 0.242 s each, 2 distinct plan hash value(s). SELECT /*+ FULL */ x FROM t WHERE c = :b1","metrics":{"elapsed":{"value":9911.4,"unit":"seconds"}}},{"id":"awr_sql_2","section":"Top SQL by elapsed time","status":"NA","title":"sql_id 0agwpg9n6cdmw","detail":"801.0 s over unknown executions, n/a s each, 1 distinct plan hash value(s). MERGE INTO \"D:\\odd\\name\" USING dual","metrics":{}},{"id":"awr_plan_changes","section":"Top SQL by elapsed time","status":"NA","title":"SQL with more than one plan in the window","detail":"1 statement(s) in the window used more than one plan hash value. A plan change is a fact here, not a fault.","metrics":{}},{"id":"awr_eff_buffer_hit","section":"Instance efficiency","status":"NA","title":"Buffer Hit","detail":"98.71 percent. No threshold is applied: compare against this database's own baseline.","metrics":{"Buffer Hit":{"value":98.71,"unit":"percent"}}},{"id":"awr_eff_soft_parse","section":"Instance efficiency","status":"NA","title":"Soft Parse","detail":"not available. No threshold is applied: compare against this database's own baseline.","metrics":{"Soft Parse":{"value":null,"unit":"percent"}}}]
+}

@@ -1,0 +1,21 @@
+SEC|AWR triage window
+CHK|awr_window|OK|Snapshot pair resolves|Snapshots 41201 and 41205 both exist for dbid 1234567890.
+MET|awr_window|begin_snap|41201|snap_id
+MET|awr_window|end_snap|41205|snap_id
+MET|awr_window|window_minutes|240.0|minutes
+CHK|awr_window_times|NA|Window boundaries|Begins 2026-08-08 02:00, ends 2026-08-08 06:00.
+SEC|Top timed events
+CHK|awr_event_1|NA|db file sequential read (User I/O)|18422.7 s across 9910233 waits, average 1.86 ms.
+CHK|awr_event_2|NA|log file sync (Commit)|4110.2 s across 2201884 waits, average 1.87 ms.
+MET|awr_event_1|time_waited|18422.7|seconds
+MET|awr_event_2|time_waited|4110.2|seconds
+SEC|Top SQL by elapsed time
+CHK|awr_sql_1|NA|sql_id 62sn3tws31xtf|9911.4 s over 41022 executions, 0.242 s each, 2 distinct plan hash value(s). SELECT /*+ FULL */ x FROM t WHERE c = :b1
+CHK|awr_sql_2|NA|sql_id 0agwpg9n6cdmw|801.0 s over unknown executions, n/a s each, 1 distinct plan hash value(s). MERGE INTO "D:\odd\name" USING dual
+MET|awr_sql_1|elapsed|9911.4|seconds
+CHK|awr_plan_changes|NA|SQL with more than one plan in the window|1 statement(s) in the window used more than one plan hash value. A plan change is a fact here, not a fault.
+SEC|Instance efficiency
+CHK|awr_eff_buffer_hit|NA|Buffer Hit|98.71 percent. No threshold is applied: compare against this database's own baseline.
+CHK|awr_eff_soft_parse|NA|Soft Parse|not available. No threshold is applied: compare against this database's own baseline.
+MET|awr_eff_buffer_hit|Buffer Hit|98.71|percent
+MET|awr_eff_soft_parse|Soft Parse|87,3|percent

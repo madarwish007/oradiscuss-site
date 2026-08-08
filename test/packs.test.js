@@ -42,10 +42,12 @@ const PACKS = [
     id: 'healthcheck',
     expects: [
       'health_check.sh',
+      'awr_triage.sh',
       'lib/odc_briefing.sh',
       'schema/briefing.schema.json',
       'prompts/triage.md',
       'sql/health_check.sql',
+      'sql/awr_triage_collect.sql',
     ],
     allowlist: ['sql/create_history_table.sql'],
   },
@@ -796,4 +798,124 @@ test('the briefing states, in the data, that the collection was read-only', () =
   const doc = JSON.parse(readFileSync(join(reports, json), 'utf8'));
   assert.equal(doc.collection.read_only, true);
   assert.match(doc.generator.notice, /Not produced by, affiliated with, or endorsed by Oracle/);
+});
+
+// ---------------------------------------------------------------------------
+// awr_triage.sh - the last single-output script in the Health Check pack,
+// converted to the dual-output contract.
+//
+// Driven through --render-only against a recorded collection, like every other
+// collector here, so these exercise the REAL parse loop in the shipped script.
+// ---------------------------------------------------------------------------
+
+function renderAwrTriage() {
+  const pack = PACKS.find((p) => p.id === 'healthcheck');
+  const out = mkdtempSync(join(tmpdir(), 'odc-awr-'));
+  // The config file is sourced AFTER the environment inside the script, so an
+  // OUTPUT_DIR passed as an env var loses to the shipped config.env and the
+  // run writes into the operator's real home directory. Pass a config, the
+  // same way the daily-ops harness does.
+  const cfg = join(out, 'config.env');
+  writeFileSync(cfg, ['ORACLE_SID=FIXTURE', `OUTPUT_DIR=${out}`].join('\n'));
+  const raw = join(pack.dir, 'test-fixtures/awr_raw_hostile.txt');
+  const before = readFileSync(raw, 'utf8');
+  try {
+    execFileSync('bash', [
+      join(pack.dir, 'awr_triage.sh'), '--config', cfg, '--render-only', raw,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const dir = join(out, 'reports');
+  const files = existsSync(dir) ? readdirSync(dir) : [];
+  return {
+    dir,
+    html: files.find((f) => f.endsWith('.html')),
+    json: files.find((f) => f.endsWith('.json')),
+    rawUnchanged: readFileSync(raw, 'utf8') === before,
+  };
+}
+
+test('awr_triage: ONE collection produces BOTH the report and the briefing', () => {
+  const r = renderAwrTriage();
+  assert.ok(r.html, 'no HTML report was written');
+  assert.ok(r.json, 'the HTML was written but the briefing was not, which is half a run');
+  JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+});
+
+test('awr_triage: --render-only leaves the collection it read exactly as it found it', () => {
+  assert.ok(renderAwrTriage().rawUnchanged, '--render-only modified the raw collection it was given');
+});
+
+test('awr_triage: the briefing validates against the shipped schema', () => {
+  const r = renderAwrTriage();
+  const pack = PACKS.find((p) => p.id === 'healthcheck');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const errors = [];
+  validate(schema, doc, '$', errors);
+  assert.deepEqual(errors, [], `briefing does not validate: ${errors.join('; ')}`);
+});
+
+test('awr_triage: the briefing survives hostile collector output', () => {
+  const r = renderAwrTriage();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const by = Object.fromEntries(doc.checks.map((c) => [c.id, c]));
+  assert.match(by.awr_sql_2.detail, /D:\\odd\\name/, 'a Windows path did not survive JSON escaping');
+  assert.match(by.awr_sql_1.detail, /\/\*\+ FULL \*\//, 'SQL text did not survive');
+  // A German-locale session emits 87,3. It must become null rather than
+  // invalidating the whole document, which is what an unquoted 87,3 would do.
+  assert.equal(by.awr_eff_soft_parse.metrics['Soft Parse'].value, null,
+    'a decimal comma must degrade to null, never corrupt the briefing');
+});
+
+test('awr_triage: metrics are keyed by check id, never by position', () => {
+  const r = renderAwrTriage();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const by = Object.fromEntries(doc.checks.map((c) => [c.id, c]));
+  // In the fixture every MET line sits AFTER every CHK line for its section,
+  // so a parser that attached each metric to whichever check it saw last would
+  // misfile all of them and this assertion is what catches it.
+  assert.equal(by.awr_window.metrics.window_minutes.value, 240);
+  assert.equal(by.awr_event_1.metrics.time_waited.value, 18422.7);
+  assert.equal(by.awr_sql_1.metrics.elapsed.value, 9911.4);
+});
+
+test('awr_triage: the efficiency ratios carry NO pass or fail verdict', () => {
+  // The product reports what the database recorded and never a verdict. The
+  // prose version of this script has always told the reader to compare against
+  // their OWN baseline, so emitting WARN at a fixed percentage would contradict
+  // its own guidance in the same document.
+  const r = renderAwrTriage();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const ratios = doc.checks.filter((c) => c.id.startsWith('awr_eff_'));
+  assert.ok(ratios.length > 0, 'the fixture carries no efficiency ratios to check');
+  for (const c of ratios) {
+    assert.equal(c.status, 'NA', `${c.id} must not carry a verdict, got ${c.status}`);
+  }
+});
+
+test('awr_triage: the report states the Diagnostics Pack requirement on its face', () => {
+  // A report outlives the README it came with. The licence requirement has to
+  // travel with the artefact, stated as a fact rather than as advice.
+  const r = renderAwrTriage();
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+  assert.match(html, /Diagnostics Pack license/i);
+});
+
+test('SELF-TEST: odc_br_document emits valid JSON when thresholds is omitted', () => {
+  // REGRESSION GUARD. The default used to be written inline as ${8:-{\}},
+  // which expands to the literal characters {\} and produced a briefing that
+  // would not parse. Every collector shipped so far passed the argument, so
+  // the broken default was never reached until awr_triage.sh omitted it.
+  // A default nobody exercises is not a default, it is a trap for the next
+  // caller, so it is exercised here on purpose.
+  for (const pack of PACKS) {
+    const lib = join(pack.dir, 'lib/odc_briefing.sh');
+    const out = execFileSync('bash', ['-c',
+      `. "${lib}"; odc_br_reset; odc_br_document p 1.0.0 s SID 2026-01-01T00:00:00Z OK 0`,
+    ], { encoding: 'utf8' });
+    const doc = JSON.parse(out); // throws if the default is broken again
+    assert.deepEqual(doc.thresholds, {}, `${pack.id}: omitted thresholds must default to an empty object`);
+  }
 });
