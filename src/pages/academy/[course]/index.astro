@@ -1,0 +1,134 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+/* A course page. Same rule as the index: a course with no published lessons
+   gets no page at all, because a course page listing no lessons is a promise
+   with a URL. */
+
+export async function getStaticPaths() {
+  const courses = await getCollection('academyCourses', ({ data }) => !data.draft);
+  const lessons = await getCollection('academy', ({ data }) => !data.draft);
+
+  return courses
+    .map((course) => ({
+      course,
+      courseLessons: lessons.filter((lesson) => lesson.data.course.id === course.id),
+    }))
+    .filter(({ courseLessons }) => courseLessons.length > 0)
+    .map(({ course, courseLessons }) => ({
+      params: { course: course.id },
+      props: { course, courseLessons },
+    }));
+}
+
+interface Props {
+  course: CollectionEntry<'academyCourses'>;
+  courseLessons: CollectionEntry<'academy'>[];
+}
+
+const { course, courseLessons } = Astro.props as Props;
+const { Content } = await render(course);
+
+const lessonSlug = (id: string) => (id.includes('/') ? id.slice(id.indexOf('/') + 1) : id);
+
+/* Modules render in the order the course declares. Any module a lesson names
+   that the course did not declare is still shown, at the end, rather than
+   silently dropped: losing a lesson is worse than showing one out of place,
+   and appending it makes the mistake visible to whoever wrote it. */
+const declared = course.data.modules;
+const named = [...new Set(courseLessons.map((lesson) => lesson.data.module))];
+const moduleOrder = [...declared, ...named.filter((m) => !declared.includes(m))];
+
+const modules = moduleOrder
+  .map((name) => ({
+    name,
+    lessons: courseLessons
+      .filter((lesson) => lesson.data.module === name)
+      .sort((a, b) => a.data.order - b.data.order),
+  }))
+  .filter((m) => m.lessons.length > 0);
+
+/* Minutes below 90 stay minutes. Rounding to hours unconditionally is how a
+   short course renders "About 0 h at the terminal", which the fixture build
+   produced before this was split. */
+const totalMinutes = courseLessons.reduce((sum, l) => sum + l.data.estimatedMinutes, 0);
+const totalLabel =
+  totalMinutes < 90 ? `About ${totalMinutes} min at the terminal` : `About ${Math.round(totalMinutes / 60)} h at the terminal`;
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+---
+<BaseLayout title={`${course.data.title} · OraDiscuss Academy`} description={course.data.summary}>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href="/academy/">← Academy</a>
+      <div class="art-cat">Course</div>
+      <h1 class="art-title">{course.data.title}</h1>
+      <div class="art-meta">
+        <span>{course.data.oracleVersions.join(', ')}</span><span class="sep">·</span>
+        <span>{courseLessons.length === 1 ? '1 lesson' : `${courseLessons.length} lessons`}</span
+        ><span class="sep">·</span>
+        <span>{totalLabel}</span><span class="sep">·</span>
+        <span>Reviewed {fmtDate(course.data.lastReviewed)}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      <Content />
+
+      {course.data.prerequisites.length > 0 && (
+        <>
+          <h2>Before you start</h2>
+          <ul>
+            {course.data.prerequisites.map((p) => <li>{p}</li>)}
+          </ul>
+        </>
+      )}
+
+      <h2>Lessons</h2>
+      {modules.map((mod) => (
+        <div class="acad-module">
+          <h3>{mod.name}</h3>
+          <ol class="acad-lessons">
+            {mod.lessons.map((lesson) => (
+              <li>
+                <a href={`/academy/${course.id}/${lessonSlug(lesson.id)}/`}>{lesson.data.title}</a>
+                <span class="acad-time">{lesson.data.estimatedMinutes} min</span>
+                <p>{lesson.data.summary}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
+    </article>
+  </section>
+
+  <style>
+    .acad-lessons {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 1.6rem;
+    }
+    .acad-lessons li {
+      padding: 14px 0;
+      border-bottom: 1px solid var(--hair);
+    }
+    .acad-lessons p {
+      margin: 6px 0 0;
+      font-size: 15px;
+      color: var(--ink3);
+    }
+    .acad-time {
+      margin-left: 10px;
+      font-family: var(--jb);
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      color: var(--ink3);
+    }
+  </style>
+</BaseLayout>

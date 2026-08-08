@@ -1,0 +1,176 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import { getCollection, render } from 'astro:content';
+
+/* One lesson of one course.
+
+   TWO INTEGRITY CHECKS LIVE HERE, and both were watched failing before they
+   were trusted.
+
+   1. A DANGLING COURSE REFERENCE. `reference('academyCourses')` in the schema
+      does NOT fail the build when the referenced course does not exist. Measured
+      on Astro 6.1.7: a lesson pointing at a non existent course built with exit
+      code 0 and one page FEWER, the lesson silently dropped. A lesson that
+      vanishes without a word is worse than one that breaks the build, so the
+      existence of the course is asserted here explicitly.
+
+   2. THE FOLDER AND THE REFERENCE MUST AGREE. The URL is built from the
+      reference, since that is the field the schema validates, but the folder is
+      what an author sees. If they disagree the lesson lands under a course it
+      does not belong to, or two lessons collide on one path.
+
+   A course that merely has `draft: true` is a different case and is NOT an
+   error: its lessons are skipped quietly, which is what drafting means. */
+
+export async function getStaticPaths() {
+  const allCourses = await getCollection('academyCourses');
+  const allLessons = await getCollection('academy');
+  const known = new Set(allCourses.map((c) => c.id));
+
+  for (const lesson of allLessons) {
+    const courseId = lesson.data.course.id;
+    if (!known.has(courseId)) {
+      throw new Error(
+        `Academy lesson "${lesson.id}" references course "${courseId}", which does not exist. ` +
+          `Astro does not fail the build on a dangling reference, it drops the lesson silently, ` +
+          `which is why this check exists.`,
+      );
+    }
+    const folder = lesson.id.includes('/') ? lesson.id.slice(0, lesson.id.indexOf('/')) : '';
+    if (folder !== courseId) {
+      throw new Error(
+        `Academy lesson "${lesson.id}" declares course "${courseId}" but sits in "${folder || 'the collection root'}". ` +
+          `Move the file to src/content/academy/${courseId}/ or fix its frontmatter.`,
+      );
+    }
+  }
+
+  const byId = new Map(allCourses.filter((c) => !c.data.draft).map((c) => [c.id, c]));
+  const lessons = allLessons.filter((l) => !l.data.draft && byId.has(l.data.course.id));
+
+  /* Reading order for prev and next: modules in the order the course declares
+     them, lessons by `order` inside each. Sorted once per course rather than
+     once per lesson. */
+  const sequence = new Map<string, CollectionEntry<'academy'>[]>();
+  for (const [courseId, course] of byId) {
+    const modules = course.data.modules;
+    sequence.set(
+      courseId,
+      lessons
+        .filter((l) => l.data.course.id === courseId)
+        .sort((a, b) => {
+          const modA = modules.indexOf(a.data.module);
+          const modB = modules.indexOf(b.data.module);
+          /* A module the course never declared sorts last rather than first,
+             which is what indexOf returning -1 would otherwise do. */
+          const rankA = modA === -1 ? modules.length : modA;
+          const rankB = modB === -1 ? modules.length : modB;
+          return rankA === rankB ? a.data.order - b.data.order : rankA - rankB;
+        }),
+    );
+  }
+
+  return lessons.map((lesson) => {
+    const courseId = lesson.data.course.id;
+    const siblings = sequence.get(courseId) ?? [];
+    const at = siblings.findIndex((l) => l.id === lesson.id);
+    return {
+      params: { course: courseId, lesson: lesson.id.slice(lesson.id.indexOf('/') + 1) },
+      props: {
+        lesson,
+        course: byId.get(courseId)!,
+        prev: at > 0 ? siblings[at - 1] : null,
+        next: at >= 0 && at < siblings.length - 1 ? siblings[at + 1] : null,
+      },
+    };
+  });
+}
+
+interface Props {
+  lesson: CollectionEntry<'academy'>;
+  course: CollectionEntry<'academyCourses'>;
+  prev: CollectionEntry<'academy'> | null;
+  next: CollectionEntry<'academy'> | null;
+}
+
+const { lesson, course, prev, next } = Astro.props as Props;
+const { Content } = await render(lesson);
+
+const lessonSlug = (id: string) => id.slice(id.indexOf('/') + 1);
+const fmtDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+---
+<BaseLayout
+  title={`${lesson.data.title} · ${course.data.title} · OraDiscuss Academy`}
+  description={lesson.data.summary}
+  modifiedTime={lesson.data.lastReviewed}
+>
+  <section class="art-hero">
+    <div class="art-container">
+      <a class="art-back" href={`/academy/${course.id}/`}>← {course.data.title}</a>
+      <div class="art-cat">{lesson.data.module}</div>
+      <h1 class="art-title">{lesson.data.title}</h1>
+      <div class="art-meta">
+        <span>{lesson.data.oracleVersions.join(', ')}</span><span class="sep">·</span>
+        <span>{lesson.data.estimatedMinutes} min at the terminal</span><span class="sep">·</span>
+        <span>Reviewed {fmtDate(lesson.data.lastReviewed)}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="art-body-wrap">
+    <article class="art-prose">
+      {lesson.data.prerequisites.length > 0 && (
+        <div class="acad-prereq">
+          <h2>Have this ready</h2>
+          <ul>
+            {lesson.data.prerequisites.map((p) => <li>{p}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <Content />
+
+      <nav class="acad-nav" aria-label="Lessons in this course">
+        {prev ? (
+          <a href={`/academy/${course.id}/${lessonSlug(prev.id)}/`}>← {prev.data.title}</a>
+        ) : (
+          <span></span>
+        )}
+        {next && <a href={`/academy/${course.id}/${lessonSlug(next.id)}/`}>{next.data.title} →</a>}
+      </nav>
+    </article>
+  </section>
+
+  <style>
+    .acad-prereq {
+      margin-bottom: 2rem;
+      padding: 18px 22px;
+      background: var(--field-2);
+      border: 1px solid var(--hair);
+      border-radius: var(--r-md);
+    }
+    .acad-prereq h2 {
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    .acad-prereq ul {
+      margin-bottom: 0;
+    }
+    .acad-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+      margin-top: 2.6rem;
+      padding-top: 22px;
+      border-top: 1px solid var(--hair);
+      font-family: var(--jb);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+  </style>
+</BaseLayout>

@@ -63,6 +63,97 @@ function inlineScripts(html) {
   return out;
 }
 
+// ---------------------------------------------------------------------------
+// EVERY BUILT PAGE, DISCOVERED, NOT NAMED.
+//
+// PAGES above is a hand-kept list of seven, and the site builds twenty. That is
+// the fan-out-by-name trap this repo has now hit four times, and this is the
+// occasion it actually cost something: `/pricing/` carried an em dash in its
+// title, straight through to the rendered page, on a live site whose house rule
+// forbids them. Every guard was green because no guard was looking.
+//
+// Two of the four per-page guards are universal (a dead inline script kills any
+// page, and the em dash rule is site-wide), so they run over whatever is on
+// disk. The other two are about the capture form and stay on a named list,
+// because a page without a form cannot be asserted to ship one closed.
+// ---------------------------------------------------------------------------
+function allBuiltPages() {
+  const out = [];
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (e.name.endsWith('.html')) out.push(relative(DIST, full));
+    }
+  };
+  walk(DIST);
+  return out.sort();
+}
+
+const ALL_PAGES = allBuiltPages();
+
+// ---------------------------------------------------------------------------
+// THE EM DASH EXEMPTIONS, NAMED AND COUNTED RATHER THAN SKIPPED.
+//
+// The article bodies break the house no-em-dash rule, up to eighteen times on a
+// single article, and they are NOT swept here. That is a registered decision
+// and not an oversight: they are the founder's own published writing, a blind
+// purge would edit thirteen articles' voice, and the scope of that edit is his
+// call. It is recorded as an open decision in SESSION_HANDOFF.
+//
+// So the exemption is written down, with a reason, and its SIZE IS ASSERTED.
+// A silent skip would mean the fourteenth article inherits the exemption
+// without anybody choosing that. With the count asserted, a new article fails
+// this test until somebody decides which side of the line it is on, and the
+// founder's eventual ruling closes it by deleting entries rather than by
+// remembering that entries existed.
+// ---------------------------------------------------------------------------
+const EM_DASH_EXEMPT_PREFIXES = [
+  // Article bodies, and the index and tag pages that display their titles.
+  'articles/', 'asm/', 'community/', 'dba/', 'goldengate/', 'oci/', 'scripts/', 'tags/',
+];
+const EM_DASH_EXEMPT_EXACT = [
+  'admin/index.html', // Sveltia CMS, third party markup this project does not author
+];
+const isEmDashExempt = (p) =>
+  EM_DASH_EXEMPT_EXACT.includes(p) || EM_DASH_EXEMPT_PREFIXES.some((pre) => p.startsWith(pre));
+
+test('page discovery finds the built site, and covers every hand-named page', () => {
+  // Without this, a discovery bug that matched nothing would report every
+  // universal guard below as passing over zero pages.
+  assert.ok(ALL_PAGES.length >= 20, `only ${ALL_PAGES.length} built pages discovered. Run npm run build first.`);
+  for (const p of PAGES) {
+    assert.ok(ALL_PAGES.includes(p), `${p} is named in PAGES but was not built`);
+  }
+});
+
+test('the em dash exemption list has not grown by itself', () => {
+  const exempt = ALL_PAGES.filter(isEmDashExempt);
+  assert.equal(
+    exempt.length,
+    62,
+    `${exempt.length} pages are exempt from the em dash rule, not 62.\n` +
+      'If an article was added, decide whether it follows the house rule before changing this number.\n' +
+      exempt.join('\n'),
+  );
+  // And the guard must still be covering the pages that matter. 15 today,
+  // against the 7 that were hand-named before page discovery replaced the list.
+  const guarded = ALL_PAGES.filter((p) => !isEmDashExempt(p));
+  assert.ok(guarded.length >= 15, `only ${guarded.length} pages are actually guarded`);
+});
+
+for (const page of ALL_PAGES.filter((p) => !isEmDashExempt(p))) {
+  test(`${page}: no em dash in rendered output`, () => {
+    const html = read(page);
+    const idx = html.indexOf('—');
+    assert.equal(
+      idx,
+      -1,
+      idx === -1 ? '' : `${page}: em dash at ${idx}: ...${html.slice(Math.max(0, idx - 90), idx + 60)}...`,
+    );
+  });
+}
+
 for (const page of PAGES) {
   test(`${page}: every inline script compiles`, () => {
     const scripts = inlineScripts(read(page));
@@ -85,15 +176,6 @@ for (const page of PAGES) {
     }
   });
 
-  test(`${page}: no em dash in rendered output`, () => {
-    const html = read(page);
-    const idx = html.indexOf('—');
-    assert.equal(
-      idx,
-      -1,
-      idx === -1 ? '' : `${page}: em dash at ${idx}: ...${html.slice(Math.max(0, idx - 90), idx + 60)}...`,
-    );
-  });
 }
 
 for (const page of ['kit/index.html', 'roadmap/index.html']) {
