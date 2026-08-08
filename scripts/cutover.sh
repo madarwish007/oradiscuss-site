@@ -100,7 +100,7 @@ code_admin=$(curl -sS -o /dev/null -w "%{http_code}" "https://$ZONE_NAME/admin/"
 echo "    HTTP $code_admin"
 
 echo
-echo "Cutover finished. If the title shows 'OraDiscuss — Oracle Mastery, Distilled'"
+echo "Cutover finished. If the title shows 'OraDiscuss: Oracle Mastery, Distilled'"
 echo "and /admin/ returns 200, you're live on the new stack."
 echo
 echo "Rollback if needed:"

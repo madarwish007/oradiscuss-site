@@ -168,7 +168,7 @@ def main() -> int:
 
     print()
     print("Cutover complete. If the homepage title is")
-    print("  'OraDiscuss — Oracle Mastery, Distilled'")
+    print("  'OraDiscuss: Oracle Mastery, Distilled'")
     print("and /admin/ returns 200, the new stack is live on oradiscuss.com.")
     print()
     print("Rollback path (if anything looks wrong):")
