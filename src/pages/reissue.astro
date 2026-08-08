@@ -1,0 +1,271 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ReissueForm from '../components/ReissueForm.jsx';
+
+/* THE PAGE THAT KILLS THE SUPPORT INBOX.
+
+   A download link that lasts five minutes is the right security answer and the
+   wrong customer answer, unless getting another one is trivial. This page is
+   the other half of that decision: it is why the link can be short lived
+   without generating a single email.
+
+   It asks for no account and no address, because we have neither. The proof of
+   purchase IS the transaction reference, and the hash of that reference is the
+   only thing we hold. */
+
+const facts = [
+  ['01', 'Nothing to remember', 'There is no account and no password, because there is no customer record here to log in to. The reference on your receipt is the whole credential.'],
+  ['02', 'Links expire in five minutes', 'Long enough to start a download, short enough that a link pasted into a group chat is dead before anyone reads it. Come back here as often as you like.'],
+  ['03', 'Every file carries its digest', 'The SHA-256 of each archive is shown beside the link and sent with the file. Check it before you run anything, from us or from anyone.'],
+];
+---
+<BaseLayout
+  title="Re-issue a download link"
+  description="Lost the email with your download links? Enter the transaction reference from your receipt and get fresh, short-lived links. No account, no password, no customer database."
+  noindex={true}
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Members</p>
+      <h1 class="rv" style="--d:70ms">Re-issue your download links.</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        Links are short lived on purpose. Getting a fresh set takes one field and no waiting, which
+        is what makes a five minute link a reasonable thing to hand somebody.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell capp-grid">
+    <div class="capp-body">
+
+      <section class="capp-sec rv">
+        <h2>How this works</h2>
+        <ol class="capp-ledger">
+          {facts.map(([n, name, what]) => (
+            <li><b>{n}</b><span><strong>{name}</strong>{what}</span></li>
+          ))}
+        </ol>
+      </section>
+
+      <section class="capp-sec rv">
+        <h2>What we hold against your purchase</h2>
+        <p>
+          One value: a one way hash of the transaction reference. It is not derived from your email
+          or your name, it cannot be reversed to either, and you can delete it from this page. Your
+          payment details never reach us at all; they stay with the Merchant of Record shown at
+          checkout.
+        </p>
+        <p>
+          That is the whole membership record. There is no table here that could hold you, which is
+          also why there is nothing to log in to.
+        </p>
+      </section>
+
+      <a class="capp-onward rv" href="/changelog/">See what has shipped</a>
+    </div>
+
+    <aside class="capp-aside rv" aria-label="Re-issue a download link">
+      <ReissueForm client:load />
+    </aside>
+  </div>
+
+</div>
+</BaseLayout>
+
+<style is:global>
+  /* Global rather than scoped because the form is a React island: Astro's
+     scoped selectors are attributes stamped on elements it rendered itself, and
+     none of them reach a component's own markup. The capture form solves the
+     same problem by living in global.css. */
+  .rei {
+    padding: 26px;
+    background: var(--surface);
+    border: 1px solid var(--hair);
+    border-radius: var(--r-card);
+    min-width: 0;
+  }
+
+  .rei-state {
+    font-size: 13.5px;
+    line-height: 1.62;
+    color: var(--ink2);
+  }
+
+  .rei-state-off {
+    color: var(--ink3);
+  }
+
+  .rei-form {
+    margin-top: 18px;
+  }
+
+  .rei-fields {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    min-width: 0;
+  }
+
+  .rei-row {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .rei-label {
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+
+  .rei-input {
+    width: 100%;
+    min-width: 0;
+    padding: 12px 14px;
+    font-family: var(--jb);
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--field);
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+  }
+
+  .rei-input:focus-visible {
+    outline: 2px solid var(--act);
+    outline-offset: 2px;
+  }
+
+  .rei-hint {
+    font-size: 12.8px;
+    line-height: 1.6;
+    color: var(--ink3);
+  }
+
+  /* No opacity on the disabled state anywhere in this block. Opacity multiplies
+     text toward its ground, so a contrast check that reads colour alone would
+     call a failing control a pass. The capture form carries a guard for exactly
+     this and it is worth repeating rather than rediscovering. */
+  .rei-fields:disabled .rei-input {
+    background: var(--field);
+    color: var(--ink3);
+    border-style: dashed;
+  }
+
+  .rei-submit {
+    margin-top: 16px;
+    width: 100%;
+    padding: 13px 18px;
+    font-family: var(--jb);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+    background: var(--act);
+    border: 1px solid var(--act);
+    border-radius: var(--r-md);
+    cursor: pointer;
+  }
+
+  .rei-submit:disabled {
+    color: var(--ink3);
+    background: var(--field);
+    border-color: var(--hair);
+    cursor: not-allowed;
+  }
+
+  .rei-result {
+    margin-top: 16px;
+    font-size: 13.5px;
+    line-height: 1.62;
+    color: var(--ink2);
+  }
+
+  .rei-result-error {
+    color: var(--act-2);
+  }
+
+  .rei-links {
+    margin-top: 14px;
+    list-style: none;
+    padding: 0;
+    border-top: 1px solid var(--hair);
+  }
+
+  .rei-link {
+    display: grid;
+    gap: 4px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .rei-link a {
+    font-family: var(--jb);
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--act);
+  }
+
+  .rei-sha {
+    font-family: var(--jb);
+    font-size: 10.5px;
+    color: var(--ink3);
+    word-break: break-all;
+    min-width: 0;
+  }
+
+  .rei-erase {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--hair);
+  }
+
+  .rei-erase summary {
+    font-family: var(--jb);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+    cursor: pointer;
+  }
+
+  .rei-erase p {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.62;
+    color: var(--ink2);
+  }
+
+  .rei-erase-go {
+    margin-top: 14px;
+    padding: 10px 14px;
+    font-family: var(--jb);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--act-2);
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: var(--r-md);
+    cursor: pointer;
+  }
+
+  .rei-erase-go:disabled {
+    color: var(--ink3);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 900px) {
+    .rei {
+      padding: 20px;
+    }
+  }
+</style>

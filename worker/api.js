@@ -10,13 +10,16 @@
 // phase makes to D1 binds one value, a course slug, and it is an aggregate
 // counter. There is no table here that could hold a customer.
 
-import { json, problem, fail, clientKey } from './http.js';
+import { json, problem, fail, clientKey, readJsonBody } from './http.js';
 import {
   integrationStatus,
   turnstileSiteKey,
   verifyTurnstile,
   beehiivSubscribe,
 } from './integrations.js';
+import { postDownload, getDownload, postReissue, postDelete } from './delivery.js';
+import { handleWebhook } from './webhook.js';
+import { changelogJson } from './changelog.js';
 
 /* ------------------------------------------------------------------ read */
 
@@ -67,6 +70,16 @@ async function health(env) {
   const { configured, detail, missing } = integrationStatus(env);
   const ok = Object.values(checks).every((c) => c.ok);
 
+  // Reported BESIDE the health rather than inside it, for the same reason the
+  // integrations are: none of these is an outage before Phase 6 is deployed,
+  // and folding a planned absence into `ok` trains the founder to ignore the
+  // uptime alarm. All three must read true before checkout may be enabled.
+  const delivery = {
+    signing_key_set: configured.delivery,
+    reissue_limiter_bound: Boolean(env.REISSUE_RATE_LIMIT),
+    retry_queue_bound: Boolean(env.WEBHOOK_RETRY),
+  };
+
   return json(
     {
       ok,
@@ -74,6 +87,7 @@ async function health(env) {
       time: new Date().toISOString(),
       checks,
       configured,
+      delivery,
       // `shape_expected: false` beside `set: true` means a key is present but
       // does not look like the kind of key it should be, which is what a
       // truncated paste or a swapped pair looks like from here.
@@ -99,6 +113,12 @@ function config(env) {
       // while the list is dark invites a future consumer to mount a live widget
       // on a form that cannot deliver anything.
       turnstile_site_key: configured.capture ? turnstileSiteKey(env) : null,
+      // The re-issue form asks this the way the capture form asks about the
+      // list: a form that could only ever answer 503 must ship shut and say so.
+      // Deliberately separate from `capture_enabled`, because delivery needs no
+      // bot check and no newsletter, and waiting on either would keep a working
+      // download counter closed for no reason.
+      delivery_enabled: configured.delivery,
       // Names only, so the page can say precisely what is not connected yet.
       missing_secrets: missing,
     },
@@ -149,9 +169,6 @@ function formatMoney(minor, currency) {
 
 /* ----------------------------------------------------------------- write */
 
-// A form post is tiny. Anything larger is not one of our forms.
-const MAX_BODY_BYTES = 2048;
-
 // Deliberately strict rather than clever. It requires a dot-bearing domain and
 // forbids the characters that turn an address into a header injection or a
 // second recipient. A rare valid address refused here is a support email; an
@@ -173,22 +190,6 @@ function normaliseSlug(value) {
   const slug = value.trim().toLowerCase();
   if (slug.length < 2 || slug.length > 64) return null;
   return SLUG_RE.test(slug) ? slug : null;
-}
-
-async function readJsonBody(request) {
-  const type = request.headers.get('content-type') ?? '';
-  if (!type.includes('application/json')) {
-    return { error: 'Send this as application/json.' };
-  }
-  const raw = await request.text();
-  if (raw.length > MAX_BODY_BYTES) return { error: 'That request body is too large.' };
-  try {
-    const value = JSON.parse(raw);
-    if (!value || typeof value !== 'object') return { error: 'Body is not valid JSON.' };
-    return { value };
-  } catch {
-    return { error: 'Body is not valid JSON.' };
-  }
 }
 
 function notConfiguredMessage(missing) {
@@ -305,9 +306,25 @@ const ROUTES = {
   'GET /api/config': (request, env) => config(env),
   'GET /api/catalog': (request, env) => catalog(env),
   'GET /api/roadmap': (request, env) => roadmap(env),
+  'GET /api/changelog': (request, env) => changelogJson(env),
   'POST /api/subscribe': (request, env) => capture(request, env, { source: 'kit', wantsCourse: false }),
   'POST /api/roadmap/vote': (request, env) =>
     capture(request, env, { source: 'roadmap', wantsCourse: true }),
+
+  /* Phase 6 delivery. Every path is written out as a literal string, and one
+     more thing depends on that than is obvious: test/api-surface.test.js reads
+     this table as TEXT to prove no debug path ships. Routes registered in a
+     loop would be invisible to it, so the guard also asserts that the number of
+     literal paths equals the number of entries. Registering a route any other
+     way now fails the build, which is the point. */
+  'POST /api/download': (request, env) => postDownload(request, env),
+  'GET /api/download': (request, env) => getDownload(request, env),
+  'POST /api/reissue': (request, env) => postReissue(request, env),
+  'POST /api/entitlement/delete': (request, env) => postDelete(request, env),
+
+  /* One line per Merchant of Record. The verification core and everything after
+     it is shared; only worker/adapters/<name>.js differs. */
+  'POST /api/paddle/webhook': (request, env) => handleWebhook(request, env, 'paddle'),
 };
 
 /* The limiter self-test route lived here until Stage A cutover prep. It proved

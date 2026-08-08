@@ -1,0 +1,166 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+/* THE CHANGELOG PAGE CARRIES NO CHANGELOG. That is the point.
+
+   Founder ruling, 5 Aug: the changelog is generated from releases, never hand
+   edited. So this file holds the page's design and its promises, and the
+   release list itself is read from the D1 `changelog` table by the Worker,
+   which fills the data-slot element below on the way past. See
+   worker/changelog.js.
+
+   The fallback sentence inside the slot is written to be TRUE in both cases
+   where it survives to the browser: when the Worker did not run at all, and
+   when it ran and the database could not be read. Neither is "there have been
+   no releases", which is a different sentence and is rendered by the Worker
+   when the table really is empty. */
+---
+<BaseLayout
+  title="Changelog: every pack release, generated from the release record"
+  description="What shipped, when, and against which version. This page is generated from the release database rather than written by hand, so it cannot drift from what a member actually downloads."
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Releases</p>
+      <h1 class="rv" style="--d:70ms">Changelog</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        Every pack release, with its version and the digest of the artifact itself. This page is
+        generated from the release record at request time. Nobody types into it, so it cannot
+        quietly disagree with the file you download.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell cl-wrap">
+    <div id="changelog-stream" class="cl-stream" data-slot="changelog">
+      <p class="cl-empty">
+        The release list is read from the database when this page is served, and it could not be
+        read just now. Nothing is shown rather than a stale list.
+      </p>
+    </div>
+
+    <section class="capp-sec cl-note rv">
+      <h2>How to check what you downloaded</h2>
+      <p>
+        Every release above carries the SHA-256 digest of its archive, and the same digest is sent
+        with the file itself. Run <code>shasum -a 256 &lt;file&gt;</code> against your download and
+        compare. If the two differ, the file is not the one we released and you should not run it.
+      </p>
+      <p>
+        Lost a download link? <a href="/reissue/">Re-issue it here</a> from the transaction
+        reference on your receipt.
+      </p>
+    </section>
+  </div>
+
+</div>
+</BaseLayout>
+
+<style is:global>
+  /* Written as a global block rather than an Astro scoped one on purpose. Scoped
+     styles compile to attribute selectors that only match elements Astro
+     rendered, and the entries on this page are injected by the Worker, so every
+     scoped rule would miss exactly the content this page exists to show. */
+  .cl-wrap {
+    display: grid;
+    gap: clamp(40px, 5vw, 64px);
+    padding-bottom: clamp(64px, 8vw, 104px);
+    min-width: 0;
+  }
+
+  .cl-stream {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .cl-empty {
+    padding: 26px 0;
+    max-width: 60ch;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink3);
+  }
+
+  .cl-entry {
+    padding: 26px 0;
+    border-bottom: 1px solid var(--hair);
+    min-width: 0;
+  }
+
+  .cl-title {
+    font-family: var(--jb);
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+  }
+
+  .cl-meta {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: baseline;
+    font-family: var(--jb);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+
+  .cl-notes {
+    margin-top: 14px;
+    max-width: 68ch;
+  }
+
+  .cl-notes p {
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--ink2);
+  }
+
+  .cl-notes p:first-child {
+    margin-top: 0;
+  }
+
+  /* A digest is 64 characters and must never widen the page. It scrolls inside
+     its own box at every width. */
+  .cl-digest {
+    margin-top: 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: baseline;
+    min-width: 0;
+  }
+
+  .cl-digest span {
+    font-family: var(--jb);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink3);
+  }
+
+  .cl-digest code {
+    font-family: var(--jb);
+    font-size: 11.5px;
+    color: var(--ink2);
+    overflow-x: auto;
+    max-width: 100%;
+    min-width: 0;
+    word-break: break-all;
+  }
+
+  .cl-note code {
+    font-family: var(--jb);
+    font-size: 13px;
+  }
+</style>

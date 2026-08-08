@@ -30,9 +30,17 @@ const SECRETS = {
   TURNSTILE_SITE_KEY: { min: 12, shape: /^\dx[A-Za-z0-9]{10,}$/, expect: 'starts with 0x' },
   PADDLE_API_KEY: { min: 20, shape: /^[A-Za-z0-9._-]{20,}$/, expect: 'a long opaque token' },
   PADDLE_WEBHOOK_SECRET: { min: 20, shape: /^[A-Za-z0-9._-]{20,}$/, expect: 'a long opaque token' },
+  // Signs the short lived download links. Rotating it invalidates every link in
+  // flight and nothing else, which is why nothing else is signed with it and why
+  // the entitlement hash deliberately does not use a key at all.
+  R2_SIGNING_KEY: {
+    min: 32,
+    shape: /^[0-9a-f]{64}$/,
+    expect: '64 hex characters, from openssl rand -hex 32',
+  },
 };
 
-function readSecret(env, name) {
+export function readSecret(env, name) {
   const raw = env?.[name];
   const value = typeof raw === 'string' ? raw.trim() : '';
   const spec = SECRETS[name];
@@ -52,6 +60,11 @@ export function integrationStatus(env) {
   const beehiiv = detail.BEEHIIV_API_KEY.set && detail.BEEHIIV_PUBLICATION_ID.set;
   const turnstile = detail.TURNSTILE_SECRET.set && detail.TURNSTILE_SITE_KEY.set;
   const paddle = detail.PADDLE_API_KEY.set && detail.PADDLE_WEBHOOK_SECRET.set;
+  // Delivery is the half of Phase 6 that needs no payment processor at all: a
+  // signing key, and links. It is reported separately from `paddle` on purpose,
+  // so the re-issue page can open on the day the signing key lands rather than
+  // waiting on a processor decision that has nothing to do with it.
+  const delivery = detail.R2_SIGNING_KEY.set;
 
   return {
     configured: {
@@ -61,6 +74,7 @@ export function integrationStatus(env) {
       beehiiv,
       turnstile,
       paddle,
+      delivery,
     },
     detail,
     // Names only. A secret name is configuration state, never a credential.
