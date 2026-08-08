@@ -1,0 +1,6 @@
+2026-08-08T22:52:48+0300 [health_check] render-only: rebuilding outputs from scripts/showcase/lab/healthcheck/collection.txt, the database is not contacted
+2026-08-08T22:52:48+0300 [health_check] collector complete: scripts/showcase/lab/healthcheck/collection.txt
+2026-08-08T22:52:49+0300 [health_check] report written: .showcase-run/reports/health_ODCDEMO1_20260808-225248.html
+2026-08-08T22:52:49+0300 [health_check] briefing written: .showcase-run/reports/health_ODCDEMO1_20260808-225248.json
+2026-08-08T22:52:49+0300 [health_check] overall status: CRIT (exit 2)
+2026-08-08T22:52:49+0300 [health_check] hand the briefing to your own AI with a prompt from prompts/ - nothing left this machine.

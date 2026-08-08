@@ -1,0 +1,150 @@
+{
+  "generated_by": "scripts/showcase/build.mjs",
+  "standard": "Showcase/STANDARDS.md",
+  "regenerate_with": "npm run build:showcase",
+  "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+  "field_test_status": "The OraDiscuss Health Check pack has not been run against a real Oracle database. The founder's field test is the designed gate for that. Until it is passed, every asset here is rendered from scripts/showcase/lab/healthcheck/collection.txt.",
+  "synthetic_inputs": [
+    {
+      "path": "scripts/showcase/lab/healthcheck/collection.txt",
+      "why": "The collection every asset here is rendered from. Written by hand to the shape the pack collector emits. No database was contacted."
+    },
+    {
+      "path": "scripts/showcase/lab/healthcheck/config.env",
+      "why": "The pack config used for the render. Invented SID, invented paths, shipped thresholds."
+    },
+    {
+      "path": "scripts/showcase/lab/healthcheck/bin/lsnrctl",
+      "why": "A lab stub standing in for the listener utility, so the listener row reports a state instead of reporting that the capture machine has no Oracle install. It contacts nothing."
+    }
+  ],
+  "capture": {
+    "chrome": "Chrome/151.0.7922.76",
+    "device_scale_factor": 2,
+    "canvas_css_width": 1280,
+    "frame_padding_css": 64,
+    "shot_css_width": 1152,
+    "tile_max_css": 2400,
+    "summary_crop": {
+      "selector": "h2",
+      "index": 2,
+      "offset": -20
+    },
+    "video": {
+      "width": 1280,
+      "height": 720,
+      "gif_width": 800,
+      "gif_height": 450
+    },
+    "video_encoded": true,
+    "video_encode_note": null
+  },
+  "assets": [
+    {
+      "path": "Showcase/samples/healthcheck/report.html",
+      "bytes": 6938,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "html",
+      "pack": "healthcheck",
+      "produced_by": "packs/healthcheck/health_check.sh --render-only",
+      "caption": "The Health Check report exactly as the pack writes it."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/briefing.json",
+      "bytes": 6443,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "json",
+      "pack": "healthcheck",
+      "produced_by": "packs/healthcheck/health_check.sh --render-only",
+      "caption": "The AI briefing written by the same run, from the same collection."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/run.log",
+      "bytes": 696,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "text",
+      "pack": "healthcheck",
+      "produced_by": "stdout and stderr of the run above",
+      "caption": "The unedited console output of the run that produced the pair."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/command.txt",
+      "bytes": 162,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "text",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/render-sample.sh",
+      "caption": "The exact command that was run. The video shows this and nothing else."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/exit-code.txt",
+      "bytes": 2,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "text",
+      "pack": "healthcheck",
+      "produced_by": "exit status of health_check.sh",
+      "caption": "Exit 2 means at least one CRIT, which the sample collection carries on purpose."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/images/healthcheck-report-full@2x.png",
+      "bytes": 768968,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "image",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/capture.mjs then the frame template",
+      "width": 2560,
+      "height": 4750,
+      "dsf": 2,
+      "caption_burned_in": true,
+      "caption": "The complete Health Check report, as one run writes it."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/images/healthcheck-report-summary@2x.png",
+      "bytes": 347868,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "image",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/capture.mjs then the frame template",
+      "width": 2560,
+      "height": 2146,
+      "dsf": 2,
+      "caption_burned_in": true,
+      "caption": "The head of the Health Check report, sized for a page hero."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/images/healthcheck-briefing@2x.png",
+      "bytes": 324367,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "image",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/capture.mjs then the frame template",
+      "width": 2560,
+      "height": 2380,
+      "dsf": 2,
+      "caption_burned_in": true,
+      "caption": "The opening of briefing.json, the machine readable half of the same run."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/video/healthcheck-run.mp4",
+      "bytes": 1417729,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "video",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/build.mjs then ffmpeg",
+      "width": 1280,
+      "height": 720,
+      "caption": "The run, terminal to report, at the speed it happens."
+    },
+    {
+      "path": "Showcase/samples/healthcheck/video/healthcheck-run.gif",
+      "bytes": 1792979,
+      "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
+      "kind": "video",
+      "pack": "healthcheck",
+      "produced_by": "scripts/showcase/build.mjs then ffmpeg",
+      "width": 800,
+      "height": 450,
+      "caption": "The same sequence as a looping GIF, for surfaces that will not play video."
+    }
+  ]
+}
