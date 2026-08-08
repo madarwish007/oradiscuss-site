@@ -2,7 +2,7 @@
 title: I just became an Oracle ACE Apprentice! Here's how you can join the club
 description: A personal note on joining the Oracle ACE program as an Apprentice and how the four-level path works for DBAs at any career stage.
 pubDate: 2026-01-24
-updatedDate: ''
+updatedDate: 2026-08-08
 category: community
 tags:
   - oracle-ace
@@ -15,6 +15,8 @@ featured: true
 
 _By: Mahmoud Darwish_
 
+> **Update, August 2026:** since this post was written I have progressed to **Oracle ACE Associate**. The post is kept as it was, because the path it describes is the point and the levels below are unchanged. Only my own position on that path has moved.
+
 It has been a long time — years, actually — since I last posted here on OraDiscuss. Life, work, and everything in between took over. But I'm back, and I couldn't think of a better way to re-launch this journey than by sharing a major professional milestone: **I've officially joined the Oracle ACE program as an ACE Apprentice!**
 
 ## What Actually is an Oracle ACE?
@@ -25,8 +27,8 @@ I used to think you had to be a "wizard" with 30 years of experience to join, bu
 
 ## The 4 Levels of the ACE Journey
 
-- **ACE Apprentice** — This is my current home. For those getting back into the swing of things, starting to blog, and showing passion for the tech.
-- **ACE Associate** — For those who are consistently showing up and helping out across the community.
+- **ACE Apprentice**: where I started. For those getting back into the swing of things, starting to blog, and showing passion for the tech.
+- **ACE Associate**: where I am now. For those who are consistently showing up and helping out across the community.
 - **ACE Pro** — For seasoned experts who are the "go-to" people for deep technical knowledge and regular contributions.
 - **ACE Director** — The top tier. Global leaders who work closely with Oracle's product teams and influence the future of the technology.
 
