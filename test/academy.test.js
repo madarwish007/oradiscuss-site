@@ -30,19 +30,36 @@ const SRC = new URL('../src/content', import.meta.url).pathname;
 // does not reconcile deletions when a collection becomes empty. A build off a
 // stale store emitted pages for four content files that had already been
 // deleted. Counting the files is the only reading that cannot be poisoned.
+// Drafts are excluded here for the same reason the pages exclude them: a
+// drafted file is not published, so counting it would make this guard demand a
+// course list for a shelf that is correctly still empty. Underscore prefixed
+// files are skipped because the loader itself skips them.
 function countEntries(dir) {
   if (!existsSync(dir)) return 0;
   let n = 0;
   for (const e of readdirSync(dir, { withFileTypes: true })) {
     if (e.name.startsWith('_') || e.name.startsWith('.')) continue;
-    if (e.isDirectory()) n += countEntries(join(dir, e.name));
-    else if (/\.mdx?$/.test(e.name)) n += 1;
+    if (e.isDirectory()) {
+      n += countEntries(join(dir, e.name));
+      continue;
+    }
+    if (!/\.mdx?$/.test(e.name)) continue;
+    const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(readFileSync(join(dir, e.name), 'utf8'))?.[1] ?? '';
+    if (/^draft:\s*true\s*$/m.test(frontmatter)) continue;
+    n += 1;
   }
   return n;
 }
 
 const courseCount = countEntries(join(SRC, 'academy-courses'));
 const lessonCount = countEntries(join(SRC, 'academy'));
+
+// THE PAGE'S OWN RULE, mirrored exactly: a course is listed only once it has at
+// least one published lesson, so a course file committed before its first
+// lesson is written renders the empty state and is RIGHT to. Testing
+// `courseCount === 0` alone would turn that ordinary authoring step into a red
+// suite, and a gate that cries wolf is a gate somebody switches off.
+const shelfIsEmpty = courseCount === 0 || lessonCount === 0;
 
 function pagesUnderAcademy() {
   assert.ok(existsSync(ACADEMY_DIST), `${ACADEMY_DIST} does not exist. Run npm run build first.`);
@@ -87,8 +104,12 @@ test('the academy index does not claim a course exists while the tree is empty',
     `the index must render exactly one state marker, found ${states.length}: ${states.join(', ')}`,
   );
 
-  if (courseCount === 0) {
-    assert.equal(states[0], 'empty', 'the content tree holds no course, so the index must render the empty state');
+  if (shelfIsEmpty) {
+    assert.equal(
+      states[0],
+      'empty',
+      `the shelf holds nothing publishable (${courseCount} course file(s), ${lessonCount} lesson file(s)), so the index must render the empty state`,
+    );
 
     // No link may point at a course page. /academy/ itself is fine.
     const courseLinks = [...main.matchAll(/href="\/academy\/[^"]+"/g)].map((m) => m[0]);
@@ -111,7 +132,11 @@ test('the academy index does not claim a course exists while the tree is empty',
       'the empty state must say plainly that there are no courses',
     );
   } else {
-    assert.equal(states[0], 'courses', `${courseCount} course file(s) exist, so the index must render the list`);
+    assert.equal(
+      states[0],
+      'courses',
+      `${courseCount} course file(s) and ${lessonCount} lesson file(s) exist, so the index must render the list`,
+    );
     assert.ok(
       /href="\/academy\/[^"]+"/.test(main),
       'courses exist but the index links to none of them',
@@ -126,7 +151,7 @@ test('the academy index never prints a count of nothing', () => {
   const text = bodyText(html);
   const hit = /\b0\s+(courses?|lessons?|modules?)\b/i.exec(text);
   assert.equal(hit, null, `the index prints an empty count: ...${text.slice(Math.max(0, (hit?.index ?? 0) - 60), (hit?.index ?? 0) + 60)}...`);
-  if (lessonCount === 0) {
+  if (shelfIsEmpty) {
     assert.ok(!/\blessons?\b\s*:/i.test(text), 'the index advertises a lesson tally while no lesson exists');
   }
 });
