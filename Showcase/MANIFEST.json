@@ -87,7 +87,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-report-full@2x.png",
-      "bytes": 768968,
+      "bytes": 770100,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -100,7 +100,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-report-summary@2x.png",
-      "bytes": 347868,
+      "bytes": 349057,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -113,7 +113,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-briefing@2x.png",
-      "bytes": 324367,
+      "bytes": 324914,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -126,7 +126,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/video/healthcheck-run.mp4",
-      "bytes": 1417729,
+      "bytes": 1419893,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "video",
       "pack": "healthcheck",
@@ -137,7 +137,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/video/healthcheck-run.gif",
-      "bytes": 1792979,
+      "bytes": 1793531,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "video",
       "pack": "healthcheck",

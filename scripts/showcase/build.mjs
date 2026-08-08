@@ -234,7 +234,10 @@ async function main() {
       TERM_H: STD.terminalCssHeight,
       FONT_PX: 13,
       CAPTION: 'Health Check pack, run against a synthetic lab collection',
-      PATH: '~/oradiscuss-site',
+      // The REPOSITORY the command ran in, not a home directory path. The
+      // command is repo relative, so a '~/...' prompt would be claiming a
+      // working directory that was not the one used.
+      PATH: 'oradiscuss-site',
       LINES: st.body,
     }));
     return p;
