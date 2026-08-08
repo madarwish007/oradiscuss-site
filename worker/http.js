@@ -29,6 +29,28 @@ export function clientKey(request) {
   return request.headers.get('CF-Connecting-IP') || 'local-dev';
 }
 
+// A form post is tiny. Anything larger is not one of our forms.
+export const MAX_BODY_BYTES = 2048;
+
+// Shared by every JSON endpoint. It lives here rather than in api.js because
+// the delivery routes need exactly the same refusals, and two copies of a body
+// reader is two places for a size cap to drift.
+export async function readJsonBody(request, maxBytes = MAX_BODY_BYTES) {
+  const type = request.headers.get('content-type') ?? '';
+  if (!type.includes('application/json')) {
+    return { error: 'Send this as application/json.' };
+  }
+  const raw = await request.text();
+  if (raw.length > maxBytes) return { error: 'That request body is too large.' };
+  try {
+    const value = JSON.parse(raw);
+    if (!value || typeof value !== 'object') return { error: 'Body is not valid JSON.' };
+    return { value };
+  } catch {
+    return { error: 'Body is not valid JSON.' };
+  }
+}
+
 // Applied to every response leaving the Worker.
 export const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
