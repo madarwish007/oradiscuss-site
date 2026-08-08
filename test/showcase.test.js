@@ -14,6 +14,10 @@
 //      signatures: the allowed SIDs, the allowed host names, the documentation
 //      IP ranges. A denylist of real identifiers checked into a repository is
 //      itself the leak it claims to prevent, so there is not one here.
+//   4. A DROPPED COLOUR STAYS IN THE PIXELS. Oracle red #C74634 is dropped
+//      entirely, a closed founder decision. A stylesheet can be corrected
+//      while a red PNG sits on disk, so the frame chrome is measured in the
+//      DELIVERED IMAGE, not in the CSS that produced it.
 //
 // SHOWCASE_DIR and SHOWCASE_SCRIPTS point the suite at a deliberately broken
 // copy. That is the only way to know a guard is a guard:
@@ -23,6 +27,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative, sep, extname } from 'node:path';
 
@@ -281,7 +286,50 @@ test('a video is only registered when it was actually encoded', () => {
 });
 
 // ===========================================================================
-// 5. SANITIZATION, AS POSITIVE SIGNATURES
+// 5. THE FRAME CHROME, MEASURED IN THE PIXELS
+//
+// Oracle red #C74634 is dropped entirely. CLOSED founder decision, re-confirmed
+// 8 Aug 2026: PRODUCT.md names Oracle's own marketing as an anti-reference and
+// the Terms disclaim affiliation. DESIGN.md still carries the old red and is
+// stale against that decision, which is exactly how the red reached shipped
+// PNGs once already.
+//
+// The pixel check is the one that matters, because a corrected template does
+// not un-render an asset. The source check beside it is not redundant: the
+// terminal frames the video is cut from never become a framed PNG, so the
+// template is the only place that dot can be caught.
+// ===========================================================================
+test('no Oracle red in the chrome of any shipped showcase image', () => {
+  const script = join(SCRIPTS, 'check-chrome-colour.py');
+  assert.ok(existsSync(script), `no chrome colour guard at ${script}`);
+  const images = manifest().assets
+    .filter((a) => a.kind === 'image')
+    .map((a) => join(SAMPLES, tail(a.path)));
+  assert.ok(images.length >= 1, 'no shipped image to check, so this guard is measuring nothing');
+  const r = spawnSync('python3', [script, ...images], { encoding: 'utf8' });
+  assert.equal(
+    r.status, 0,
+    'the frame chrome of a shipped image carries a dropped colour, or the guard could not '
+    + `locate the chrome bands to measure them.\n${r.stderr || ''}${r.stdout || ''}`,
+  );
+});
+
+test('no showcase template carries the dropped Oracle red', () => {
+  const dir = join(SCRIPTS, 'templates');
+  assert.ok(existsSync(dir), `no templates directory at ${dir}`);
+  const files = readdirSync(dir).sort();
+  assert.ok(files.length >= 1, 'no templates found, so this guard is measuring nothing');
+  const offenders = files.filter((f) => /#c74634/i.test(readFileSync(join(dir, f), 'utf8')));
+  assert.deepEqual(
+    offenders, [],
+    'Oracle red is dropped entirely and that is a closed founder decision, re-confirmed '
+    + '8 Aug 2026. The showcase accent is #8A4B12. Do not re-derive it from DESIGN.md, which '
+    + 'is stale against that decision: see section 4 of Showcase/STANDARDS.md.',
+  );
+});
+
+// ===========================================================================
+// 6. SANITIZATION, AS POSITIVE SIGNATURES
 // ===========================================================================
 function sampleTextFiles() {
   const files = walk(SAMPLES).filter(isText).map((rel) => [`samples/${rel}`, join(SAMPLES, rel)]);
@@ -353,7 +401,7 @@ test('every synthetic input is declared in the manifest and exists', () => {
 });
 
 // ===========================================================================
-// 6. THE SAMPLES ARE THE PACK'S OWN OUTPUT, NOT A RETOUCHED COPY
+// 7. THE SAMPLES ARE THE PACK'S OWN OUTPUT, NOT A RETOUCHED COPY
 // ===========================================================================
 test('the shipped report is the pack template, unedited', () => {
   const html = readFileSync(join(SAMPLES, 'healthcheck', 'report.html'), 'utf8');

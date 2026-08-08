@@ -6,7 +6,17 @@
 <title>{{TITLE}}</title>
 <style>
   /*
-    The showcase frame. Instrument palette, from DESIGN.md.
+    The showcase frame.
+    THE ACCENT IS #8A4B12, AND ORACLE RED IS DROPPED ENTIRELY. That is a closed
+    founder decision, re-confirmed 8 Aug 2026: PRODUCT.md names Oracle's own
+    marketing as an anti-reference and the Terms disclaim affiliation, so
+    borrowing Oracle's red contradicts both. Do not take the accent from
+    DESIGN.md, which still carries the old red and is stale against that
+    decision. Section 4 of Showcase/STANDARDS.md names the dropped value and
+    the reason; it is deliberately not repeated here, because a guard in
+    test/showcase.test.js reads this file looking for it. A second guard,
+    scripts/showcase/check-chrome-colour.py, measures the shipped pixels, so
+    restoring the red here fails the build twice.
     No webfonts: an asset that renders differently depending on whether a font
     server answered is not a reproducible asset. The stacks below resolve on
     any machine that has a browser.
@@ -15,7 +25,7 @@
   */
   :root{
     --field:#FAFBFD; --surface:#FFFFFF; --ink:#0B1B34; --ink2:#4D5A74;
-    --ink3:#626C80; --hairline:#DFE5EE; --action:#C74634; --signal:#17785A;
+    --ink3:#626C80; --hairline:#DFE5EE; --action:#8A4B12; --signal:#17785A;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--field)}
