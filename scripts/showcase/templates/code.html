@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>{{TITLE}}</title>
+<style>
+  /*
+    The briefing.json view. Deliberately styled to match the pack's own report
+    surface rather than the site, because it is the SECOND OUTPUT of the same
+    run and the two belong to each other.
+    No inline script. No webfonts.
+  */
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#0A0B0D}
+  body{color:#E8E9EB;font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+  .panel{width:{{PANEL_W}}px;padding:26px 30px 30px}
+  .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  .name{font-size:13px;color:#E8E9EB;letter-spacing:.02em}
+  .name span{color:#9BA1A9}
+  .role{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#9BA1A9}
+  pre{margin:0;font-size:{{FONT_PX}}px;line-height:1.55;white-space:pre;color:#C9CDD3}
+  .k{color:#7FB2F0}
+  .s{color:#9FE0C2}
+  .n{color:#F0C07A}
+  .more{margin-top:14px;font-size:12px;color:#9BA1A9;letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="bar">
+    <div class="name">{{FILENAME}} <span>{{BYTES}}</span></div>
+    <div class="role">{{ROLE}}</div>
+  </div>
+<pre>{{CODE}}</pre>
+  <div class="more">{{MORE}}</div>
+</div>
+</body>
+</html>

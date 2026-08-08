@@ -10,7 +10,9 @@
     "build": "astro build && find dist -name '.DS_Store' -delete",
     "preview": "astro preview",
     "test": "node --test \"test/*.test.js\"",
-    "astro": "astro"
+    "astro": "astro",
+    "build:showcase": "node scripts/showcase/build.mjs",
+    "test:showcase-guards": "bash scripts/showcase/selftest-guards.sh"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",

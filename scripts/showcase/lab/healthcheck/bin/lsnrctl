@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# =============================================================================
+# SYNTHETIC LAB STUB. THIS IS NOT ORACLE'S lsnrctl.
+#
+# health_check.sh probes the listener with `command -v lsnrctl` and then
+# `lsnrctl status <name>`. On the capture machine there is no Oracle install,
+# so without this stub the sample report would carry
+#
+#     WARN  Listener  lsnrctl not available - listener state unknown
+#
+# which is a fact about the CAPTURE MACHINE, not about the product, and it
+# would read on a sales page as a defect the pack has.
+#
+# So the synthetic lab supplies a listener the way it supplies a collection:
+# invented, checked in, and declared. It is listed as a synthetic input in
+# Showcase/MANIFEST.json and in Showcase/STANDARDS.md. It reports one state,
+# it contacts nothing, and it exists only inside scripts/showcase/lab/.
+#
+# It is NOT part of packs/ and it is never shipped to a customer.
+# =============================================================================
+set -euo pipefail
+
+# health_check.sh sends this to /dev/null and reads only the exit code, so
+# nothing printed here reaches the report. It is written for whoever runs the
+# stub by hand while debugging the rig.
+cat <<'BANNER'
+OraDiscuss showcase lab stub, standing in for lsnrctl.
+No listener was contacted. Exit code 0 means "the lab declares the listener up".
+BANNER
+
+exit 0

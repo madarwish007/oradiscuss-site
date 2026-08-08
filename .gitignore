@@ -32,3 +32,8 @@ pnpm-debug.log*
 
 # Generated knowledge graph (rebuild with: graphify update .)
 graphify-out/
+
+# Showcase capture scratch. Both are removed by scripts/showcase/build.mjs;
+# they are listed here so a crashed run cannot leave the tree dirty.
+.showcase-run/
+.showcase-work/
