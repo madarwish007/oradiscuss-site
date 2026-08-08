@@ -64,14 +64,32 @@ than everything else in the document combined.
 
 ## What it collects, and what happens when it cannot
 
-| Tier | Needs |
-|---|---|
-| Alert log via `X$DBGALERTEXT` | SYS, or an explicit grant on the fixed table |
-| Alert log, text fallback | read access to the ADR trace directory |
-| ADR incidents | `adrci` on the PATH |
-| Workload evidence from `DBA_HIST_*` | **Oracle Diagnostics Pack licence** |
-| Listener log | read access to the ADR listener trace directory |
-| Operating system logs | root, or passwordless sudo |
+| Tier | Check id | Needs |
+|---|---|---|
+| Alert log via `X$DBGALERTEXT` | `ALERT` | SYS, or an explicit grant on the fixed table |
+| Alert log, text fallback | `ALERT_TEXT` | read access to the ADR trace directory |
+| ADR incidents | `ADRINC` | `adrci` on the PATH, and a resolved ADR home |
+| Workload evidence from `DBA_HIST_*` | `AWR` | **Oracle Diagnostics Pack licence** |
+| Listener log | `LSNR` | read access to the ADR listener trace directory |
+| Operating system logs | `OSTIER` | root, or passwordless sudo |
+
+Every tier in that table emits a check with the id beside it, on every run, and
+a test asserts that the table and the collector agree. A document that lists a
+tier the collector does not have is the same defect as a tier that silently does
+not run.
+
+## It describes ONE node, and says so
+
+`NODESCOPE` records which node the collection ran on. Alert log, listener and
+operating system evidence are **local to that node**. On RAC, run it on each
+node you are responsible for: an incident that evicted a different node leaves
+its evidence on that node, not this one.
+
+The v0.9 release reached remote nodes over SSH. That is a larger change and a
+positioning decision rather than a bug fix, and it is an open question shared
+with the other packs in this product. Until it is answered, the honest answer is
+"run it on each node", and the report says so on its face rather than leaving a
+single-node picture to be mistaken for a cluster-wide one.
 
 **Every tier that cannot run becomes an `NA` check that names what would make it
 run.** This matters more than it sounds. A tier that is silently absent looks
