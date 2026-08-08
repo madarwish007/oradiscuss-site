@@ -196,7 +196,10 @@ async function sendToMembers(request, env, brief) {
 // because a draft is unpublished work and a source failure is our operational
 // state, neither of which is public.
 export async function getWatchStatus(request, env) {
-  const refusal = await authorise(request, env);
+  // Throttled like its two siblings, so all three token gated routes behave the
+  // same way. Uniformity is the point: an endpoint that is the odd one out is
+  // the one a later edit forgets about.
+  const refusal = (await authorise(request, env)) ?? (await throttle(request, env));
   if (refusal) return refusal;
   return json({ ok: true, ...(await watchStatus(env)) });
 }
