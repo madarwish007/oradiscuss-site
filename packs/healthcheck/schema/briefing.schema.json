@@ -1,16 +1,22 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://oradiscuss.com/schema/briefing-1.0.json",
+  "$id": "https://oradiscuss.com/schema/briefing-1.1.json",
   "title": "OraDiscuss briefing",
   "_header": "OraDiscuss - DBA Health Check Automation Pack v1.0.0. Generated and published by OraDiscuss (oradiscuss.com). Not produced by, affiliated with, or endorsed by Oracle Corporation. READ-ONLY: this pack issues no DDL and no DML against your data. License: single-user license, modify allowed, no redistribution.",
   "description": "The machine-readable half of an OraDiscuss collection. Written on the customer's own machine, alongside report.html, from one run of one collector. It is meant to be handed to the customer's own AI assistant together with a prompt from the pack's prompts/ directory. OraDiscuss never receives this file.",
   "type": "object",
-  "required": ["schema_version", "generator", "collection", "summary", "checks"],
+  "required": ["schema_version", "kind", "generator", "collection", "summary", "checks"],
   "properties": {
     "schema_version": {
       "type": "string",
-      "description": "Version of THIS contract, not of the pack. A consumer that understands 1.0 can rely on every field below continuing to mean what it means here.",
+      "description": "Version of THIS contract, not of the pack. A consumer that understands 1.0 can rely on every field below continuing to mean what it means here. 1.1 adds `kind` and the optional `incident` block. Nothing a 1.0 reader relied on changed, which is why this is a minor bump rather than a second schema.",
       "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["state", "incident"],
+      "description": "Which question this document answers. `state` means what is the state of this database, and the checks array is the whole answer. `incident` means what happened, and the answer is the checks array PLUS the `incident` block below. Reading this field is more reliable than inferring the shape from whether a key is present.",
+      "_note": "Every collector except the RCA generator emits `state`."
     },
     "generator": {
       "type": "object",
@@ -66,6 +72,72 @@
     "thresholds": {
       "type": "object",
       "description": "The thresholds this run was judged against. They are the customer's own configured values, so a status of WARN means nothing without them."
+    },
+    "incident": {
+      "type": "object",
+      "description": "Present only when `kind` is `incident`. Everything here describes ONE time window that somebody asked about, and it is deliberately evidence rather than conclusions: no entry in this block tells the reader what to do, and none of it is a verdict about what caused anything.",
+      "required": ["window", "events", "ordering_facts"],
+      "properties": {
+        "window": {
+          "type": "object",
+          "description": "The window that was collected, and how it was arrived at. `resolved_from` records which argument shape the operator used, because a triage that silently examined a different window than the operator meant is worse than one that refused to run.",
+          "required": ["from", "to", "resolved_from"],
+          "properties": {
+            "from": { "type": "string" },
+            "to": { "type": "string" },
+            "resolved_from": { "type": "string" }
+          }
+        },
+        "events": {
+          "type": "array",
+          "description": "The reconstructed timeline, in collected order. Sort by (epoch, seq): `seq` is assigned at collection time and exists so that events sharing a second have one stable order, rather than an order that depends on which sort implementation ran.",
+          "items": {
+            "type": "object",
+            "required": ["seq", "epoch", "timestamp", "source", "severity", "message"],
+            "properties": {
+              "seq": { "type": "number" },
+              "epoch": { "type": ["number", "null"] },
+              "timestamp": {
+                "type": "string",
+                "description": "Formatted at COLLECTION time, on the machine that saw the incident. Carried rather than recomputed so that re-reading an archived collection in another timezone does not silently rewrite the clock the incident actually happened on."
+              },
+              "source": { "type": "string" },
+              "severity": { "type": "string" },
+              "message": { "type": "string" }
+            }
+          }
+        },
+        "ordering_facts": {
+          "type": "array",
+          "description": "Correlations drawn from the ORDER of events, split into two fields on purpose. `statement` is measured and can be checked against the timeline. `reading` is an interpretation of that measurement and is labelled as one. Nothing here is a recommendation: this product reports evidence, a timeline and ranked probable causes, never verdicts and never commands.",
+          "items": {
+            "type": "object",
+            "required": ["id", "statement"],
+            "properties": {
+              "id": { "type": "string" },
+              "statement": { "type": "string" },
+              "reading": { "type": "string" },
+              "would_distinguish": {
+                "type": "string",
+                "description": "What further knowledge would separate this reading from a competing one. Deliberately phrased as something to KNOW rather than something to RUN."
+              }
+            }
+          }
+        },
+        "appendix": {
+          "type": "array",
+          "description": "Raw evidence files written beside this briefing at collection time. Listed rather than embedded, because an alert log excerpt can be larger than everything else here combined.",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "bytes": { "type": ["number", "null"] }
+            }
+          }
+        }
+      }
     },
     "checks": {
       "type": "array",

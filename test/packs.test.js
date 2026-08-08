@@ -72,6 +72,20 @@ const PACKS = [
     // in held/, out of the product, rather than allowlisted into it.
     allowlist: [],
   },
+  {
+    id: 'rca',
+    expects: [
+      'rca_generator.sh',
+      'lib/odc_briefing.sh',
+      'schema/briefing.schema.json',
+      'prompts/incident-review.md',
+      'sql/rca_alertlog.sql',
+      'sql/rca_awr_evidence.sql',
+    ],
+    // RCA reads dictionary views and log files. It has no writer to allowlist,
+    // and an incident is the worst possible moment to be holding an exception.
+    allowlist: [],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -956,6 +970,278 @@ test('tbs_manager: v1.0 ships no path that writes to the database', () => {
     assert.ok(!live.includes(flag), `tbs_manager.sh still accepts ${flag}`);
   }
   assert.deepEqual(shellMutations(src), [], 'tbs_manager.sh contains a mutation pair');
+});
+
+// ---------------------------------------------------------------------------
+// RCA: the second document KIND. Evidence, a timeline, ordering facts.
+// ---------------------------------------------------------------------------
+
+function renderRca() {
+  const pack = PACKS.find((p) => p.id === 'rca');
+  const out = mkdtempSync(join(tmpdir(), 'odc-rca-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(
+    cfg,
+    [
+      'ORACLE_SID=LABDB',
+      'ORACLE_HOME=/nonexistent',
+      'ORACLE_CONNECT="/ as sysdba"',
+      `OUTPUT_DIR=${out}`,
+      'RCA_MAX_EVENTS=500',
+      'RCA_CORRELATION_WINDOW_SEC=600',
+    ].join('\n'),
+  );
+  const raw = join(pack.dir, 'test-fixtures/rca_raw_hostile.txt');
+  const before = readFileSync(raw, 'utf8');
+  try {
+    execFileSync('bash', [
+      join(pack.dir, 'rca_generator.sh'), '--config', cfg, '--render-only', raw,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const dir = join(out, 'rca');
+  return {
+    dir,
+    html: readdirSync(dir).find((f) => f.endsWith('.html') && !f.includes('latest')),
+    json: readdirSync(dir).find((f) => f.endsWith('.json') && !f.includes('latest')),
+    rawUnchanged: readFileSync(raw, 'utf8') === before,
+  };
+}
+
+test('rca: ONE collection produces BOTH the report and the briefing', () => {
+  const r = renderRca();
+  assert.ok(r.html, 'no HTML incident report was written');
+  assert.ok(r.json, 'the HTML was written but the briefing was not, which is half a run');
+  assert.ok(readFileSync(join(r.dir, r.html), 'utf8').includes('<!DOCTYPE html>'));
+  JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+});
+
+test('rca: --render-only leaves the collection it read exactly as it found it', () => {
+  assert.ok(renderRca().rawUnchanged, '--render-only modified the raw collection it was given');
+});
+
+test('rca: the incident briefing validates against the shipped schema', () => {
+  const pack = PACKS.find((p) => p.id === 'rca');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  // ONE call. Two calls render into two different temp directories, and pairing
+  // one directory with the other's filename is a test that fails for a reason
+  // the product had nothing to do with. This file already carried that warning
+  // and this test was written ignoring it.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.deepEqual(validate(schema, doc), []);
+});
+
+test('rca: the document declares which KIND it is', () => {
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.equal(doc.kind, 'incident');
+  assert.equal(doc.schema_version, '1.1');
+  assert.ok(doc.incident, 'kind is incident but there is no incident block');
+});
+
+test('SELF-TEST: a state collector still emits a valid document with NO incident block', () => {
+  // THE UNEXERCISED PATH IS THE TRAP, and this library has already shipped one:
+  // the inline thresholds default that expanded to three literal characters and
+  // emitted invalid JSON for the first caller that omitted the argument.
+  // Injecting the incident block is the new path; OMITTING it is the old one,
+  // and both are asserted rather than assumed.
+  const pack = PACKS.find((p) => p.id === 'daily-ops');
+  const schema = JSON.parse(readFileSync(join(pack.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const r = renderTbsManager();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.equal(doc.kind, 'state');
+  assert.ok(!('incident' in doc), 'a state collector emitted an incident block');
+  assert.deepEqual(validate(schema, doc), []);
+});
+
+test('rca: the timeline sorts by epoch AND by the collected sequence number', () => {
+  // The fixture is deliberately shuffled and carries TWO events in the same
+  // second. Sorting on the epoch alone leaves those two in an order chosen by
+  // whichever sort implementation is installed, which is how one collection
+  // tells two different stories on two machines.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const ev = doc.incident.events;
+  assert.ok(ev.length >= 7, `expected the whole fixture timeline, got ${ev.length}`);
+  for (let i = 1; i < ev.length; i++) {
+    const prev = ev[i - 1];
+    const cur = ev[i];
+    assert.ok(
+      prev.epoch < cur.epoch || (prev.epoch === cur.epoch && prev.seq < cur.seq),
+      `timeline is out of order at index ${i}: (${prev.epoch},${prev.seq}) then (${cur.epoch},${cur.seq})`,
+    );
+  }
+  const tied = ev.filter((e) => e.epoch === 1754640042);
+  assert.equal(tied.length, 2, 'the tied-second pair is missing, so this guard proved nothing');
+  assert.deepEqual(tied.map((e) => e.seq), [4, 7]);
+});
+
+test('rca: timestamps are carried from collection, never recomputed', () => {
+  // A renderer that formatted the epoch itself would rewrite the incident
+  // machine's clock whenever an archived collection was read in another
+  // timezone. The string in the fixture must survive verbatim.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const first = doc.incident.events.find((e) => e.seq === 1);
+  assert.equal(first.timestamp, '2026-08-08 03:20:00');
+  assert.equal(first.epoch, 1754640000);
+});
+
+test('rca: ordering facts separate what was MEASURED from what was READ into it', () => {
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const facts = doc.incident.ordering_facts;
+  assert.ok(facts.length > 0, 'no ordering facts, so this guard is asleep');
+
+  const os = facts.find((f) => f.id === 'os_precedes_ora');
+  assert.ok(os, 'the fixture puts an OS error 42s before an ORA- error and no fact was drawn');
+  assert.match(os.statement, /42 seconds/);
+  assert.ok(os.reading, 'the correlation carries no labelled reading');
+  assert.ok(os.would_distinguish, 'a reading with a competing explanation must say what would separate them');
+
+  for (const f of facts) {
+    assert.ok(f.statement, `${f.id} has no measured statement`);
+  }
+});
+
+test('rca: the report contains NO verdicts and NO commands', () => {
+  // The locked decision is evidence, timeline and ranked probable causes,
+  // NEVER verdicts or commands. v0.9 shipped a "recommended next steps" section
+  // and cause entries phrased as instructions ("investigate the storage layer
+  // first"). Enforced by a guard rather than by anybody remembering.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+
+  const imperatives = [
+    /recommended next steps/i,
+    /\binvestigate the\b/i,
+    /\byou should\b/i,
+    /\brun the following\b/i,
+    /\bexecute\b/i,
+  ];
+  const prose = [
+    ...doc.incident.ordering_facts.flatMap((f) => [f.statement, f.reading ?? '', f.would_distinguish ?? '']),
+    html,
+  ].join('\n');
+  for (const re of imperatives) {
+    assert.ok(!re.test(prose), `the incident report reads as an instruction: ${re}`);
+  }
+});
+
+test('rca: a tier that could not run is recorded as NA, never as absent', () => {
+  // A silently missing tier looks exactly like a tier that found nothing, and
+  // during an incident those are completely different answers.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const os = doc.checks.find((c) => c.id === 'OSTIER');
+  const awr = doc.checks.find((c) => c.id === 'AWR');
+  assert.equal(os.status, 'NA');
+  assert.equal(awr.status, 'NA');
+  assert.ok(doc.summary.counts.NA >= 2, 'NA checks are not being counted');
+  assert.ok(!doc.summary.needs_attention.includes('OSTIER'), 'NA must not be reported as needing attention');
+  // Each NA must say what would make it runnable, or it is just a shrug.
+  assert.match(awr.detail, /Diagnostics Pack/);
+  assert.match(os.detail, /sudo|root/i);
+});
+
+test('rca: the window and how it was resolved are both recorded', () => {
+  // A triage that examined a different window than the operator meant is the
+  // failure that matters most here, so the window is carried in the data.
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.equal(doc.incident.window.from, '2026-08-08 02:00:00');
+  assert.equal(doc.incident.window.to, '2026-08-08 06:00:00');
+  assert.match(doc.incident.window.resolved_from, /--at/);
+  assert.match(readFileSync(join(r.dir, r.html), 'utf8'), /2026-08-08 02:00:00/);
+});
+
+test('rca: the briefing survives hostile collector output', () => {
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const adr = doc.checks.find((c) => c.id === 'ADR');
+  assert.match(adr.detail, /D:\\oracle\\diag/, 'a Windows path did not survive JSON escaping');
+  const awr = doc.checks.find((c) => c.id === 'AWR');
+  assert.match(awr.detail, /"NONE"/, 'a quoted value did not survive');
+  const trace = doc.incident.events.find((e) => e.seq === 3);
+  assert.match(trace.message, /D:\\oracle\\diag/, 'a Windows path in an event did not survive');
+  assert.match(trace.message, /"block corruption"/, 'a quoted phrase in an event did not survive');
+  // A decimal comma is what a German-locale session emits. It must become null
+  // rather than invalidate the whole document.
+  assert.equal(doc.checks.find((c) => c.id === 'IDENT').metrics.uptime_hours.value, null);
+});
+
+// ---------------------------------------------------------------------------
+// THE WINDOW. This is collect-time logic, which --render-only never reaches,
+// and it is the code where a silent mistake costs the most: it decides which
+// hours of an incident anybody ever looks at. It is testable here only because
+// the date helpers were written to work on BSD date as well as GNU date.
+// ---------------------------------------------------------------------------
+
+function runRca(args, opts = {}) {
+  const pack = PACKS.find((p) => p.id === 'rca');
+  const out = mkdtempSync(join(tmpdir(), 'odc-rcaw-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(
+    cfg,
+    [
+      'ORACLE_SID=LABDB', 'ORACLE_HOME=/nonexistent', 'ORACLE_CONNECT="/ as sysdba"',
+      `OUTPUT_DIR=${out}`, 'RCA_MAX_EVENTS=500', 'RCA_CORRELATION_WINDOW_SEC=600',
+    ].join('\n'),
+  );
+  try {
+    const stdout = execFileSync('bash', [join(pack.dir, 'rca_generator.sh'), '--config', cfg, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'], encoding: 'utf8', ...opts,
+    });
+    return { status: 0, out: stdout };
+  } catch (err) {
+    return { status: err.status, out: `${err.stdout ?? ''}${err.stderr ?? ''}` };
+  }
+}
+
+test('rca: --at widens to a window and says so, and --since resolves against now', () => {
+  const at = runRca(['--dry-run', '--at', '2026-08-08 04:00']);
+  assert.equal(at.status, 0);
+  assert.match(at.out, /window {10}: 2026-08-08 02:00:00 to 2026-08-08 06:00:00/);
+  assert.match(at.out, /resolved from {3}: --at 2026-08-08 04:00, widened/);
+
+  const since = runRca(['--dry-run', '--since', '2h']);
+  assert.equal(since.status, 0);
+  assert.match(since.out, /resolved from {3}: --since 2h/);
+  // Proves the window is real rather than a passed-through string: two
+  // timestamps four hours apart cannot both be the literal argument.
+  const [, from, to] = /window {10}: (\S+ \S+) to (\S+ \S+)/.exec(since.out);
+  assert.equal((Date.parse(to.replace(' ', 'T')) - Date.parse(from.replace(' ', 'T'))) / 3600000, 2);
+});
+
+test('rca: it REFUSES rather than guessing, and each refusal exits non-zero', () => {
+  // A triage that silently picked one of two windows is worse than one that
+  // refused to start, so every one of these is an error and not a precedence
+  // rule. The exit code is asserted too: a script that prints ERROR and exits 0
+  // is a script cron treats as a success.
+  const cases = [
+    [['--since', '2h', '--at', '2026-08-08 04:00'], /give ONE window shape/],
+    [[], /no window given and no terminal/],
+    [['--from', '2026-08-08 06:00', '--to', '2026-08-08 02:00'], /--to must be later than --from/],
+    [['--from', '2026-08-08 06:00'], /--from and --to are given together/],
+    [['--since', 'yesterday'], /--since takes a number followed by/],
+    [['--at', 'not a time'], /could not read --at/],
+  ];
+  for (const [args, re] of cases) {
+    const r = runRca(args);
+    assert.equal(r.status, 2, `${args.join(' ') || '(no args)'} should exit 2, exited ${r.status}`);
+    assert.match(r.out, re);
+  }
+});
+
+test('rca: the appendix is listed rather than embedded', () => {
+  const r = renderRca();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.equal(doc.incident.appendix.length, 2);
+  assert.equal(doc.incident.appendix[0].name, 'alertlog_window.txt');
+  assert.equal(doc.incident.appendix[0].bytes, 18422);
 });
 
 function renderEnvCollector() {

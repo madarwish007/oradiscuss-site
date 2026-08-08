@@ -1,0 +1,21 @@
+WIN|2026-08-08 02:00:00|2026-08-08 06:00:00|--at 2026-08-08 04:00, widened to plus and minus 2 hours
+SEC|Collection status
+CHK|IDENT|OK|Instance identity|version 19.22.0.0.0, CDB=YES, role PRIMARY
+MET|IDENT|uptime_hours|412,5|hours
+CHK|ADR|OK|ADR paths|ADR home D:\oracle\diag\rdbms\labdb\labdb1
+CHK|OSTIER|NA|Operating system tier|skipped. Running as oracle, which cannot read the system logs, and no passwordless sudo is available.
+CHK|AWR|NA|Workload evidence|control_management_pack_access is "NONE", so DBA_HIST views were not read. Those views are licensed with the Oracle Diagnostics Pack. Stated as a fact about what was not read, not as advice about your licensing.
+SEC|Alert log
+CHK|ALERT|OK|Alert log source|read through X$DBGALERTEXT, filtered on the window in the database
+EVT|4|1754640042|2026-08-08 03:20:42|alert-log|SEVERE|ORA-01578: ORACLE data block corrupted (file # 7, block # 1234)
+EVT|2|1754639400|2026-08-08 03:10:00|alert-log|NORMAL|Thread 1 advanced to log sequence 4412
+EVT|7|1754640042|2026-08-08 03:20:42|alert-log|SEVERE|ORA-01578: second entry in the SAME second, which is why the timeline sorts on seq as well as epoch
+EVT|1|1754640000|2026-08-08 03:20:00|os-messages|OS-ERROR|kernel: I/O error, dev sdc, sector 88213344 on "/u02/oradata"
+EVT|5|1754640301|2026-08-08 03:25:01|alert-log|SEVERE|ORA-00600: internal error code, arguments: [kcbzib_kcrsds_1], [], []
+EVT|3|1754640100|2026-08-08 03:21:40|alert-log|IMPORTANT|Errors in file D:\oracle\diag\rdbms\labdb\labdb1\trace\labdb1_dbw0_4711.trc "block corruption"
+EVT|6|1754640350|2026-08-08 03:25:50|alert-log|SEVERE|ORA-01578: ORACLE data block corrupted (file # 7, block # 1299)
+SEC|Listener
+CHK|LSNR|OK|Listener log|3 TNS- lines captured to the appendix
+MET|LSNR|tns_errors|3|lines
+APX|alertlog_window.txt|18422|raw evidence captured during collection
+APX|listener_errors.txt|294|raw evidence captured during collection

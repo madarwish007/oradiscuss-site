@@ -79,6 +79,8 @@ ODC_BR_COUNT_WARN=0
 ODC_BR_COUNT_CRIT=0
 ODC_BR_COUNT_NA=0
 ODC_BR_ATTENTION=''    # ids that are not OK, comma separated
+ODC_BR_KIND='state'    # see odc_br_incident below
+ODC_BR_INCIDENT=''     # complete JSON object, or empty
 
 odc_br_reset() {
   ODC_BR_CHECKS=''
@@ -88,6 +90,40 @@ odc_br_reset() {
   ODC_BR_COUNT_CRIT=0
   ODC_BR_COUNT_NA=0
   ODC_BR_ATTENTION=''
+  ODC_BR_KIND='state'
+  ODC_BR_INCIDENT=''
+}
+
+# ---------------------------------------------------------------------------
+# odc_br_incident <complete JSON object>
+#
+# TWO DOCUMENT KINDS, ONE SCHEMA, AND WHY IT IS NOT TWO SCHEMAS.
+#
+# Every collector until now answered "what is the state of this database", and
+# a checks array says that perfectly. RCA answers a different question, "what
+# happened", whose answer is evidence, a reconstructed timeline and ranked
+# ordering facts. That is genuinely a second document shape.
+#
+# It is carried as an OPTIONAL block on the SAME schema, discriminated by
+# `kind`, rather than as a second schema. A consumer that already reads a
+# briefing keeps working unchanged: the header, the collection block, the
+# summary and the checks all still mean exactly what they meant, and RCA's
+# collection-status facts (which tiers ran, which were skipped and why) are
+# ordinary checks carrying ordinary NA statuses. Only the incident-specific part
+# is new, and a reader that does not care about it can ignore one key.
+#
+# Two schemas would have duplicated all of that, and the duplicate would drift.
+#
+# THE UNEXERCISED PATH IS THE TRAP. This library has already shipped one default
+# nobody reached, the inline ${8:-...} for thresholds, which expanded to three
+# literal characters and emitted invalid JSON for the first caller that omitted
+# the argument. So both paths here are deliberately exercised: every
+# state-shaped collector omits the incident block on every run, and RCA's tests
+# drive the injection path AND assert that omitting it still validates.
+# ---------------------------------------------------------------------------
+odc_br_incident() {
+  ODC_BR_KIND='incident'
+  ODC_BR_INCIDENT="${1-}"
 }
 
 # ---------------------------------------------------------------------------
@@ -180,9 +216,19 @@ odc_br_document() {
   # default, it is a trap waiting for the next caller.
   [ -n "$thresholds" ] || thresholds='{}'
 
+  # Built before the heredoc rather than branched inside it, so the document has
+  # exactly one shape in the source and cannot end up with a stray comma in one
+  # of two branches nobody renders side by side.
+  local incident_block=''
+  if [ -n "$ODC_BR_INCIDENT" ]; then
+    incident_block="
+  \"incident\": ${ODC_BR_INCIDENT},"
+  fi
+
   cat <<JSON
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
+  "kind": "$(odc_json_esc "$ODC_BR_KIND")",
   "generator": {
     "vendor": "OraDiscuss",
     "source": "https://oradiscuss.com",
@@ -208,7 +254,7 @@ odc_br_document() {
     },
     "needs_attention": [${ODC_BR_ATTENTION}]
   },
-  "thresholds": ${thresholds},
+  "thresholds": ${thresholds},${incident_block}
   "checks": [${ODC_BR_CHECKS}]
 }
 JSON
