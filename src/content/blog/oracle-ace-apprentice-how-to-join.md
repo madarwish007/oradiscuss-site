@@ -17,7 +17,7 @@ _By: Mahmoud Darwish_
 
 > **Update, August 2026:** since this post was written I have progressed to **Oracle ACE Associate**. The post is kept as it was, because the path it describes is the point and the levels below are unchanged. Only my own position on that path has moved.
 
-It has been a long time — years, actually — since I last posted here on OraDiscuss. Life, work, and everything in between took over. But I'm back, and I couldn't think of a better way to re-launch this journey than by sharing a major professional milestone: **I've officially joined the Oracle ACE program as an ACE Apprentice!**
+It has been a long time (years, actually) since I last posted here on OraDiscuss. Life, work, and everything in between took over. But I'm back, and I couldn't think of a better way to re-launch this journey than by sharing a major professional milestone: **I've officially joined the Oracle ACE program as an ACE Apprentice!**
 
 ## What Actually is an Oracle ACE?
 
@@ -29,12 +29,12 @@ I used to think you had to be a "wizard" with 30 years of experience to join, bu
 
 - **ACE Apprentice**: where I started. For those getting back into the swing of things, starting to blog, and showing passion for the tech.
 - **ACE Associate**: where I am now. For those who are consistently showing up and helping out across the community.
-- **ACE Pro** — For seasoned experts who are the "go-to" people for deep technical knowledge and regular contributions.
-- **ACE Director** — The top tier. Global leaders who work closely with Oracle's product teams and influence the future of the technology.
+- **ACE Pro**: for seasoned experts who are the "go-to" people for deep technical knowledge and regular contributions.
+- **ACE Director**: the top tier. Global leaders who work closely with Oracle's product teams and influence the future of the technology.
 
 ## Why I'm Telling You This
 
-I'm sharing this because this blog — and you, the readers — are a huge part of why I want to give back. Whether you love writing, speaking, coding, or just answering questions on forums, there is a path for you in the ACE program.
+I'm sharing this because this blog (and you, the readers) are a huge part of why I want to give back. Whether you love writing, speaking, coding, or just answering questions on forums, there is a path for you in the ACE program.
 
 My goal for OraDiscuss moving forward is to share what I'm learning _as I learn it_. No more waiting until I'm an "expert" to hit publish. We're going to grow together.
 

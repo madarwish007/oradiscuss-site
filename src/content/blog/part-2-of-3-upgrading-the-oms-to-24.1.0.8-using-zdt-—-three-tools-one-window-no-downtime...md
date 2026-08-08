@@ -265,16 +265,16 @@ After both OMS nodes finish patching, run a quick validation across the componen
 bash
 
 ```bash
-# OMS Platform version — should be 24.1.0.8
+# OMS Platform version: should be 24.1.0.8
 $OMS_HOME/OMSPatcher/omspatcher lspatches
 
-# JDK version — should be 1.8.0_481
+# JDK version: should be 1.8.0_481
 $OMS_HOME/oracle_common/jdk/bin/java -version
 
-# OPatch version — should be 13.9.4.2.22
+# OPatch version: should be 13.9.4.2.22
 $OMS_HOME/OPatch/opatch version
 
-# OMS status — should be Up
+# OMS status: should be Up
 $OMS_HOME/bin/emctl status oms -details
 ```
 

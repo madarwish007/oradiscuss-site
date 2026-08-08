@@ -1,6 +1,6 @@
 ---
-title: Moving from DBCS to ExaCS — The Things Nobody Puts in the Migration Guide!!
-description: Lessons from migrating production Oracle databases from DBCS to Exadata Cloud Service — the things the official guide skips.
+title: 'Moving from DBCS to ExaCS: The Things Nobody Puts in the Migration Guide!!'
+description: 'Lessons from migrating production Oracle databases from DBCS to Exadata Cloud Service: the things the official guide skips.'
 pubDate: 2026-04-09
 updatedDate: ''
 category: oci
@@ -66,7 +66,7 @@ We had four realistic options. We didn't use the same method for every database.
 
 ### Option 1: Data Guard Physical Standby Migration
 
-My preferred method for large, critical databases. Build ExaCS as a physical standby of the source DBCS, let it sync fully, then perform a controlled switchover. Application downtime is limited to the switchover itself — typically 2–4 minutes on a healthy configuration.
+My preferred method for large, critical databases. Build ExaCS as a physical standby of the source DBCS, let it sync fully, then perform a controlled switchover. Application downtime is limited to the switchover itself, typically 2–4 minutes on a healthy configuration.
 
 ```sql
 -- Verify on SOURCE DBCS
@@ -107,7 +107,7 @@ Best for smaller schemas or logical migrations. Not practical for large transact
 If both source DBCS and target ExaCS are running CDB/PDB architecture, you can clone a PDB directly across a database link. The source PDB must be in READ ONLY mode during the clone.
 
 ```sql
--- On TARGET ExaCS — create the DB link
+-- On TARGET ExaCS: create the DB link
 CREATE DATABASE LINK dbcs_source_link
   CONNECT TO clone_link_user IDENTIFIED BY "<password>"
   USING '(DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)

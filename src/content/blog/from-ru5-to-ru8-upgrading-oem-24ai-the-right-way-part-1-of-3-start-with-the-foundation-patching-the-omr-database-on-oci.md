@@ -59,7 +59,7 @@ One thing worth understanding before you start: **patch 38641793** is a **DB Hom
 
 **Read the README. All of it.**
 
-#### Understanding the Patching Order on RAC — GI Before DB, Always..
+#### Understanding the Patching Order on RAC: GI Before DB, Always..
 
 On any Oracle RAC system, whether on-premises or on OCI, there is one rule about patch ordering that is non-negotiable: **Grid Infrastructure must be patched before the Database home. Never after.**
 
@@ -163,7 +163,7 @@ unzip p39168344_1930000DBRU_Linux-x86-64.zip
 The README explicitly recommends running `opatchauto` in analyze mode before the actual apply. This checks for conflicts with any currently installed interim patches without making any changes:
 
 ```bash
-# As grid user — analyze both GI and DB homes together (Case 1)
+# As grid user, analyze both GI and DB homes together (Case 1)
 sudo su - grid
 cd /u01/app/patches
 $GRID_HOME/OPatch/opatchauto apply ./39168344 -analyze
@@ -172,11 +172,11 @@ $GRID_HOME/OPatch/opatchauto apply ./39168344 -analyze
 Review the analyze output carefully. If any conflicts are reported, resolve them via MOS before proceeding. Do not skip the analyze step, it is your safety check before you start touching the production cluster.
 
 ```bash
-# DB Home OPatch — as oracle user 
+# DB Home OPatch, as oracle user 
 sudo su - oracle
 $ORACLE_HOME/OPatch/opatch version
 
-# GI Home OPatch — as grid user 
+# GI Home OPatch, as grid user 
 sudo su - grid
 $GRID_HOME/OPatch/opatch version
 ```
@@ -197,7 +197,7 @@ The `-prepatch` step stops specific CRS resources in a controlled manner, prepar
 **Phase 2: Apply the binary patch on Node 1**
 
 ```bash
-# As grid user on Node 1 — patches both GI and DB homes together
+# As grid user on Node 1, patches both GI and DB homes together
 cd /u01/app/patches
 $GRID_HOME/OPatch/opatchauto apply ./39168344
 ```
@@ -228,7 +228,7 @@ All resources must show `ONLINE` before you touch Node 2.
 The same sequence runs identically on Node 2. By the time you are patching Node 2, Node 1 is fully patched and back in the cluster, the OMR database remains available throughout.
 
 ```bash
-# Node 2 — identical sequence
+# Node 2: identical sequence
 sudo su - root
 $GRID_HOME/crs/install/rootcrs.sh -prepatch
 
@@ -246,7 +246,7 @@ $GRID_HOME/crs/install/rootcrs.sh -postpatch
 With both nodes patched, verify the overlay patch is correctly registered in the DB Home on both nodes. Remember, look in the DB Home only. The GI Home will not show this patch and that is correct.
 
 ```bash
-# Run on BOTH Node 1 and Node 2 — as oracle user
+# Run on BOTH Node 1 and Node 2, as oracle user
 # Output should be identical on both nodes
 ORACLE_HOME=/u01/app/oracle/product/19.0.0.0/dbhome_1
 $ORACLE_HOME/OPatch/opatch lspatches | grep 38641793
@@ -258,7 +258,7 @@ $ORACLE_HOME/OPatch/opatch lspatches | grep 38641793
 Once both nodes have the binary patch applied and the cluster is fully healthy, run `datapatch` from one node only. `datapatch` applies the SQL-level dictionary changes that correspond to the binary patches. It is cluster-aware and only needs to run once regardless of the number of RAC nodes.
 
 ```bash
-# On Node 1 only — as oracle user
+# On Node 1 only, as oracle user
 cd $ORACLE_HOME/OPatch
 ./datapatch -verbose
 ```
@@ -270,7 +270,7 @@ Watch the output carefully. `datapatch` lists each patch being applied at the SQ
 After `datapatch` completes, run this query to confirm both the base 19.30 RU and the overlay patch are correctly applied at the dictionary level. This is the definitive check.
 
 ```plsql
--- Run on ONE node as sysdba — covers the entire RAC cluster
+-- Run on ONE node as sysdba, covers the entire RAC cluster
 sqlplus / as sysdba
 
 SELECT
@@ -321,7 +321,7 @@ Both instances: `STATUS = OPEN`, `DATABASE_STATUS = ACTIVE`
 
 ```bash
 # Run on both Node 1 and Node 2
-# GI Home — should show 19.30 GI patches, NOT 38641793
+# GI Home: should show 19.30 GI patches, NOT 38641793
 $GRID_HOME/OPatch/opatch lspatches
 39221823;OCW Interim patch for 39221823
 39030362;ACFS Interim patch for 39030362
@@ -336,7 +336,7 @@ $GRID_HOME/OPatch/opatch lspatches
 OPatch succeeded.
 
 
-# DB Home — MUST show 38641793
+# DB Home: MUST show 38641793
 $ORACLE_HOME/OPatch/opatch lspatches | grep 38641793
 38641793;X10M FADB23 FA ADMIN SERVER NOT STARTING -- ORA-17401  PROTOCOL VIOLATION.  [ 14, 3, ]
 ```
@@ -345,7 +345,7 @@ Output must be identical on both nodes for the DB Home check. Any discrepancy me
 
 **Check 4: OEM console accessible and OMR connected**
 
-Log into the OEM console — if it loads, the OMR is serving connections correctly. Then confirm explicitly from the repository details page.
+Log into the OEM console. If it loads, the OMR is serving connections correctly. Then confirm explicitly from the repository details page.
 
 Confirm the repository shows the correct database version and the connection status is active.
 
@@ -354,8 +354,8 @@ Confirm the repository shows the correct database version and the connection sta
 When all six checks pass, your OMR database stack looks like this:
 
 ```apex
-Grid Infrastructure:  19.30 (OCI Console — rolling)
-Oracle Database:      19.30 (OCI Console — rolling)
+Grid Infrastructure:  19.30 (OCI Console, rolling)
+Oracle Database:      19.30 (OCI Console, rolling)
 Overlay patch:        38641793 in DB Home (manual opatchauto)
 datapatch:            38632161 + 38641793 SUCCESS
 Cluster health:       All resources ONLINE both nodes

@@ -1,6 +1,6 @@
 ---
 title: How to Partition a Large Table Online in Oracle Without Downtime (DBMS_REDEFINITION)
-description: Converting a 20TB monolithic table to range-interval partitioned IOT with LOB compression — online, using DBMS_REDEFINITION.
+description: Converting a 20TB monolithic table to range-interval partitioned IOT with LOB compression, online, using DBMS_REDEFINITION.
 pubDate: 2026-01-25
 updatedDate: ''
 category: dba
@@ -19,14 +19,14 @@ _By: Mahmoud Darwish_
 
 Every seasoned DBA eventually faces the "Big Table" problem. In our case, it was a monolithic, non-partitioned table that had ballooned to **20 Terabytes**. Full table scans were glacial, index rebuilds were an all-weekend affair, and storage costs were escalating rapidly.
 
-We needed to implement a robust Data Lifecycle Management strategy — online, with minimal to zero downtime. Our solution: **Range-Interval Partitioning**, conversion to an **Index-Organized Table (IOT)**, advanced **LOB compression**, and **DBMS_REDEFINITION**.
+We needed to implement a robust Data Lifecycle Management strategy, online, with minimal to zero downtime. Our solution: **Range-Interval Partitioning**, conversion to an **Index-Organized Table (IOT)**, advanced **LOB compression**, and **DBMS_REDEFINITION**.
 
 ## Why This Approach for a 20TB Table?
 
 | Feature | Technical Benefit | Impact |
 | --- | --- | --- |
-| Online Redefinition | Uses DBMS_REDEFINITION while original table stays fully accessible for DML | Zero Downtime — only brief lock at FINISH_REDEF_TABLE |
-| Range-Interval Partitioning | Partitions monthly on CREATION_TIMESTAMP | Enables Partition Pruning — queries scan only a fraction of data |
+| Online Redefinition | Uses DBMS_REDEFINITION while original table stays fully accessible for DML | Zero Downtime, only brief lock at FINISH_REDEF_TABLE |
+| Range-Interval Partitioning | Partitions monthly on CREATION_TIMESTAMP | Enables Partition Pruning, queries scan only a fraction of data |
 | Advanced Compression | COMPRESS for historical, COMPRESS ADVANCED for older partitions | Significant storage cost reduction |
 | LOB Optimization | SECUREFILE with COMPRESS HIGH and DEDUPLICATE | Can cut size dramatically for repetitive API payloads |
 
@@ -121,7 +121,7 @@ END;
 
 ## Step 6: Finalize the Redefinition
 
-This is the switchover — the only point of application downtime. On a 20TB table, this typically takes under 30 seconds:
+This is the switchover, the only point of application downtime. On a 20TB table, this typically takes under 30 seconds:
 
 ```sql
 BEGIN
@@ -155,4 +155,4 @@ END;
 /
 ```
 
-**Result:** A 20TB monolithic table transformed into a monthly-partitioned, IOT-organized, LOB-compressed structure — entirely online, with only a brief exclusive lock during the final switchover step.
+**Result:** A 20TB monolithic table transformed into a monthly-partitioned, IOT-organized, LOB-compressed structure, entirely online, with only a brief exclusive lock during the final switchover step.

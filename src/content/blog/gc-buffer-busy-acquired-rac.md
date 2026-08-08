@@ -1,6 +1,6 @@
 ---
 title: 'gc buffer busy acquired: The RAC Wait Event That Ruined My Weekend'
-description: A RAC gc buffer busy acquired war story — how an application optimisation concentrated hot blocks and doubled transaction times.
+description: 'A RAC gc buffer busy acquired war story: how an application optimisation concentrated hot blocks and doubled transaction times.'
 pubDate: 2026-04-03
 updatedDate: ''
 category: dba
@@ -21,9 +21,9 @@ If you've spent any meaningful time managing Oracle RAC, you've developed a pers
 
 ## The Setup
 
-We run a 2-node RAC cluster for a financial processing system with a very specific access pattern: lots of small, targeted transactions hitting a relatively small set of "hot" rows — account balance tables, transaction status tables.
+We run a 2-node RAC cluster for a financial processing system with a very specific access pattern: lots of small, targeted transactions hitting a relatively small set of "hot" rows: account balance tables, transaction status tables.
 
-For months it ran fine. Then we upgraded the application, and suddenly response times for certain transaction types doubled. Not crashed, not errored out — just doubled. Which, in financial services, is enough to get people very upset very quickly.
+For months it ran fine. Then we upgraded the application, and suddenly response times for certain transaction types doubled. Not crashed, not errored out, just doubled. Which, in financial services, is enough to get people very upset very quickly.
 
 ## What AWR Was Telling Me
 
@@ -38,7 +38,7 @@ WHERE  event LIKE 'gc buffer busy%'
 ORDER BY time_waited_micro DESC;
 ```
 
-Node 1 was the aggressor — it was generating the hot block requests. Node 2 was mostly the victim.
+Node 1 was the aggressor: it was generating the hot block requests. Node 2 was mostly the victim.
 
 ## Drilling Down to the Hot Blocks
 
@@ -57,13 +57,13 @@ ORDER BY current_blocks_received DESC
 FETCH FIRST 10 ROWS ONLY;
 ```
 
-One table came back as a clear outlier — our account balance table. Several "hot" rows that get updated by almost every transaction were sitting in just a handful of blocks, and every node was fighting over them constantly.
+One table came back as a clear outlier: our account balance table. Several "hot" rows that get updated by almost every transaction were sitting in just a handful of blocks, and every node was fighting over them constantly.
 
 ## The Root Cause Was the Application Change
 
-The developer had made an "optimisation" — they changed a query to use an index range scan on a status column. The problem: this index access pattern was now hitting the same small set of "active status" rows repeatedly, concentrating I/O on very few blocks.
+The developer had made an "optimisation": they changed a query to use an index range scan on a status column. The problem: this index access pattern was now hitting the same small set of "active status" rows repeatedly, concentrating I/O on very few blocks.
 
-The old code was scattering the I/O slightly more — and that slight scatter was actually _better_ in a RAC context because it reduced per-block contention.
+The old code was scattering the I/O slightly more, and that slight scatter was actually _better_ in a RAC context because it reduced per-block contention.
 
 ## What We Fixed
 
@@ -75,4 +75,4 @@ The old code was scattering the I/O slightly more — and that slight scatter wa
 
 ## The Takeaway
 
-`gc buffer busy acquired` is not an "Oracle RAC problem." It's an _application design meeting a shared-everything architecture_ problem. Before you tune the database, understand what the application is actually doing to those blocks. And when a developer tells you an "optimisation" is making things worse in production — they're usually not wrong.
+`gc buffer busy acquired` is not an "Oracle RAC problem." It's an _application design meeting a shared-everything architecture_ problem. Before you tune the database, understand what the application is actually doing to those blocks. And when a developer tells you an "optimisation" is making things worse in production, they're usually not wrong.
