@@ -34,7 +34,8 @@ import {
   normaliseItem,
   plainText,
   parseRevisionCell,
-  isoWeek,
+  patchCyclePeriod,
+  thirdTuesdayOf,
   briefTitleFor,
   listLiveBriefs,
   RECENT_DAYS,
@@ -273,9 +274,43 @@ test('the feed parser reads RSS and Atom, so the blog row is an unproven source 
   assert.equal(items[1].href, 'https://blogs.oracle.com/database/post/atom-one');
 });
 
-test('the week label and the brief title are derived, never typed', () => {
-  assert.equal(isoWeek(new Date('2026-08-10T06:00:00Z')), '2026-W33');
-  assert.equal(briefTitleFor(new Date('2026-08-13T06:00:00Z')), 'Security Watch, week of 10 August 2026');
+test('the cycle label and the brief title are derived, never typed', () => {
+  assert.equal(patchCyclePeriod(new Date('2026-08-20T06:00:00Z')), '2026-08');
+  assert.equal(patchCyclePeriod(new Date('2027-01-21T06:00:00Z')), '2027-01');
+  assert.equal(briefTitleFor(new Date('2026-08-20T06:00:00Z')), 'Security Watch, August 2026');
+});
+
+test("the release day we schedule against is ORACLE'S OWN, checked against the dates Oracle published", () => {
+  // THIS IS THE TEST THAT MATTERS, and it is deliberately not a restatement of
+  // the arithmetic. oracle.com/security-alerts/ carried its forward calendar on
+  // 9 Aug 2026: "The next four dates are: 20 October 2026, 19 January 2027,
+  // 20 April 2027, 20 July 2027", the quarterly Critical Patch Updates. If
+  // thirdTuesdayOf reproduces all four then "third Tuesday" is the right rule,
+  // and the monthly cron derived from it lands where it is meant to.
+  //
+  // A test that recomputed the offset the way the function does would agree
+  // with a wrong function. These four dates came from Oracle.
+  const published = [
+    ['2026-10-20', 2026, 9],
+    ['2027-01-19', 2027, 0],
+    ['2027-04-20', 2027, 3],
+    ['2027-07-20', 2027, 6],
+  ];
+  for (const [iso, year, monthIndex] of published) {
+    assert.equal(
+      thirdTuesdayOf(year, monthIndex).toISOString().slice(0, 10),
+      iso,
+      `Oracle published ${iso} as a Critical Patch Update date and the rule did not reproduce it`,
+    );
+    assert.equal(thirdTuesdayOf(year, monthIndex).getUTCDay(), 2, `${iso} is not a Tuesday`);
+  }
+
+  // The brief is timed two days later, which is the third Thursday, which is
+  // exactly what `0 6 * * THU#3` in wrangler.toml expresses.
+  const drop = thirdTuesdayOf(2026, 9);
+  const brief = new Date(drop.getTime() + 2 * 86400000);
+  assert.equal(brief.getUTCDay(), 4, 'two days after the release is not a Thursday');
+  assert.equal(brief.toISOString().slice(0, 10), '2026-10-22');
 });
 
 /* ================================================================ the run */
@@ -296,7 +331,10 @@ test('a scheduled run writes a DRAFT and publishes nothing', async () => {
   const brief = await briefRow(env, summary.brief.slug);
   assert.equal(brief.published_at, null, 'a draft carries no publication date');
   assert.equal(brief.sent_at, null, 'a draft has been sent to nobody');
-  assert.match(brief.slug, /^watch-\d{4}-w\d{2}$/);
+  // The slug carries the ORACLE PATCH CYCLE the brief covers, which is a month,
+  // because Oracle ships security content on the third Tuesday of every month.
+  // It was an ISO week until the founder's 9 Aug ruling.
+  assert.match(brief.slug, /^watch-\d{4}-(0[1-9]|1[0-2])$/);
 
   // The 2021 bulletin is in the fixture and must have been dropped for age.
   const old = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_item WHERE published_on LIKE '2021-%'").first();
@@ -902,11 +940,27 @@ test('only worker/watch-publish.js can reach the member list', () => {
   );
 });
 
-test('the cron is declared, is weekly, and preview is explicitly given none', () => {
+test('the cron is declared, is MONTHLY on the third Thursday, and preview is explicitly given none', () => {
   const toml = readFileSync(new URL('../wrangler.toml', import.meta.url).pathname, 'utf8');
-  const prod = /\[triggers\]\s*\ncrons = \["([^"]+)"\]/.exec(toml);
+  // Tolerates the comment block between the header and the value: the reason
+  // this date was chosen is written there, and a regex that forbade it would
+  // punish the file for explaining itself.
+  const prod = /\[triggers\][\s\S]*?\ncrons = \["([^"]+)"\]/.exec(toml);
   assert.ok(prod, 'no production cron is declared');
-  assert.equal(prod[1], '0 6 * * 1', 'the schedule must be the weekly one the report defends');
+  assert.equal(
+    prod[1],
+    '0 6 * * THU#3',
+    'the schedule must be the monthly third Thursday, two days after Oracle publishes',
+  );
+  assert.match(toml, /third Tuesday/i, 'the config no longer records WHY this date was chosen');
+  // Day of month must stay `*`. A restricted day-of-month beside a restricted
+  // weekday is ORed by standard cron, so `15-21 * THU` would fire every
+  // Thursday AND every day from the 15th to the 21st.
+  assert.equal(
+    prod[1].split(/\s+/)[2],
+    '*',
+    'day-of-month is restricted beside a restricted weekday, which cron ORs rather than ANDs',
+  );
 
   assert.match(
     toml,

@@ -16,7 +16,7 @@
 //   3. FAILURES ARE RECORDED, NOT SKIPPED. Every source leaves a row in
 //      watch_source_run every run, ok or not, with the status code and the
 //      reason. A watch that quietly stopped watching looks exactly like a quiet
-//      week, and this table is the only thing that tells the two apart.
+//      month, and this table is the only thing that tells the two apart.
 
 import { sha256Hex } from './crypto.js';
 import { enabledSources, registrySummary } from './watch-sources.js';
@@ -80,7 +80,7 @@ function safeChar(code) {
 // "Rev 5, 30 July 2026" becomes { revision: 'Rev 5', published_on: '2026-07-30' }.
 // Either half may be missing and the item still counts: a date we cannot read
 // is stored as NULL rather than guessed into today, which would make an old
-// advisory look like this week's news.
+// advisory look like this month's news.
 export function parseRevisionCell(raw) {
   const text = plainText(raw);
   const revision = /rev\s*\.?\s*(\d+)/i.exec(text);
@@ -313,25 +313,53 @@ function reason(err) {
 
 /* ------------------------------------------------------------- the draft */
 
-export function isoWeek(date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - day);
-  const yearStart = Date.UTC(d.getUTCFullYear(), 0, 1);
-  const week = Math.ceil(((d.getTime() - yearStart) / 86400000 + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+/* ---------------------------------------------------------------------------
+   THE BRIEF IS KEYED TO ORACLE'S PATCH CYCLE, WHICH IS MONTHLY.
+   Founder ruling 9 Aug 2026: monthly, not weekly, timed one or two days after
+   Oracle publishes.
+
+   THIS IS NOT AN ARBITRARY CADENCE. IT IS ORACLE'S OWN, READ OFF ORACLE'S OWN
+   PAGE rather than recalled. https://www.oracle.com/security-alerts/ states:
+
+     - Critical Patch Updates are quarterly, and the next four are 20 October
+       2026, 19 January 2027, 20 April 2027 and 20 July 2027, which are the
+       THIRD TUESDAY of January, April, July and October.
+     - "Critical Security Patch Updates will be released on the third Tuesday
+       of February, March, May, June, August, September, November, and
+       December."
+
+   Those two series together mean Oracle ships security content on the THIRD
+   TUESDAY OF EVERY MONTH. Two days later is the third Thursday, which is why
+   the cron in wrangler.toml reads `0 6 * * THU#3`.
+
+   ONE THING THIS CADENCE DOES NOT COVER, stated rather than left to be found:
+   Oracle issues out-of-band Security Alerts for "vulnerability fixes deemed
+   too critical to wait", so a monthly schedule can trail one by up to a month.
+   The token-gated `POST /api/watch/run` picks those up on demand with no
+   schedule change. A second, more frequent polling cron is a one-line addition
+   and is deliberately NOT made here: the founder asked for monthly, and a seat
+   should not quietly widen the instruction it was given.
+   --------------------------------------------------------------------------- */
+
+// The Oracle patch cycle a brief belongs to, at the granularity Oracle
+// publishes at.
+export function patchCyclePeriod(date) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-export function isoWeekMonday(date) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const day = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() - (day - 1));
-  return d;
+// The third Tuesday of a month: Oracle's own release day. Exported so a test
+// can check it against the real dates Oracle published rather than against a
+// reimplementation of the same arithmetic.
+export function thirdTuesdayOf(year, monthIndex) {
+  const first = new Date(Date.UTC(year, monthIndex, 1));
+  // getUTCDay: 0 is Sunday, so 2 is Tuesday. Step to the first Tuesday, then
+  // two more weeks to the third.
+  const offset = (2 - first.getUTCDay() + 7) % 7;
+  return new Date(Date.UTC(year, monthIndex, 1 + offset + 14));
 }
 
 export function briefTitleFor(date) {
-  const monday = isoWeekMonday(date);
-  return `Security Watch, week of ${monday.getUTCDate()} ${MONTHS[monday.getUTCMonth()]} ${monday.getUTCFullYear()}`;
+  return `Security Watch, ${MONTHS[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
 }
 
 // The generated lede. It says only what stays true after the founder publishes,
@@ -366,7 +394,7 @@ async function openDraft(env, now) {
   ).first();
   if (existing) return existing;
 
-  const period = isoWeek(now);
+  const period = patchCyclePeriod(now);
   const base = `watch-${period.toLowerCase()}`;
   let slug = base;
   for (let n = 2; n <= 50; n += 1) {

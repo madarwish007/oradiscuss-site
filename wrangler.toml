@@ -129,7 +129,23 @@ max_retries = 5
 # Verifying the pipeline needs NO cron at all: POST /api/watch/run takes exactly
 # the same path behind the same token.
 [triggers]
-crons = ["0 6 * * 1"]
+# MONTHLY, TIMED TWO DAYS AFTER ORACLE PUBLISHES. Founder ruling 9 Aug 2026.
+#
+# Oracle ships security content on the THIRD TUESDAY OF EVERY MONTH: quarterly
+# Critical Patch Updates in January, April, July and October, and Critical
+# Security Patch Updates on the third Tuesday of the other eight months. Read
+# off oracle.com/security-alerts/, not recalled. Two days later is the third
+# Thursday.
+#
+# `THU#3` is Quartz "third Thursday" syntax, which Cloudflare supports in the
+# weekday field. It is written this way ON PURPOSE rather than as a day-of-month
+# range: standard cron ORs a restricted day-of-month with a restricted weekday,
+# so `15-21 * THU` would fire every Thursday AND every day from the 15th to the
+# 21st. Leaving day-of-month as `*` removes that trap entirely.
+#
+# Note also that Cloudflare numbers weekdays 1=Sunday to 7=Saturday, unlike most
+# cron systems. The abbreviation avoids the ambiguity.
+crons = ["0 6 * * THU#3"]
 
 # ------------------------------------------------------------------- PREVIEW
 
