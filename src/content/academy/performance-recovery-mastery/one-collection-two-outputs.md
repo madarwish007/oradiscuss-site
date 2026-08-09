@@ -107,7 +107,7 @@ echo "exit ${?}"
 
 ```text
 # captured 2026-08-09, GNU bash 3.2.57, pack v1.0.0, no database contacted.
-# Absolute paths shortened to their last components for this page.
+# Absolute paths shortened to their last components, no lines omitted.
 2026-08-09T05:07:54+0300 [awr_triage] render-only: rebuilding outputs from .../od-lab-b1/awr_raw_LAB_001.txt, the database is not contacted
 2026-08-09T05:07:55+0300 [awr_triage] report:   .../od-lab-b1/out/reports/awr_triage_LAB_001.html
 2026-08-09T05:07:55+0300 [awr_triage] briefing: .../od-lab-b1/out/reports/awr_triage_LAB_001.json
@@ -127,8 +127,10 @@ echo "exit ${?}"
 ```
 
 ```text
-# captured 2026-08-09, same run, paths shortened
+# captured 2026-08-09, same run, absolute paths shortened, no lines omitted
 CHK|awr_window|CRIT|Snapshot pair resolves|Snapshots 41201 and 41205 both exist for dbid 1234567890.
+2026-08-09T05:07:55+0300 [awr_triage] render-only: rebuilding outputs from .../od-lab-b1/awr_raw_LAB_002.txt, the database is not contacted
+2026-08-09T05:07:55+0300 [awr_triage] report:   .../od-lab-b1/out/reports/awr_triage_LAB_002.html
 2026-08-09T05:07:55+0300 [awr_triage] briefing: .../od-lab-b1/out/reports/awr_triage_LAB_002.json
 exit 2
 ```
