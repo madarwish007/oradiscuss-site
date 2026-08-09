@@ -1,23 +1,43 @@
 // GUARDS over the Security Watch pipeline.
 //
-// The five the work order names, each written so it CAN fail and each watched
-// failing against deliberately broken input before it was trusted:
+// THE INVARIANT CHANGED ON 9 Aug 2026, AND SO DID THESE GUARDS. Founder ruling,
+// verbatim: "Monthly is okay, and that should be automated workflow without any
+// human intervention, as a Founder, i need to get an aknowledgement about the
+// updated kits only." That reverses his own 5 Aug standing gate, under which
+// publishing the brief and sending it to the member list were founder-only.
 //
-//   1. a draft does not appear on the public archive
-//   2. a second run over the same source creates no duplicate
-//   3. a failing source is RECORDED as failed, not skipped
-//   4. the publish endpoint refuses an unauthenticated caller
+// THE OLD INVARIANT, which several guards below used to assert:
+//   nothing publishes without the token.
+//
+// THE NEW ONE, which they assert now:
+//   nothing publishes without passing the CIRCUIT BREAKER, and nothing sends
+//   without a live, non empty brief and a named member segment.
+//
+// The guards that changed were REWRITTEN to assert the new invariant, never
+// deleted to make something pass, and the ones that still hold were left exactly
+// as they were:
+//
+//   1. a draft does not appear on the public archive            unchanged
+//   2. a second run over the same source creates no duplicate   unchanged
+//   3. a failing source is RECORDED as failed, not skipped      unchanged
+//   4. the publish endpoint refuses an unauthenticated caller   unchanged, it is
+//      now the MANUAL OVERRIDE rather than the only door
 //   5. nothing sends to the member list without an explicit publish
+//                                                               REWRITTEN: the
+//      scheduled cycle publishes and sends, and the thing that stands between a
+//      broken run and the founder's name is the breaker, so the guard now
+//      measures the breaker instead of the absence of a caller
 //
 // Plus the ones the shape of this feature earns: a published brief is never
 // rewritten by the job, a hostile feed cannot plant a link or markup on a page
 // that carries our name, and no code outside worker/watch-publish.js can set a
-// brief live or call the list.
+// brief live or call the list. Those three are structural and survive the
+// ruling untouched.
 //
 // NOTHING HERE REACHES THE NETWORK. Every fetch goes through the stub in
 // test/support/watch-fixtures.js, which records what it was asked for, so "the
-// scheduled run sent nothing" is a measurement of calls rather than a reading
-// of the code.
+// cycle sent exactly one notification" is a measurement of calls rather than a
+// reading of the code.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -55,6 +75,10 @@ import {
   watchIndexPage,
   watchBriefPage,
 } from '../worker/watch-pages.js';
+import { runWatchCycle } from '../worker/watch-cycle.js';
+import { publishBrief } from '../worker/watch-publish.js';
+import { watchConfig, evaluateBreaker, checkStaleness } from '../worker/watch-breaker.js';
+import { memberSendReadiness } from '../worker/integrations.js';
 import { makeEnv, captureConsole, everythingWritten } from './support/system-env.js';
 import {
   oracleIndexHtml,
@@ -116,11 +140,46 @@ function sendableEnv(overrides = {}) {
   });
 }
 
+// A synthetic acknowledgement endpoint. Nothing in this suite reaches it: the
+// stub answers for it and records the call, which is how "he was told" and "he
+// was not told" become measurements rather than readings of the code.
+const NOTIFY_HOOK = 'https://hooks.example.com/oradiscuss-watch';
+
+function notifiableEnv(overrides = {}) {
+  return sendableEnv({ WATCH_NOTIFY_WEBHOOK: NOTIFY_HOOK, ...overrides });
+}
+
 function oracleRoutes(now = new Date(), html = null) {
   return {
     [ORACLE_ALERT_INDEX]: { body: html ?? oracleIndexHtml(now) },
     [BEEHIIV_POSTS]: { body: JSON.stringify({ data: { id: 'post_1' } }), type: 'application/json' },
+    [NOTIFY_HOOK]: { body: JSON.stringify({ ok: true }), type: 'application/json' },
   };
+}
+
+async function cycleRows(env) {
+  const { results } = await env.DB.prepare('SELECT * FROM watch_cycle ORDER BY id').all();
+  return results ?? [];
+}
+
+async function lastCycle(env) {
+  const rows = await cycleRows(env);
+  return rows[rows.length - 1] ?? null;
+}
+
+// One scheduled cycle, driven with the stub and a fixed clock. It takes exactly
+// the same path worker.scheduled takes; the tests that need to prove THAT use
+// worker.scheduled itself.
+async function cycle(env, stub, now = new Date()) {
+  const capture = captureConsole();
+  let out;
+  try {
+    out = await withFetch(stub, () => runWatchCycle(env, { fetcher: stub, now }));
+  } finally {
+    capture.restore();
+  }
+  out.log = capture.text();
+  return out;
 }
 
 async function withFetch(impl, fn) {
@@ -315,7 +374,12 @@ test("the release day we schedule against is ORACLE'S OWN, checked against the d
 
 /* ================================================================ the run */
 
-test('a scheduled run writes a DRAFT and publishes nothing', async () => {
+// REWRITTEN NAME, SAME ASSERTION. This used to be called "a scheduled run
+// writes a DRAFT and publishes nothing", which is no longer what a scheduled run
+// does. What it measures is still exactly right and still worth having: the
+// DRAFTING JOB is a layer that cannot publish, which is why the breaker can sit
+// between it and publication at all.
+test('THE DRAFTING JOB writes a draft and publishes nothing, whatever the schedule then does', async () => {
   const env = watchEnv();
   const fetchStub = stubFetch(oracleRoutes());
   const summary = await runWatch(env, { fetcher: fetchStub });
@@ -326,10 +390,11 @@ test('a scheduled run writes a DRAFT and publishes nothing', async () => {
   const drafts = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'draft'").first();
   const live = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live'").first();
   assert.equal(drafts.n, 1, 'exactly one draft is opened');
-  assert.equal(live.n, 0, 'a run must never publish');
+  assert.equal(live.n, 0, 'the drafting job must never publish');
 
   const brief = await briefRow(env, summary.brief.slug);
   assert.equal(brief.published_at, null, 'a draft carries no publication date');
+  assert.equal(brief.published_by, null, 'a draft was published by nobody');
   assert.equal(brief.sent_at, null, 'a draft has been sent to nobody');
   // The slug carries the ORACLE PATCH CYCLE the brief covers, which is a month,
   // because Oracle ships security content on the third Tuesday of every month.
@@ -474,20 +539,40 @@ test('a published brief is never rewritten: new items open the NEXT draft', asyn
   assert.equal(drafts.results[0].item_count, 1, 'only the new item belongs to the new draft');
 });
 
-test('the drafting job stores nothing that could identify a person', async () => {
-  const env = watchEnv();
-  const capture = captureConsole();
+// EXTENDED to the WHOLE CYCLE rather than the drafting half. The cycle now
+// publishes, mails a list and writes an acknowledgement ledger, so the sweep has
+// to cover the three writes the 9 Aug ruling added or it would be checking the
+// only part of the pipeline that never touched a person in the first place.
+test('the whole cycle stores nothing that could identify a person', async () => {
+  const draftOnly = watchEnv();
+  const first = captureConsole();
   try {
-    await runWatch(env, { fetcher: stubFetch(oracleRoutes()) });
+    await runWatch(draftOnly, { fetcher: stubFetch(oracleRoutes()) });
   } finally {
-    capture.restore();
+    first.restore();
   }
-  const written = everythingWritten(env, capture);
-  for (const forbidden of ['@', 'email', 'ip_address', 'CF-Connecting-IP']) {
-    assert.ok(
-      !written.toLowerCase().includes(forbidden.toLowerCase()),
-      `the pipeline wrote something containing "${forbidden}"`,
-    );
+
+  const full = notifiableEnv();
+  const stub = stubFetch(oracleRoutes());
+  const second = captureConsole();
+  try {
+    await withFetch(stub, () => runWatchCycle(full, { fetcher: stub }));
+  } finally {
+    second.restore();
+  }
+  // The guard is asleep unless the cycle actually got as far as the send and the
+  // acknowledgement, which are the two stages that touch a mailing list at all.
+  assert.equal(stub.to('beehiiv').length, 1, 'the cycle did not send, so this sweep proves nothing');
+  assert.equal(stub.to('hooks.example.com').length, 1, 'the cycle did not acknowledge, so this sweep proves nothing');
+
+  for (const [label, env, capture] of [['drafting', draftOnly, first], ['cycle', full, second]]) {
+    const written = everythingWritten(env, capture);
+    for (const forbidden of ['@', 'email', 'ip_address', 'CF-Connecting-IP']) {
+      assert.ok(
+        !written.toLowerCase().includes(forbidden.toLowerCase()),
+        `the ${label} path wrote something containing "${forbidden}"`,
+      );
+    }
   }
 });
 
@@ -721,11 +806,17 @@ test('a correct token publishes exactly one brief and sends exactly one notifica
   const row = await briefRow(env, slug);
   assert.equal(row.status, 'live');
   assert.ok(row.published_at, 'a published brief carries a publication time');
+  assert.equal(row.published_by, 'manual', 'who published a brief is recorded, and this one was a person');
   assert.ok(row.sent_at, 'a sent brief records when');
   assert.equal(row.send_status, 'sent');
 });
 
-test('publishing twice does not send twice', async () => {
+// REWRITTEN. The old version asserted that a second publish sends nothing, full
+// stop, which was right while a person was the only caller and a failed send
+// could be retried by hand. It is wrong now: a brief that publishes and cannot
+// send would be a dead end, because the only route that can send refuses to look
+// at a live brief. So the guard splits the two cases and asserts both.
+test('publishing twice does not send twice, and a send that FAILED can still be retried', async () => {
   const env = sendableEnv();
   await runWatch(env, { fetcher: stubFetch(oracleRoutes()) });
   const slug = await draftSlug(env);
@@ -737,7 +828,38 @@ test('publishing twice does not send twice', async () => {
   assert.equal(again.res.status, 200);
   assert.equal(again.body.already_published, true);
   assert.equal(again.body.sent, false);
+  assert.equal(again.body.send_status, 'sent', 'the second call reports the send that already happened');
   assert.equal(sendStub.to('beehiiv').length, 1, 'the second publish must not mail the list again');
+
+  // The other half: a brief whose FIRST send was refused. The segment is absent
+  // at publication and appears afterwards, which is exactly the shape of "the
+  // founder wired beehiiv the day after the cycle ran".
+  const held = sendableEnv({ BEEHIIV_MEMBERS_SEGMENT_ID: '' });
+  await runWatch(held, { fetcher: stubFetch(oracleRoutes()) });
+  const heldSlug = await draftSlug(held);
+  const retryStub = stubFetch(oracleRoutes());
+
+  const capture = captureConsole();
+  try {
+    const first = await withFetch(retryStub, () => publish(held, heldSlug));
+    assert.equal(first.body.published, true);
+    assert.equal(first.body.sent, false);
+    assert.equal(first.body.send_status, 'no_segment');
+    assert.equal(retryStub.to('beehiiv').length, 0, 'an unnamed segment must mean no send at all');
+    assert.equal((await briefRow(held, heldSlug)).sent_at, null);
+
+    held.BEEHIIV_MEMBERS_SEGMENT_ID = 'seg_members_test';
+    const retry = await withFetch(retryStub, () => publish(held, heldSlug));
+    assert.equal(retry.body.already_published, true);
+    assert.equal(retry.body.sent, true, 'a published brief whose send failed must be sendable');
+    assert.equal(retryStub.to('beehiiv').length, 1, 'exactly one send, on the retry');
+  } finally {
+    capture.restore();
+  }
+
+  const after = await briefRow(held, heldSlug);
+  assert.ok(after.sent_at, 'the retried send is recorded');
+  assert.equal(after.send_status, 'sent');
 });
 
 test('a brief that cannot be sent is still published, and says why', async () => {
@@ -819,31 +941,480 @@ test('the founder status view needs the token and reports the unwatched sources'
   assert.ok(body.registry.some((s) => !s.enabled), 'the status view must show what is NOT watched');
 });
 
-/* ================================================== nothing sends on a cron */
+/* ============================================== the cycle and the breaker */
 
-test('NOTHING SENDS TO THE MEMBER LIST WITHOUT AN EXPLICIT PUBLISH', async () => {
-  // The real scheduled handler, the real registry, beehiiv fully configured so
-  // that silence cannot be explained by a missing key, and a stub that records
-  // every outbound call.
+/* THE GUARD THIS SECTION REPLACED asserted "NOTHING SENDS TO THE MEMBER LIST
+   WITHOUT AN EXPLICIT PUBLISH", which was the 5 Aug gate written as a test. The
+   founder reversed that gate on 9 Aug. What stands between a broken run and his
+   name is now the CIRCUIT BREAKER, so these guards measure the breaker: they
+   assert that a healthy cycle publishes and sends exactly once, and that every
+   named failure HOLDS the brief as a draft and mails nobody.
+
+   Every one of the five failure guards below was watched failing with the break
+   ASSERTED PRESENT in the database or the fixture first, because a break that
+   did not land is indistinguishable from a guard that passed. */
+
+test('THE SCHEDULED CYCLE PUBLISHES ONE BRIEF AND SENDS ONE NOTIFICATION, and a second cycle does neither again', async () => {
+  // The real scheduled handler, the real registry, beehiiv fully configured, and
+  // a stub that records every outbound call.
   const env = sendableEnv();
   const sendStub = stubFetch(oracleRoutes());
 
   const capture = captureConsole();
   try {
-    await withFetch(sendStub, () => worker.scheduled({ cron: '0 6 * * 1' }, env));
-    await withFetch(sendStub, () => worker.scheduled({ cron: '0 6 * * 1' }, env));
+    await withFetch(sendStub, () => worker.scheduled({ cron: '0 6 * * THU#3' }, env));
   } finally {
     capture.restore();
   }
 
-  assert.equal(sendStub.to('beehiiv').length, 0, 'the scheduled run mailed the list');
-  assert.equal(sendStub.to('oracle.com').length >= 1, true, 'this guard is asleep unless the run actually ran');
+  assert.ok(sendStub.to('oracle.com').length >= 1, 'this guard is asleep unless the run actually ran');
+  assert.equal(sendStub.to('beehiiv').length, 1, 'a verified cycle mails the member list exactly once');
+
+  const live = await env.DB.prepare("SELECT slug, published_by, item_count, sent_at, send_status FROM watch_brief WHERE status = 'live'").all();
+  assert.equal(live.results.length, 1, 'the cycle published exactly one brief');
+  assert.equal(live.results[0].published_by, 'auto', 'a scheduled publication is recorded as automatic');
+  assert.ok(live.results[0].item_count >= 4);
+  assert.ok(live.results[0].sent_at, 'a sent brief records when');
+  assert.equal(live.results[0].send_status, 'sent');
+  assert.match(capture.text(), /watch_run_complete/);
+
+  const first = await lastCycle(env);
+  assert.equal(first.verdict, 'published');
+  assert.equal(first.send_status, 'sent');
+
+  // A SECOND CYCLE. Nothing new on the page, a brief already out for this Oracle
+  // patch cycle, so there is nothing to publish and nothing wrong with that.
+  const secondStub = stubFetch(oracleRoutes());
+  const again = captureConsole();
+  try {
+    await withFetch(secondStub, () => worker.scheduled({ cron: '0 6 * * THU#3' }, env));
+  } finally {
+    again.restore();
+  }
+
+  assert.equal(secondStub.to('beehiiv').length, 0, 'the second cycle must not mail the list again');
+  const liveAfter = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live'").first();
+  assert.equal(liveAfter.n, 1, 'the second cycle published a second brief');
+  const second = await lastCycle(env);
+  assert.equal(second.verdict, 'quiet', 'an empty cycle after a publication in the same period is quiet, not a fault');
+  assert.equal(second.notify_status, 'suppressed_quiet', 'a quiet cycle must not become a founder chore');
+});
+
+test('A 403 ON ANY ENABLED SOURCE HOLDS THE BRIEF: nothing is published and nothing is sent', async () => {
+  const env = notifiableEnv();
+  const routes = { ...oracleRoutes(), [ORACLE_ALERT_INDEX]: { status: 403, body: 'forbidden' } };
+  const stub = stubFetch(routes);
+
+  // THE BREAK, ASSERTED PRESENT BEFORE THE CYCLE RUNS. A stub that quietly
+  // answered 200 would make this guard pass by proving nothing.
+  const probe = await stub(ORACLE_ALERT_INDEX, {});
+  assert.equal(probe.status, 403, 'the fixture is not returning 403, so this guard is asleep');
+
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'held');
+  const row = await lastCycle(env);
+  assert.equal(row.verdict, 'held');
+  assert.match(
+    row.reasons,
+    /source oracle-cpu did not return ok: http_403 \(http 403\)/,
+    `the hold reason must name the source and the status, got: ${row.reasons}`,
+  );
+  for (const id of enabledSources().map((s) => s.id)) {
+    assert.ok(row.reasons.includes(id), `${id} also failed and is missing from the reason`);
+  }
 
   const live = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live'").first();
-  const sent = await env.DB.prepare('SELECT COUNT(*) AS n FROM watch_brief WHERE sent_at IS NOT NULL').first();
-  assert.equal(live.n, 0, 'the scheduled run published a brief');
-  assert.equal(sent.n, 0, 'the scheduled run recorded a send');
-  assert.match(capture.text(), /watch_run_complete/);
+  assert.equal(live.n, 0, 'a held cycle must publish nothing');
+  assert.equal(stub.to('beehiiv').length, 0, 'a held cycle must mail nobody');
+  assert.equal(stub.to('hooks.example.com').length, 1, 'a HELD cycle must always reach the founder');
+  assert.equal(row.notify_status, 'delivered');
+
+  // And the break is still there afterwards, so the pass was not bought by the
+  // fixture quietly repairing itself.
+  const after = await stub(ORACLE_ALERT_INDEX, {});
+  assert.equal(after.status, 403);
+});
+
+test('A ZERO ITEM CYCLE IN A MONTH WHOSE PATCH ALREADY DROPPED IS PARSE ROT, not a quiet month', async () => {
+  // The page fetches perfectly and yields nothing, which is what an Oracle
+  // redesign looks like from here: every source ok, every status 200, and a
+  // matcher that has silently stopped matching.
+  const redesigned = '<html><body><h1>Security Alerts</h1><p>redesigned</p></body></html>';
+  const cpu = SOURCES.find((s) => s.id === 'oracle-cpu');
+
+  // THE BREAK, ASSERTED PRESENT: the fixture really does parse to nothing.
+  assert.equal(extractAlertIndex(redesigned, cpu).length, 0, 'the fixture still parses, so this guard is asleep');
+
+  // Two days after Oracle's own release day for that month, which is exactly
+  // when the cron fires.
+  const drop = thirdTuesdayOf(2026, 7);
+  const now = new Date(drop.getTime() + 2 * 86400000);
+  assert.ok(now.getTime() >= drop.getTime(), 'the clock is before the release day, so the tripwire cannot fire');
+  assert.equal(now.toISOString().slice(0, 10), '2026-08-20', 'the third Thursday of August 2026 moved');
+
+  const env = notifiableEnv();
+  const stub = stubFetch({ ...oracleRoutes(), [ORACLE_ALERT_INDEX]: { body: redesigned } });
+  const out = await cycle(env, stub, now);
+
+  assert.equal(out.cycle.verdict, 'held', 'an unexplained empty cycle must HOLD, not pass as quiet');
+  const row = await lastCycle(env);
+  assert.match(
+    row.reasons,
+    /every source returned ok and the draft is empty, but Oracle's release day for 2026-08 was 2026-08-18/,
+    `the tripwire must say what it expected, got: ${row.reasons}`,
+  );
+  assert.match(row.reasons, /parser that stopped matching, not a quiet month/);
+  assert.equal(stub.to('hooks.example.com').length, 1, 'parse rot must reach the founder');
+
+  // THE CONTROL, which is what makes this a tripwire rather than an alarm that
+  // fires on every empty month: the same empty page BEFORE the release day is a
+  // quiet cycle, and quiet is silent.
+  const early = notifiableEnv();
+  const earlyStub = stubFetch({ ...oracleRoutes(), [ORACLE_ALERT_INDEX]: { body: redesigned } });
+  const before = new Date(drop.getTime() - 3 * 86400000);
+  const quiet = await cycle(early, earlyStub, before);
+  assert.equal(quiet.cycle.verdict, 'quiet', 'an empty cycle before the release day is not evidence of anything');
+  assert.equal(earlyStub.to('hooks.example.com').length, 0, 'a quiet cycle must say nothing');
+});
+
+test('A DRAFT CARRIED OVER FROM LAST MONTH CANNOT MASK THIS MONTH\'S PARSE ROT', async () => {
+  // The tripwire asks "have we already covered THIS Oracle patch cycle". A draft
+  // carries the month it was OPENED in, not the month being judged, and the two
+  // come apart the moment a manual run opens a draft after a publication. This
+  // guard is the reachable case: publish in August, open a draft in late August
+  // by hand, then let September's cycle find a parser that has stopped matching.
+  const env = notifiableEnv();
+  const dead = '<html><body>redesigned</body></html>';
+
+  const august = new Date(thirdTuesdayOf(2026, 7).getTime() + 2 * 86400000);
+  const published = await cycle(env, stubFetch(oracleRoutes(august)), august);
+  assert.equal(published.cycle.verdict, 'published', 'the August brief must go out, or this guard is asleep');
+
+  // The founder runs the drafting job by hand a week later. The page is already
+  // rotten, so the draft opens empty and carries period 2026-08.
+  const lateAugust = new Date(august.getTime() + 7 * 86400000);
+  await runWatch(env, { fetcher: stubFetch({ [ORACLE_ALERT_INDEX]: { body: dead } }), now: lateAugust });
+  const carried = await env.DB.prepare("SELECT period, item_count FROM watch_brief WHERE status = 'draft'").first();
+  assert.equal(carried.period, '2026-08', 'the carried draft must be labelled August, or this guard proves nothing');
+  assert.equal(carried.item_count, 0);
+  const liveAugust = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live' AND period = '2026-08'",
+  ).first();
+  assert.equal(liveAugust.n, 1, 'the August brief must be live, which is the thing that could mask September');
+
+  // September's cycle, two days after Oracle's September release day.
+  const september = new Date(thirdTuesdayOf(2026, 8).getTime() + 2 * 86400000);
+  assert.equal(september.toISOString().slice(0, 10), '2026-09-17', 'the third Thursday of September 2026 moved');
+  const stub = stubFetch({ ...oracleRoutes(september), [ORACLE_ALERT_INDEX]: { body: dead } });
+  const out = await cycle(env, stub, september);
+
+  assert.equal(out.cycle.verdict, 'held', 'September parse rot was read as a quiet month');
+  const row = await lastCycle(env);
+  assert.match(
+    row.reasons,
+    /Oracle's release day for 2026-09 was 2026-09-15/,
+    `the tripwire must judge the CURRENT cycle, got: ${row.reasons}`,
+  );
+  assert.equal(stub.to('hooks.example.com').length, 1, 'and he must be told');
+});
+
+test('A MISSING SEGMENT ID HOLDS THE SEND AND NOT THE PUBLISH, and the split is visible in the record', async () => {
+  const env = notifiableEnv({ BEEHIIV_MEMBERS_SEGMENT_ID: '' });
+
+  // THE BREAK, ASSERTED PRESENT before anything runs.
+  assert.equal(memberSendReadiness(env).status, 'no_segment', 'the segment is set, so this guard is asleep');
+
+  const stub = stubFetch(oracleRoutes());
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'published', 'the site is the product: a send that cannot happen must not block it');
+  assert.equal(stub.to('beehiiv').length, 0, 'an unnamed segment must mean no send at all, never a widened one');
+
+  const brief = await briefRow(env, out.cycle.brief_slug);
+  assert.equal(brief.status, 'live');
+  assert.equal(brief.published_by, 'auto');
+  assert.equal(brief.sent_at, null, 'nothing was sent, so nothing is timestamped');
+  assert.equal(brief.send_status, 'no_segment', 'published but not sent must be a state with a name');
+
+  const row = await lastCycle(env);
+  assert.equal(row.verdict, 'published');
+  assert.equal(row.send_status, 'no_segment');
+  assert.equal(stub.to('hooks.example.com').length, 1, 'he is told the brief went out and the mail did not');
+
+  // And the founder view carries the same fact, so it is visible without a log.
+  const status = await handleApi(
+    new Request('https://oradiscuss.com/api/watch/status', { headers: { Authorization: `Bearer ${TEST_ADMIN_TOKEN}` } }),
+    env,
+    '/api/watch/status',
+  );
+  const body = await status.json();
+  assert.equal(body.published[0].send_status, 'no_segment');
+  assert.equal(body.published[0].sent_at, null);
+  assert.equal(body.cycles[0].send_status, 'no_segment');
+});
+
+test('AN EM DASH IN A DRAFTED TITLE HOLDS THE BRIEF, because the rendered page is swept and not assumed', async () => {
+  const env = notifiableEnv();
+  await runWatch(env, { fetcher: stubFetch(oracleRoutes()) });
+
+  // Straight into the ledger, because every path INTO it normalises the dash
+  // away: worker/watch.js plainText is what makes the ingest side safe, and this
+  // guard exists for the day something else writes a row.
+  const poisoned = 'Critical Patch Update — July 2026';
+  await env.DB.prepare(
+    "UPDATE watch_item SET title = ?1 WHERE url LIKE '%cpujul2026%'",
+  )
+    .bind(poisoned)
+    .run();
+
+  // THE BREAK, ASSERTED PRESENT IN THE DATABASE.
+  const before = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_item WHERE title LIKE '%—%'").first();
+  assert.equal(before.n, 1, 'the em dash did not land, so this guard is asleep');
+
+  const stub = stubFetch(oracleRoutes());
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'held');
+  const row = await lastCycle(env);
+  assert.match(row.reasons, /the rendered brief carries an em dash at offset \d+/, `got: ${row.reasons}`);
+  assert.match(row.reasons, /Critical Patch Update/, 'the reason must quote the offending text');
+
+  const live = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live'").first();
+  assert.equal(live.n, 0, 'an em dash reached a published page');
+  assert.equal(stub.to('beehiiv').length, 0);
+
+  // Re-read: the break is still in the database, so the hold was caused by it.
+  const after = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_item WHERE title LIKE '%—%'").first();
+  assert.equal(after.n, 1);
+});
+
+test('AN ITEM URL ON A HOST THE REGISTRY DOES NOT DECLARE HOLDS THE BRIEF', async () => {
+  const env = notifiableEnv();
+  await runWatch(env, { fetcher: stubFetch(oracleRoutes()) });
+
+  // normaliseItem refuses this at ingest, which is the first of the two layers
+  // and is asserted elsewhere. This row is written straight into the ledger to
+  // prove the SECOND layer exists: the breaker reads what is in the draft, not
+  // what the ingest rules would have allowed.
+  await env.DB.prepare(
+    `INSERT INTO watch_item (item_key, source_id, brief_id, title, url, revision, published_on, first_seen_at)
+     VALUES ('planted', 'oracle-cpu', NULL, 'Critical Patch Update mirror', 'https://evil.example.com/x.html', 'Rev 1', NULL, datetime('now'))`,
+  ).run();
+
+  // THE BREAK, ASSERTED PRESENT IN THE DATABASE.
+  const before = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM watch_item WHERE url NOT LIKE 'https://www.oracle.com/%'",
+  ).first();
+  assert.equal(before.n, 1, 'the off host row did not land, so this guard is asleep');
+
+  const stub = stubFetch(oracleRoutes());
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'held');
+  const row = await lastCycle(env);
+  assert.match(
+    row.reasons,
+    /links to https:\/\/evil\.example\.com\/x\.html, which is not https on a host the registry declares/,
+    `got: ${row.reasons}`,
+  );
+
+  const live = await env.DB.prepare("SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live'").first();
+  assert.equal(live.n, 0);
+  assert.equal(stub.to('beehiiv').length, 0);
+
+  const after = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM watch_item WHERE url NOT LIKE 'https://www.oracle.com/%'",
+  ).first();
+  assert.equal(after.n, 1);
+});
+
+test('the item ceiling holds a cycle that suddenly matches far too much', async () => {
+  const env = notifiableEnv({ WATCH_MAX_ITEMS: '3' });
+  assert.equal(watchConfig(env).maxItems, 3, 'the ceiling did not take, so this guard is asleep');
+
+  const stub = stubFetch(oracleRoutes());
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'held');
+  const row = await lastCycle(env);
+  assert.match(row.reasons, /the draft carries 4 items, above the configured ceiling of 3/, `got: ${row.reasons}`);
+  assert.equal(stub.to('beehiiv').length, 0);
+});
+
+test('the breaker refuses to speak about an empty draft when a source failed, because it cannot know', () => {
+  // A source that failed means we do not know what the cycle SHOULD have found,
+  // so the tripwire must not add "and the draft is empty" to a fault it cannot
+  // attribute. The hold is real either way; the REASON has to be the true one.
+  const now = new Date('2026-08-20T06:00:00Z');
+  const verdict = evaluateBreaker({
+    summary: { sources: [{ id: 'oracle-cpu', ok: false, http_status: 403, error: 'http_403' }] },
+    brief: { title: 'Security Watch, August 2026', body_md: '', published_at: null },
+    snapshot: [],
+    now,
+    config: watchConfig({}),
+    expectedIds: ['oracle-cpu'],
+    publishedThisPeriod: false,
+  });
+  assert.equal(verdict.verdict, 'hold');
+  assert.ok(!/parser that stopped matching/.test(verdict.reasons), 'a failed fetch must not be reported as parse rot');
+
+  // And the tripwire itself, asserted directly in both directions so neither
+  // branch is taken on trust.
+  assert.equal(checkStaleness([], { now, publishedThisPeriod: true }), null, 'already published this cycle');
+  assert.ok(checkStaleness([], { now, publishedThisPeriod: false }), 'nothing published and the drop has passed');
+  assert.equal(
+    checkStaleness([{ url: 'https://www.oracle.com/a.html' }], { now, publishedThisPeriod: false }),
+    null,
+    'a draft with items is not empty',
+  );
+});
+
+test('A SUMMARY THAT REPORTS NO SOURCES AT ALL IS A FAULT, because [].every(ok) is true', () => {
+  // The asleep-guard failure this whole file is written against. A source sweep
+  // built only on `every` passes an empty list, so coverage is checked first.
+  const verdict = evaluateBreaker({
+    summary: { sources: [] },
+    brief: { title: 'Security Watch', body_md: '', published_at: null },
+    snapshot: [{ source_id: 'oracle-cpu', title: 'x', url: 'https://www.oracle.com/a.html', published_on: null }],
+    now: new Date('2026-08-20T06:00:00Z'),
+    config: watchConfig({}),
+    expectedIds: ['oracle-cpu', 'oracle-cspu'],
+    publishedThisPeriod: false,
+  });
+  assert.equal(verdict.verdict, 'hold');
+  assert.match(verdict.reasons, /source oracle-cpu reported no run this cycle/);
+  assert.match(verdict.reasons, /source oracle-cspu reported no run this cycle/);
+});
+
+/* ============================================== the acknowledgement */
+
+test('THE ACKNOWLEDGEMENT IS ABOUT SOMETHING: a quiet cycle is silent and NOTIFY_EMPTY_CYCLES defaults to off', async () => {
+  // Founder ruling: "i need to get an aknowledgement about the updated kits
+  // only". An acknowledgement of nothing is the recurring chore his
+  // automation-first ruling bans, so quiet is silent by default.
+  const off = notifiableEnv();
+  assert.equal(watchConfig(off).notifyEmptyCycles, false, 'NOTIFY_EMPTY_CYCLES must default to OFF');
+
+  const redesigned = '<html><body>nothing here</body></html>';
+  const early = new Date(thirdTuesdayOf(2026, 7).getTime() - 3 * 86400000);
+  const quietStub = stubFetch({ ...oracleRoutes(), [ORACLE_ALERT_INDEX]: { body: redesigned } });
+  const quiet = await cycle(off, quietStub, early);
+  assert.equal(quiet.cycle.verdict, 'quiet');
+  assert.equal(quietStub.to('hooks.example.com').length, 0, 'a healthy quiet month must not become an inbox item');
+  assert.equal((await lastCycle(off)).notify_status, 'suppressed_quiet');
+  assert.match(quiet.log, /watch_ack_suppressed_quiet/, 'a suppressed acknowledgement is still logged');
+
+  // The flag is in his hands and it works.
+  const on = notifiableEnv({ NOTIFY_EMPTY_CYCLES: '1' });
+  assert.equal(watchConfig(on).notifyEmptyCycles, true);
+  const onStub = stubFetch({ ...oracleRoutes(), [ORACLE_ALERT_INDEX]: { body: redesigned } });
+  const told = await cycle(on, onStub, early);
+  assert.equal(told.cycle.verdict, 'quiet');
+  assert.equal(onStub.to('hooks.example.com').length, 1, 'NOTIFY_EMPTY_CYCLES on must report a quiet cycle');
+});
+
+test('the acknowledgement carries the cycle and nobody, and degrades honestly with no webhook', async () => {
+  const env = notifiableEnv();
+  const stub = stubFetch(oracleRoutes());
+  await cycle(env, stub);
+
+  const calls = stub.to('hooks.example.com');
+  assert.equal(calls.length, 1);
+  const payload = JSON.parse(calls[0].init.body);
+  assert.equal(payload.event, 'oradiscuss.watch.cycle');
+  assert.equal(payload.verdict, 'published');
+  assert.ok(payload.brief.slug);
+  assert.equal(payload.brief.url, `https://oradiscuss.com/watch/${payload.brief.slug}/`);
+  assert.ok(payload.item_count >= 4);
+  assert.equal(payload.send_status, 'sent');
+  // No person, checked as a sweep over the whole payload rather than field by
+  // field, because a field added later would escape a field by field check.
+  const flat = JSON.stringify(payload).toLowerCase();
+  for (const forbidden of ['@', 'email', 'subscriber', 'segment']) {
+    assert.ok(!flat.includes(forbidden), `the acknowledgement carries "${forbidden}"`);
+  }
+
+  // With no webhook configured the cycle still runs, still records, and says
+  // plainly that nobody was told.
+  const dark = sendableEnv();
+  assert.equal(watchConfig(dark).notifyWebhook, null);
+  const darkStub = stubFetch(oracleRoutes());
+  const out = await cycle(dark, darkStub);
+  assert.equal(out.cycle.verdict, 'published');
+  assert.equal(out.cycle.notify_status, 'not_configured', 'an undelivered acknowledgement must not report success');
+  assert.equal((await lastCycle(dark)).notified, 0);
+  assert.match(out.log, /watch_ack /, 'the log line is the record of last resort and must always be written');
+});
+
+test('an acknowledgement that cannot be delivered does not undo the cycle', async () => {
+  const env = notifiableEnv();
+  const stub = stubFetch({ ...oracleRoutes(), [NOTIFY_HOOK]: { throws: 'hook unreachable' } });
+  const out = await cycle(env, stub);
+
+  assert.equal(out.cycle.verdict, 'published', 'a dead webhook must not unpublish a brief');
+  assert.equal(out.cycle.notify_status, 'unreachable');
+  const row = await lastCycle(env);
+  assert.equal(row.verdict, 'published');
+  assert.equal(row.notified, 0, 'a notification that did not land is recorded as not landed');
+  assert.match(out.log, /watch_ack_unreachable/);
+});
+
+test('a non https acknowledgement URL is refused rather than used', () => {
+  assert.equal(watchConfig({ WATCH_NOTIFY_WEBHOOK: 'http://hooks.example.com/x' }).notifyWebhook, null);
+  assert.equal(watchConfig({ WATCH_NOTIFY_WEBHOOK: 'not a url' }).notifyWebhook, null);
+  assert.equal(watchConfig({ WATCH_NOTIFY_WEBHOOK: '  ' }).notifyWebhook, null);
+  assert.equal(watchConfig({ WATCH_NOTIFY_WEBHOOK: NOTIFY_HOOK }).notifyWebhook, NOTIFY_HOOK);
+  // And the same rule on the origin the member email links to, because a link
+  // to the wrong host cannot be taken back once it is mailed.
+  assert.equal(watchConfig({ SITE_ORIGIN: 'http://oradiscuss.com' }).siteOrigin, 'https://oradiscuss.com');
+  assert.equal(watchConfig({}).siteOrigin, 'https://oradiscuss.com');
+});
+
+/* ================================================ the manual override */
+
+test('THE MANUAL PUBLISH REFUSES A BRIEF THE BREAKER HELD, and force is recorded as force', async () => {
+  const env = sendableEnv();
+  await runWatch(env, { fetcher: stubFetch(oracleRoutes()) });
+  await env.DB.prepare(
+    `INSERT INTO watch_item (item_key, source_id, brief_id, title, url, revision, published_on, first_seen_at)
+     VALUES ('planted-manual', 'oracle-cpu', NULL, 'A mirror', 'https://evil.example.com/x.html', NULL, NULL, datetime('now'))`,
+  ).run();
+  await rollUpDraft(env, new Date());
+  const slug = await draftSlug(env);
+
+  // THE BREAK, ASSERTED PRESENT.
+  const draft = await briefRow(env, slug);
+  assert.ok(draft.sources_json.includes('evil.example.com'), 'the poisoned row is not in the draft, guard asleep');
+
+  const stub = stubFetch(oracleRoutes());
+  const capture = captureConsole();
+  let refused;
+  let forced;
+  try {
+    refused = await withFetch(stub, () => publish(env, slug));
+    assert.equal(refused.res.status, 409, 'the breaker must refuse the manual path too');
+    assert.equal(refused.body.code, 'breaker_held');
+    assert.match(refused.body.error, /evil\.example\.com/, 'he must be shown what it refused on');
+    assert.match(refused.body.error, /"force":true/, 'and how to override it');
+    assert.equal((await briefRow(env, slug)).status, 'draft', 'a refused publish leaves the brief a draft');
+    assert.equal(stub.to('beehiiv').length, 0);
+
+    // The founder overrides, knowingly.
+    forced = await withFetch(stub, () =>
+      handleApi(publishRequest({ slug, force: true }), env, '/api/watch/publish'),
+    );
+  } finally {
+    capture.restore();
+  }
+
+  const body = await forced.json();
+  assert.equal(forced.status, 200);
+  assert.equal(body.published, true);
+  assert.equal(body.forced, true);
+  const after = await briefRow(env, slug);
+  assert.equal(after.status, 'live');
+  assert.equal(after.published_by, 'manual-force', 'an override that leaves no trace is not an override');
 });
 
 test('the manual run endpoint takes the same path and also cannot publish', async () => {
@@ -892,6 +1463,16 @@ function workerSources() {
   return files;
 }
 
+function importsOf(path) {
+  const src = readFileSync(path, 'utf8');
+  return [...src.matchAll(/^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+}
+
+// UNCHANGED BY THE RULING, and deliberately so. The founder lifted the gate on
+// WHO may publish. He did not ask for publication to become something any file
+// can do, and this sweep is what keeps the breaker unskippable: the breaker
+// lives inside publishBrief, so as long as one file can write status = 'live',
+// there is exactly one door and the breaker is behind it.
 test('only worker/watch-publish.js can set a brief live', () => {
   const files = workerSources();
   assert.ok(files.length >= 8, `only ${files.length} worker files read, the sweep is broken`);
@@ -903,10 +1484,12 @@ test('only worker/watch-publish.js can set a brief live', () => {
   assert.deepEqual(
     offenders.map((p) => p.split('/').pop()),
     ['watch-publish.js'],
-    'publishing is a founder gate: only the token guarded endpoint may write it',
+    'publication has exactly one door, and the circuit breaker is behind it',
   );
 });
 
+// UNCHANGED. One caller for the member list, whoever the ruling lets pull the
+// lever.
 test('only worker/watch-publish.js can reach the member list', () => {
   const files = workerSources();
   const callers = files
@@ -914,30 +1497,66 @@ test('only worker/watch-publish.js can reach the member list', () => {
     .map(([path]) => path.split('/').pop());
   assert.deepEqual(callers, ['watch-publish.js'], 'the send must have exactly one caller');
 
-  // And the scheduled entry point cannot even see that module. The check is on
-  // the IMPORT rather than on the text: the first version searched for the
-  // string and failed against a COMMENT in worker.js naming the file it must
-  // not import, which is a guard measuring the wrong thing.
-  const entry = readFileSync(new URL('../worker.js', import.meta.url).pathname, 'utf8');
-  const imports = [...entry.matchAll(/^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)].map((m) => m[1]);
-  assert.ok(imports.length >= 4, `only ${imports.length} imports parsed, the matcher is broken`);
-  assert.ok(
-    !imports.some((i) => i.includes('watch-publish')),
-    `the Worker entry imports the publish module: ${imports.join(', ')}`,
-  );
-  assert.ok(entry.includes('async scheduled('), 'the scheduled handler is missing, so this guard is asleep');
-
-  // The pipeline itself imports nothing that can publish or send. Same rule as
-  // above: the IMPORT is what matters, and both files name watch-publish.js in
-  // prose precisely because the separation is worth explaining.
+  // The pipeline itself imports nothing that can publish or send, which is what
+  // lets the breaker sit between drafting and publication at all. The check is
+  // on the IMPORT rather than on the text: an earlier version searched for the
+  // string and failed against a COMMENT naming the file it must not import,
+  // which is a guard measuring the wrong thing.
   const pipeline = readFileSync(new URL('../worker/watch.js', import.meta.url).pathname, 'utf8');
-  const pipelineImports = [...pipeline.matchAll(/^\s*import\s[^;]*?from\s+['"]([^'"]+)['"]/gm)].map((m) => m[1]);
+  const pipelineImports = importsOf(new URL('../worker/watch.js', import.meta.url).pathname);
   assert.ok(pipelineImports.length >= 2, 'the import matcher is broken');
   assert.ok(!/beehiiv/i.test(pipeline), 'the drafting job must not know how to mail anybody');
   assert.ok(
     !pipelineImports.some((i) => i.includes('watch-publish')),
     `the drafting job imports the publish module: ${pipelineImports.join(', ')}`,
   );
+});
+
+// REWRITTEN. This used to assert that worker.js CANNOT SEE the publish module,
+// which was the 5 Aug gate expressed as a module graph. The founder reversed
+// that on 9 Aug, so the entry point now reaches publication: what this guard
+// asserts instead is the SHAPE of that reach, which is the thing that keeps the
+// breaker unskippable.
+//
+//   worker.js       imports the CYCLE, never the publish module directly
+//   watch-cycle.js  is the only file besides the API router that imports it
+//   watch-cycle.js  never publishes by itself, it calls publishBrief, and
+//                   publishBrief is where the breaker runs
+test('the scheduled entry reaches publication ONLY through the cycle, and the cycle only through the breaker', () => {
+  const entryPath = new URL('../worker.js', import.meta.url).pathname;
+  const entry = readFileSync(entryPath, 'utf8');
+  const entryImports = importsOf(entryPath);
+  assert.ok(entryImports.length >= 4, `only ${entryImports.length} imports parsed, the matcher is broken`);
+  assert.ok(entry.includes('async scheduled('), 'the scheduled handler is missing, so this guard is asleep');
+  assert.ok(
+    !entryImports.some((i) => i.includes('watch-publish')),
+    `the Worker entry imports the publish module directly: ${entryImports.join(', ')}`,
+  );
+  assert.ok(
+    entryImports.some((i) => i.includes('watch-cycle')),
+    'the Worker entry must reach publication through the cycle',
+  );
+
+  // Exactly two files may import the publish module: the router that serves the
+  // manual override, and the cycle the cron runs. A third would be a second
+  // path to publication that nobody reviewed.
+  const importers = workerSources()
+    .filter(([path, src]) => /from\s+['"]\.\/watch-publish\.js['"]/.test(src) && !path.endsWith('watch-publish.js'))
+    .map(([path]) => path.split('/').pop())
+    .sort();
+  assert.deepEqual(importers, ['api.js', 'watch-cycle.js'], `the publish module has unexpected importers: ${importers}`);
+
+  // And the breaker is wired INSIDE the publish module rather than by its
+  // callers, because a check a caller has to remember is a check that gets
+  // forgotten.
+  const publishSrc = readFileSync(new URL('../worker/watch-publish.js', import.meta.url).pathname, 'utf8');
+  assert.match(publishSrc, /evaluateBreaker\s*\(/, 'the publish module does not run the breaker');
+  const cycleSrc = readFileSync(new URL('../worker/watch-cycle.js', import.meta.url).pathname, 'utf8');
+  assert.ok(
+    !/SET\s+status\s*=\s*'live'/i.test(cycleSrc),
+    'the cycle publishes by itself instead of going through publishBrief',
+  );
+  assert.match(cycleSrc, /publishBrief\s*\(/, 'the cycle must publish through publishBrief');
 });
 
 test('the cron is declared, is MONTHLY on the third Thursday, and preview is explicitly given none', () => {
@@ -975,14 +1594,26 @@ test('the cron is declared, is MONTHLY on the third Thursday, and preview is exp
   );
 });
 
-test('the migration extends watch_brief rather than replacing it', () => {
-  const sql = readFileSync(new URL('../migrations/0004_watch.sql', import.meta.url).pathname, 'utf8');
-  assert.ok(!/DROP\s+TABLE/i.test(sql), 'a migration in this repository never drops a table');
-  assert.ok(!/CREATE\s+TABLE[^;]*watch_brief/i.test(sql), 'watch_brief already exists and must be extended');
-  assert.match(sql, /ALTER TABLE watch_brief ADD COLUMN sent_at/);
-  assert.ok(!/—/.test(sql), 'no em dash, including in SQL comments');
-  // No column here may hold a person.
-  for (const banned of ['email', 'subscriber', 'ip_address', 'name TEXT']) {
-    assert.ok(!new RegExp(banned, 'i').test(sql), `0004 declares a column that could hold a person: ${banned}`);
+test('both watch migrations extend watch_brief rather than replacing it, and neither can hold a person', () => {
+  const files = ['0004_watch.sql', '0005_watch_autopublish.sql'];
+  for (const file of files) {
+    const sql = readFileSync(new URL(`../migrations/${file}`, import.meta.url).pathname, 'utf8');
+    assert.ok(!/DROP\s+TABLE/i.test(sql), `${file}: a migration in this repository never drops a table`);
+    assert.ok(!/CREATE\s+TABLE[^;]*watch_brief/i.test(sql), `${file}: watch_brief already exists and must be extended`);
+    assert.ok(!/—/.test(sql), `${file}: no em dash, including in SQL comments`);
+    // No column in either may hold a person.
+    for (const banned of ['email', 'subscriber', 'ip_address', 'name TEXT']) {
+      assert.ok(!new RegExp(banned, 'i').test(sql), `${file} declares a column that could hold a person: ${banned}`);
+    }
   }
+
+  const m4 = readFileSync(new URL('../migrations/0004_watch.sql', import.meta.url).pathname, 'utf8');
+  assert.match(m4, /ALTER TABLE watch_brief ADD COLUMN sent_at/);
+
+  // 0005 is what the 9 Aug ruling needed: who published a brief, and the cycle
+  // ledger that is the founder's acknowledgement record.
+  const m5 = readFileSync(new URL('../migrations/0005_watch_autopublish.sql', import.meta.url).pathname, 'utf8');
+  assert.match(m5, /ALTER TABLE watch_brief ADD COLUMN published_by/);
+  assert.match(m5, /CREATE TABLE IF NOT EXISTS watch_cycle/);
+  assert.match(m5, /verdict/, 'the ledger must record what the breaker decided');
 });

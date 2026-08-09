@@ -21,12 +21,12 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 const facts = [
   ['01', 'Official Oracle sources only', "The watcher reads Oracle's own advisory index: Critical Patch Updates, the monthly Critical Security Patch Updates, out of cycle Security Alerts, and the Solaris third party bulletins. Public pages, cited and linked, never copied."],
   ['02', 'My Oracle Support is not covered', 'MOS needs an authenticated session and cannot be read by a machine. Nothing here claims MOS coverage. A MOS note reaches a brief only when a person puts it there.'],
-  ['03', 'A person publishes, never the machine', 'The job writes drafts and stops. Every brief on this page was read by a human being before it appeared, and nothing here goes out on a schedule.'],
+  ['03', 'Verified before it is published', "The job runs on Oracle's own monthly release cycle and checks what it found before anything reaches this page: every source answered, every link is Oracle's own, nothing is out of date, and the page renders clean. A brief that fails any one of those is held back instead of published, so a month can pass with nothing new here."],
 ];
 ---
 <BaseLayout
   title="Security Watch: Oracle advisories, read and cited"
-  description="Published Security Watch briefs. Each one cites Oracle's own Critical Patch Update advisories and security alerts, with a link to the source. Drafted automatically from official Oracle sources, published only after a person has read it."
+  description="Published Security Watch briefs. Each one cites Oracle's own Critical Patch Update advisories and security alerts, with a link to the source. Drafted from official Oracle sources on Oracle's monthly release cycle, and published only once every check on what was found has passed."
 >
 <div class="capp">
 

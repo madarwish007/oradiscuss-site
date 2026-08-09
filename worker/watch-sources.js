@@ -74,7 +74,7 @@ export const SOURCES = Object.freeze([
     id: 'oracle-security-alert',
     label: 'Oracle Security Alerts',
     detail:
-      'Out of cycle alerts for a single CVE, published when Oracle will not wait for the next quarterly advisory. These are the items a weekly brief exists for.',
+      'Out of cycle alerts for a single CVE, published when Oracle will not wait for the next quarterly advisory. These are the items the brief exists for.',
     url: ORACLE_ALERT_INDEX,
     kind: 'oracle-alert-index',
     // The index carries both alert-cve- and alert-CVE- spellings, so this is

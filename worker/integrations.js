@@ -38,10 +38,13 @@ const SECRETS = {
     shape: /^[0-9a-f]{64}$/,
     expect: '64 hex characters, from openssl rand -hex 32',
   },
-  // The Security Watch publish gate. Publishing a brief is a founder action
-  // (RUNBOOK, THE STANDING GATES), so the endpoint that flips a draft live is
-  // useless without this and REFUSES without it: an absent token means no
-  // publish is possible, never that no token is required.
+  // The Security Watch MANUAL OVERRIDE. Since the founder's 9 Aug 2026 ruling
+  // the scheduled cycle publishes on its own behind the circuit breaker, so
+  // this token no longer gates publication itself: it gates the three HTTP
+  // routes a person uses to look at the pipeline, run it by hand, or publish a
+  // brief the breaker held. Those routes REFUSE without it, because an absent
+  // token must mean the override is impossible, never that no token is
+  // required.
   WATCH_ADMIN_TOKEN: {
     min: 32,
     shape: /^[0-9a-f]{64}$/,
@@ -215,7 +218,7 @@ export async function beehiivSubscribe(env, { email, source, courseSlug }) {
 
 /* ------------------------------------------------- the member send (Watch) */
 
-// The beehiiv segment the weekly brief goes to. A plain configuration value
+// The beehiiv segment the monthly brief goes to. A plain configuration value
 // rather than a secret, and REQUIRED rather than defaulted, which is the point:
 // with no segment named, beehiiv's own default audience is everybody, and the
 // free kit list is not the member list. Sending a members-only brief to every
@@ -226,10 +229,36 @@ export function memberSegmentId(env) {
   return raw.length >= 4 ? raw : null;
 }
 
+// CAN WE MAIL THE MEMBER LIST AT ALL, asked and answered BEFORE a brief is
+// handed to the send stage, so that "published but not sent" carries the reason
+// a person would give rather than whichever check happened to run first.
+//
+// The word order matters: with nothing wired the honest answer is
+// `not_configured`, and `no_segment` is reserved for the case where beehiiv IS
+// connected and the one value that decides who receives the mail is missing.
+// Reporting the second when the first is true would send the founder looking
+// for a segment id on a publication that does not exist.
+export function memberSendReadiness(env) {
+  const key = readSecret(env, 'BEEHIIV_API_KEY');
+  const publication = readSecret(env, 'BEEHIIV_PUBLICATION_ID');
+  if (!key.set || !publication.set) {
+    return { ready: false, status: 'not_configured', detail: 'BEEHIIV_API_KEY or BEEHIIV_PUBLICATION_ID is not set' };
+  }
+  if (memberSegmentId(env) === null) {
+    return { ready: false, status: 'no_segment', detail: 'BEEHIIV_MEMBERS_SEGMENT_ID is not set' };
+  }
+  return { ready: true, status: 'ready', detail: null };
+}
+
 // THE ONLY FUNCTION IN THIS REPOSITORY THAT CAN MAIL THE LIST, and it is called
-// from exactly one place: the founder's authenticated publish action in
-// worker/watch-publish.js. Nothing scheduled calls it, and a test sweeps the
-// source tree to keep that true.
+// from exactly one place: sendBrief in worker/watch-publish.js. A test sweeps
+// the source tree to keep that true.
+//
+// SINCE THE FOUNDER'S 9 Aug 2026 RULING THE SCHEDULE REACHES IT, through the
+// cycle in worker/watch-cycle.js, and that is the change his ruling authorised.
+// What did NOT change is that a send is a stage with its own checks: sendBrief
+// refuses unless the brief is live, cites at least one item and a member
+// segment is named, and this function refuses again on the last of those.
 //
 // UNVERIFIED AGAINST A LIVE ACCOUNT, and this comment is the honest record of
 // that. No beehiiv publication exists yet (BUILD_PLAN integration 04 status:
