@@ -3,8 +3,12 @@ dist/
 # generated types
 .astro/
 
-# dependencies
+# dependencies. Both forms on purpose: parallel work runs in git worktrees that
+# symlink node_modules back to the main checkout, and a SYMLINK named
+# node_modules is not matched by the trailing-slash `node_modules/` rule, so it
+# reads as untracked and dirties whoever checks this branch out next.
 node_modules/
+node_modules
 
 # logs
 npm-debug.log*
