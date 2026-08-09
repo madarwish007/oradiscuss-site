@@ -3,15 +3,11 @@ dist/
 # generated types
 .astro/
 
-# dependencies. Both forms on purpose: this worktree carries node_modules as a
-# SYMLINK to a sibling checkout, and a trailing-slash pattern does not match a
-# symlink, so `git add -A` committed it once.
+# dependencies. Both forms on purpose: parallel work runs in git worktrees that
+# symlink node_modules back to the main checkout, and a SYMLINK named
+# node_modules is not matched by the trailing-slash `node_modules/` rule, so it
+# reads as untracked and dirties whoever checks the branch out next.
 node_modules/
-# ...and as a bare name, because a trailing slash does NOT match a SYMLINK.
-# Parallel work runs in git worktrees that symlink node_modules back to the
-# main checkout, and `git add -A` will happily commit that symlink through a
-# `node_modules/` rule. Caught once before it landed; this is the fix.
-node_modules
 node_modules
 
 # logs

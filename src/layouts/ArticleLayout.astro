@@ -31,7 +31,7 @@ const dateLabel = data.pubDate.toLocaleDateString('en-US', {
   day: 'numeric',
 });
 
-const ogImage = data.cover ?? '/og-image.png';
+const ogImage = data.cover ?? '/og-card.png';
 
 const tags = (data.tags ?? [])
   .map((t) => tagSlug(t))
