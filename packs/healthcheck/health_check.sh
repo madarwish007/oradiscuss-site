@@ -102,7 +102,6 @@ export ORACLE_SID ORACLE_HOME
 export PATH="$ORACLE_HOME/bin:$PATH"
 export NLS_LANG="${NLS_LANG:-AMERICAN_AMERICA.AL32UTF8}"
 
-mkdir -p "$OUTPUT_DIR/reports"
 
 # ---------------------------------------------------------------------------
 # Connectivity check (also the core of --dry-run).
@@ -139,6 +138,12 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "dry-run: WOULD write AI briefing JSON beside it in the same directory"
   exit 0
 fi
+
+# Created AFTER the dry-run branch has exited, deliberately. A dry run
+# prints a plan and must leave the filesystem exactly as it found it: it
+# says it writes nothing, and creating an output directory would make that
+# sentence false. A test asserts a dry run adds no files.
+mkdir -p "$OUTPUT_DIR/reports"
 
 # ---------------------------------------------------------------------------
 # Listener check (best effort; failure is reported, not fatal).

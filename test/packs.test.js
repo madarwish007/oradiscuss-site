@@ -410,6 +410,69 @@ for (const pack of PACKS) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// A DRY RUN PRINTS A PLAN AND LEAVES THE FILESYSTEM EXACTLY AS IT FOUND IT.
+//
+// Every one of these scripts created its output directory BEFORE reaching the
+// dry-run branch, while rca_generator's own dry-run text said, in words a
+// customer reads, "Nothing here writes to the database or to the OS". Creating
+// a directory is writing to the OS, so that sentence was false.
+//
+// It is a small untruth and that is exactly why it earns a guard: this product
+// is sold on its claims being literally checkable, and a reader who verifies
+// the smallest claim and finds it wrong has no reason to trust the large one
+// about read-only access.
+//
+// Asserted by MEASURING the directory before and after rather than by reading
+// the source for a mkdir, because the next way this breaks will not be a mkdir.
+// ---------------------------------------------------------------------------
+
+test('every --dry-run leaves the output directory untouched', () => {
+  const plausible = (name) => {
+    if (name === 'ORACLE_CONNECT') return '"/ as sysdba"';
+    if (name === 'ORACLE_SID') return 'ODCDEMO';
+    if (name === 'ORACLE_HOME') return '/nonexistent';
+    if (name.endsWith('_TABLE')) return 'ORADISCUSS_TS_HISTORY';
+    return '1';
+  };
+
+  let checked = 0;
+  for (const pack of PACKS) {
+    for (const rel of pack.shipped) {
+      if (!rel.endsWith('.sh') || rel.includes('/')) continue;
+      const src = readFileSync(join(pack.dir, rel), 'utf8');
+      if (!/--dry-run\)/.test(src)) continue;
+
+      const out = mkdtempSync(join(tmpdir(), 'odc-dry-'));
+      const cfg = join(out, 'config.env');
+      const vars = new Set(requiredConfigVars(src));
+      vars.add('OUTPUT_DIR');
+      writeFileSync(
+        cfg,
+        [...vars].map((v) => (v === 'OUTPUT_DIR' ? `OUTPUT_DIR=${out}` : `${v}=${plausible(v)}`)).join('\n'),
+      );
+
+      const before = readdirSync(out).sort();
+      try {
+        execFileSync('bash', [join(pack.dir, rel), '--config', cfg, '--dry-run'], { stdio: 'pipe' });
+      } catch {
+        // A dry run that REFUSES to run is a different defect, caught by that
+        // pack's own tests. What must never happen here is a WRITE.
+      }
+      const after = readdirSync(out).sort();
+      assert.deepEqual(
+        after,
+        before,
+        `${pack.id}/${rel} --dry-run created ${after.filter((f) => !before.includes(f)).join(', ')}. ` +
+          'A dry run prints a plan and writes nothing.',
+      );
+      checked += 1;
+      rmSync(out, { recursive: true, force: true });
+    }
+  }
+  assert.ok(checked >= 5, `only ${checked} scripts with a --dry-run were exercised, so this guard is nearly asleep`);
+});
+
 test('the shared dual-output layer is byte-identical in every pack that ships it', () => {
   for (const rel of SHARED_FILES) {
     const carriers = PACKS.filter((p) => p.shipped.includes(rel));
