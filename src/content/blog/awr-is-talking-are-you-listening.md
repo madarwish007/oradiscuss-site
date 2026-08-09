@@ -1,6 +1,6 @@
 ---
 title: AWR is Talking, Are You Actually Listening? A Practical Guide to Reading What Matters
-description: How to read an AWR report as a conversation rather than a symptom lookup — context, load profile, wait-event patterns, SQL and segments.
+description: 'How to read an AWR report as a conversation rather than a symptom lookup: context, load profile, wait-event patterns, SQL and segments.'
 pubDate: 2026-04-14
 updatedDate: ''
 category: dba
@@ -16,7 +16,7 @@ coverAlt: ''
 
 _By: Mahmoud Darwish_
 
-Here's a confession: for the first couple of years of my DBA career, I used AWR reports the wrong way. I'd run the report, scroll straight to "Top 5 Timed Events," see something like `db file sequential read` or `log file sync`, and then go Google "how to fix log file sync" — as if the wait event itself was the answer, rather than a symptom.
+Here's a confession: for the first couple of years of my DBA career, I used AWR reports the wrong way. I'd run the report, scroll straight to "Top 5 Timed Events," see something like `db file sequential read` or `log file sync`, and then go Google "how to fix log file sync", as if the wait event itself was the answer, rather than a symptom.
 
 It took a few painful production incidents to teach me that AWR is a conversation, not a diagnosis. You have to learn how to read it, not just react to it.
 
@@ -38,17 +38,17 @@ Always generate a **comparative AWR** against a known-good window:
 
 The difference report (`awrddrpt`) is underused. It shows you _what changed_ between two time periods, not just a snapshot of the bad time.
 
-## Step 1: DB Time and Load Profile — The Vital Signs
+## Step 1: DB Time and Load Profile, the Vital Signs
 
 The first thing I look at is the **Load Profile** section. Specifically:
 
-- **DB Time per Second** — your headline number. A number close to or exceeding your CPU count suggests you're fully utilizing (or over-utilizing) the system.
-- **Logical Reads vs Physical Reads per Second** — sudden spikes in physical reads mean something changed: a new query plan, a cache eviction, a new table scan where there wasn't one before.
-- **Redo Size per Second** — unusually high redo often points to bulk DML, large array inserts, or a runaway session.
+- **DB Time per Second**: your headline number. A number close to or exceeding your CPU count suggests you're fully utilizing (or over-utilizing) the system.
+- **Logical Reads vs Physical Reads per Second**: sudden spikes in physical reads mean something changed: a new query plan, a cache eviction, a new table scan where there wasn't one before.
+- **Redo Size per Second**: unusually high redo often points to bulk DML, large array inserts, or a runaway session.
 
 If these numbers look normal compared to your baseline, the problem you're investigating might not be a database problem at all.
 
-## Step 2: Wait Events — Read the Story, Not the Headline
+## Step 2: Wait Events. Read the Story, Not the Headline
 
 The mistake is treating each wait event in isolation. Consider this example:
 
@@ -58,17 +58,17 @@ gc cr request                 18.3%  of wait time
 log file sync                 12.1%  of wait time
 ```
 
-A lot of people would start tuning for `gc buffer busy acquired` immediately. But look at the story these three events tell together. You have heavy inter-node block transfer (`gc buffer busy`, `gc cr request`) AND commit bottleneck (`log file sync`). That's a pattern — a high-write, high-sharing workload where both the commit path and the block transfer path are under strain. The solution space is completely different from if you had _only_ `gc buffer busy` at the top.
+A lot of people would start tuning for `gc buffer busy acquired` immediately. But look at the story these three events tell together. You have heavy inter-node block transfer (`gc buffer busy`, `gc cr request`) AND commit bottleneck (`log file sync`). That's a pattern: a high-write, high-sharing workload where both the commit path and the block transfer path are under strain. The solution space is completely different from if you had _only_ `gc buffer busy` at the top.
 
 Read the wait events as a **pattern**, not as individual items on a to-do list.
 
-## Step 3: SQL Statistics — Find Your Criminals
+## Step 3: SQL Statistics, Find Your Criminals
 
 After wait events, I look at three SQL sections:
 
-- **SQL ordered by Elapsed Time** — your highest-impact SQL
-- **SQL ordered by Gets** — your highest logical read consumers
-- **SQL ordered by Executions** — a "fast" query that runs 50,000 times per minute can be more impactful than one slow query
+- **SQL ordered by Elapsed Time**: your highest-impact SQL
+- **SQL ordered by Gets**: your highest logical read consumers
+- **SQL ordered by Executions**: a "fast" query that runs 50,000 times per minute can be more impactful than one slow query
 
 The **gets per execution** ratio is something I always calculate mentally. A query doing 500,000 logical reads once per hour is very different from one doing 5,000 logical reads 10,000 times per hour. Same total gets, completely different tuning approach.
 
@@ -81,9 +81,9 @@ WHERE  sql_id = '&sql_id'
 ORDER BY snap_id DESC;
 ```
 
-Performance degradation often has nothing to do with data growth or load — it's simply that the optimizer chose a different plan. `SQL Plan Baselines (SPM)` exist precisely for this reason.
+Performance degradation often has nothing to do with data growth or load. It is simply that the optimizer chose a different plan. `SQL Plan Baselines (SPM)` exist precisely for this reason.
 
-## Step 4: Segment Statistics — Where on Disk Is the Pain?
+## Step 4: Segment Statistics, Where on Disk Is the Pain?
 
 **Segments by Logical Reads** and **Segments by Physical Reads** tell you exactly which tables and indexes are driving your I/O. This closes the loop:
 
@@ -91,7 +91,7 @@ Performance degradation often has nothing to do with data growth or load — it'
 - You know which SQL is involved (SQL statistics)
 - Now you know which objects that SQL is hammering (segment statistics)
 
-If you see an index appearing in "Segments by Physical Reads" that has no business being scanned heavily — that's a plan regression. If a table appears that shouldn't be touched by any of your top SQL — you've found a rogue query.
+If you see an index appearing in "Segments by Physical Reads" that has no business being scanned heavily, that's a plan regression. If a table appears that shouldn't be touched by any of your top SQL, you've found a rogue query.
 
 ## The One Rule I Follow
 

@@ -7,9 +7,9 @@ export async function GET(context) {
   );
 
   return rss({
-    title: 'OraDiscuss — Oracle Mastery, Distilled',
+    title: 'OraDiscuss: Oracle Mastery, Distilled',
     description:
-      'Production-grade Oracle DBA insights from a practising ACE Apprentice. Exadata, RAC, AWR, GoldenGate, OCI — the hard problems, solved in writing.',
+      'Production-grade Oracle DBA insights from a practising ACE Apprentice. Exadata, RAC, AWR, GoldenGate, OCI. The hard problems, solved in writing.',
     site: context.site,
     items: posts.map((post) => ({
       title: post.data.title,

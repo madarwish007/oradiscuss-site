@@ -1,6 +1,6 @@
 ---
 title: 'Oracle RMAN Backup Progress Monitoring: Scripts & V$SESSION_LONGOPS'
-description: Two practical SQL scripts for monitoring RMAN backup progress — compression ratio, percent complete, and estimated finish time.
+description: 'Two practical SQL scripts for monitoring RMAN backup progress: compression ratio, percent complete, and estimated finish time.'
 pubDate: 2018-09-20
 updatedDate: ''
 category: scripts
@@ -15,7 +15,7 @@ coverAlt: ''
 
 _By: Mahmoud Darwish_
 
-It was a very long time since writing in this blog — here we are back again! I was looking for a proper and accurate way to monitor the progress of RMAN backups. The scripts below can be used to monitor progress efficiently.
+It was a very long time since writing in this blog. Here we are back again! I was looking for a proper and accurate way to monitor the progress of RMAN backups. The scripts below can be used to monitor progress efficiently.
 
 ## Script 1: RMAN Backup Progress via V$RMAN_STATUS
 
@@ -52,4 +52,4 @@ AND    SOFAR != TOTALWORK
 ORDER BY 1;
 ```
 
-Both scripts complement each other — use V$RMAN_STATUS for the high-level backup view and V$SESSION_LONGOPS for the detailed operation-by-operation progress, including index rebuilds, stats gathering, and other long-running DBA tasks.
+Both scripts complement each other: use V$RMAN_STATUS for the high-level backup view and V$SESSION_LONGOPS for the detailed operation-by-operation progress, including index rebuilds, stats gathering, and other long-running DBA tasks.

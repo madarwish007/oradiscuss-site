@@ -53,7 +53,7 @@ In online mode, OEM does the prep for you. The moment you search for a patch in 
 
 If you are still in offline mode at this stage of the series, push for the security exception. The operational savings on the agent side alone are worth the security review.
 
-#### The Method I Used — Patch Plan via Provisioning and Patching
+#### The Method I Used: Patch Plan via Provisioning and Patching
 
 OEM 24ai supports two equally valid approaches for mass agent updates: the **Agent Gold Image** model for ongoing fleet hygiene, and the **Patch Plan** model for direct, targeted patch application. Both are documented. Both work. The right answer depends on your specific situation.
 
@@ -94,7 +94,7 @@ The Create Patch Plan wizard opens with the patch already pre-selected. Configur
 | Field | Value |
 | **Plan Name** | `OEM_24ai_RU8` (or your naming convention) |
 | **Patch** | 38735209 (already populated) |
-| **Description** | Free text — I used "Mass agent update from 24.1.0.5 to 24.1.0.8" |
+| **Description** | Free text: I used "Mass agent update from 24.1.0.5 to 24.1.0.8" |
 | **Allow ad-hoc patches** | Yes (lets you adjust agent selection later if needed) |
 
 Click **Create Plan**. You now have an empty plan with the agent patch attached but no targets selected yet.
@@ -195,9 +195,9 @@ TARGET_VERSION    AGENT_COUNT
 24.1.0.8.0        80
 ```
 
-A single row at the new version. If you see two rows, you have stragglers — agents that didn't make it through the deployment for some reason.
+A single row at the new version. If you see two rows, you have stragglers, agents that didn't make it through the deployment for some reason.
 
-**View 2 — Agents not yet on 24.1.0.8 via SQL:**
+**View 2: Agents not yet on 24.1.0.8 via SQL:**
 
 ```sql
 SELECT

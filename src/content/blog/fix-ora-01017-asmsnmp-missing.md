@@ -1,6 +1,6 @@
 ---
 title: 'Fix ORA-01017: ASMSNMP User Missing After Grid Infrastructure Install'
-description: Why DBCA fails with ORA-01017 after an 11.2.0.4 Grid Infrastructure install — the ASMSNMP user is missing, and here is how to create it.
+description: 'Why DBCA fails with ORA-01017 after an 11.2.0.4 Grid Infrastructure install: the ASMSNMP user is missing, and here is how to create it.'
 pubDate: 2014-08-24
 updatedDate: ''
 category: dba
@@ -25,7 +25,7 @@ Could not connect to ASM due to the following error:
 ORA-01017: invalid username/password; logon denied.
 ```
 
-Everyone will say there is a wrong provided password — that was my first thought too. But I found the ASMSNMP user simply was not created.
+Everyone will say there is a wrong provided password. That was my first thought too. But I found the ASMSNMP user simply was not created.
 
 ## Diagnosis
 

@@ -1,6 +1,6 @@
 ---
 title: Configuring Bidirectional Replication using Oracle GoldenGate 12c
-description: Step-by-step GoldenGate 12c bidirectional replication setup on Oracle 12.1 and Solaris 11.2 SPARC — Extract, DataPump and Replicat.
+description: 'Step-by-step GoldenGate 12c bidirectional replication setup on Oracle 12.1 and Solaris 11.2 SPARC: Extract, DataPump and Replicat.'
 pubDate: 2015-12-27
 updatedDate: ''
 category: goldengate
