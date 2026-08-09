@@ -113,7 +113,15 @@ while IFS= read -r PACK_ID; do
   # passed in. Two scripts in one pack disagreeing about their version is a real
   # drift that nothing else would catch, and it would name the customer's zip
   # after a guess.
-  VERSION="$(grep -ho '^VERSION="[^"]*"' "$SRC"/*.sh 2>/dev/null | sed 's/VERSION="//; s/"//' | sort -u)"
+  #
+  # The `|| true` is load bearing, and its absence made the refusal below
+  # UNREACHABLE. grep exits 1 when it matches nothing, `set -o pipefail` promotes
+  # that to the pipeline's status, and a plain assignment carries it, so a pack
+  # with no VERSION= killed this script at exit 1 with no message at all. It was
+  # never noticed because every pack committed so far declares a version. Found
+  # on 9 Aug 2026 by a test that watched the same guard fail to fire in
+  # scripts/release-pack.sh, which was written from this shape.
+  VERSION="$(grep -ho '^VERSION="[^"]*"' "$SRC"/*.sh 2>/dev/null | sed 's/VERSION="//; s/"//' | sort -u || true)"
   if [ -z "$VERSION" ]; then
     err "$PACK declares no VERSION= in any top-level script"
     exit 2

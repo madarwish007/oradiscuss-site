@@ -1,0 +1,61 @@
+-- OraDiscuss system schema, migration 0005: the release notification ledger.
+--
+-- DATA LAW, unchanged: we hold NOTHING that identifies a person. The two
+-- columns added here hold a timestamp and one outcome word about a SEND THAT
+-- HAPPENED AT BEEHIIV. There is no column below that could take an address, a
+-- name, an IP, or a subscriber identifier, and that is a property of the schema
+-- rather than of anyone's discipline.
+--
+-- `pack_release` ALREADY EXISTS from 0001 and is EXTENDED here rather than
+-- duplicated. Its original columns (pack, version, r2_key, sha256, min_tier,
+-- released_at) are untouched and still mean what they meant, and the primary
+-- key on (pack, version) is what makes the release insert itself idempotent.
+--
+-- WHY THE STATE LIVES ON THE RELEASE ROW rather than in a table of its own.
+-- This is the same shape migration 0004 gave watch_brief, and for the same
+-- reason: "announcing a release twice does not mail the list twice" has to be a
+-- check against a FACT, and the fact belongs beside the thing it is a fact
+-- about. A separate ledger would let a release row exist with no ledger row and
+-- leave the code guessing which of the two is authoritative.
+--
+-- APPLY ONCE. SQLite has no "ADD COLUMN IF NOT EXISTS", so a second run of this
+-- file fails on the first ALTER. That is loud rather than silent, which is the
+-- behaviour we want.
+--
+--   npx wrangler d1 execute oradiscuss-preview --remote --file=migrations/0005_release_notify.sql
+--
+--   notified_at    when a notification attempt CLAIMED this release, and NULL
+--                  until one does. It is written by a conditional UPDATE whose
+--                  WHERE clause requires it to be NULL, so exactly one caller
+--                  can ever win it and only that caller sends.
+--
+--                  It records the CLAIM rather than the delivery, and the
+--                  difference is the whole safety property. A send that leaves
+--                  our Worker and then fails to answer (a timeout, a dropped
+--                  connection) may well have been accepted at the other end, so
+--                  the claim stays taken and the release is not silently mailed
+--                  a second time. `notify_status` is where the outcome is told
+--                  truthfully. Read the pair, never notified_at alone.
+--
+--   notify_status  the outcome word: sent, failed, unreachable, or the two
+--                  PRE-FLIGHT refusals not_configured and no_segment. NULL means
+--                  no attempt has been made.
+--
+--                  The pre-flight words are decided BEFORE the claim is taken,
+--                  because nothing left our process in either case. Those rows
+--                  keep notified_at NULL and can be announced again for free the
+--                  moment the segment is configured, which is the state this
+--                  build ships in.
+--
+--                  A row with notified_at set and notify_status other than
+--                  'sent' is a release that is PUBLISHED and NOT ANNOUNCED. It
+--                  is the honest half-state this design chooses over a send that
+--                  might fire twice, and POST /api/release/announce with
+--                  {"retry": true} is the deliberate way out of it.
+ALTER TABLE pack_release ADD COLUMN notified_at   TEXT;
+ALTER TABLE pack_release ADD COLUMN notify_status TEXT;
+
+-- Reading "what is released but not yet announced" is the founder's question,
+-- so it gets an index rather than a scan that grows with the catalogue.
+CREATE INDEX IF NOT EXISTS idx_pack_release_unannounced
+  ON pack_release(notified_at, released_at DESC);

@@ -21,6 +21,7 @@ import { postDownload, getDownload, postReissue, postDelete } from './delivery.j
 import { handleWebhook } from './webhook.js';
 import { changelogJson } from './changelog.js';
 import { postPublish, getWatchStatus, postWatchRun } from './watch-publish.js';
+import { postReleaseAnnounce, postReleaseLink } from './release.js';
 
 /* ------------------------------------------------------------------ read */
 
@@ -339,6 +340,15 @@ const ROUTES = {
   'POST /api/watch/publish': (request, env) => postPublish(request, env),
   'GET /api/watch/status': (request, env) => getWatchStatus(request, env),
   'POST /api/watch/run': (request, env) => postWatchRun(request, env),
+
+  /* Phase 9 release pipeline. Behind the SAME WATCH_ADMIN_TOKEN as the three
+     above, not a second secret, and both refuse without it. `announce` mails
+     subscribers about one released version, at most once ever; `link` mints the
+     founder a short lived signed link so he can see what a customer receives.
+     Neither route reads R2 and neither can hand out a pack without a signature:
+     the file is still served only by GET /api/download. */
+  'POST /api/release/announce': (request, env) => postReleaseAnnounce(request, env),
+  'POST /api/release/link': (request, env) => postReleaseLink(request, env),
 };
 
 /* The limiter self-test route lived here until Stage A cutover prep. It proved

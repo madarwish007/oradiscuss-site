@@ -3,8 +3,16 @@ dist/
 # generated types
 .astro/
 
-# dependencies
+# dependencies. Both forms on purpose: this worktree carries node_modules as a
+# SYMLINK to a sibling checkout, and a trailing-slash pattern does not match a
+# symlink, so `git add -A` committed it once.
 node_modules/
+# ...and as a bare name, because a trailing slash does NOT match a SYMLINK.
+# Parallel work runs in git worktrees that symlink node_modules back to the
+# main checkout, and `git add -A` will happily commit that symlink through a
+# `node_modules/` rule. Caught once before it landed; this is the fix.
+node_modules
+node_modules
 
 # logs
 npm-debug.log*
@@ -37,3 +45,6 @@ graphify-out/
 # they are listed here so a crashed run cannot leave the tree dirty.
 .showcase-run/
 .showcase-work/
+
+# release artefacts (zips + generated SQL) from scripts/release-pack.sh
+.release-out/
