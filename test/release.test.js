@@ -865,6 +865,69 @@ test('the script builds a deterministic zip and emits idempotent SQL', () => {
   }
 });
 
+// The one that closes the gap between what this file THINKS the script emits
+// and what it actually emits. Everything above tests the shape of the SQL; this
+// runs the real script, takes the file it wrote, and applies it twice to a
+// database carrying only the migrations preview and production actually have.
+test('the SQL the script really writes is idempotent against the real schema', () => {
+  const dir = scratchRepo();
+  try {
+    const run = runScript(dir, ['--dry-run']);
+    assert.equal(run.code, 0, run.stderr);
+
+    const sqlFile = join(dir, '.release-out', 'preview-demo-v1.0.0.sql');
+    assert.ok(existsSync(sqlFile), `the script wrote no SQL file at ${sqlFile}`);
+    const sql = readFileSync(sqlFile, 'utf8');
+
+    const db = new DatabaseSync(':memory:');
+    const migrations = join(REPO, 'migrations');
+    for (const file of readdirSync(migrations).filter((f) => /^000[12]_/.test(f)).sort()) {
+      db.exec(readFileSync(join(migrations, file), 'utf8'));
+    }
+
+    db.exec(sql);
+    db.exec(sql);
+
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM pack_release').get().n, 1, 'a second apply created a second release row');
+    assert.equal(db.prepare('SELECT COUNT(*) AS n FROM changelog').get().n, 1, 'a second apply created a second changelog entry');
+
+    // And what it recorded is what it built, not a placeholder.
+    const row = db.prepare('SELECT pack, version, r2_key, sha256, min_tier FROM pack_release').get();
+    assert.equal(row.pack, 'demo');
+    assert.equal(row.version, '1.0.0');
+    assert.equal(row.r2_key, 'packs/demo/demo-v1.0.0.zip');
+    assert.equal(row.min_tier, 1);
+    assert.match(row.sha256, /^[0-9a-f]{64}$/);
+    assert.equal(row.sha256, /sha256   ([0-9a-f]{64})/.exec(run.stdout)[1], 'the SQL records a different digest to the one printed');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('a release note carrying a quote survives the emitted SQL intact', () => {
+  const dir = scratchRepo();
+  try {
+    const notes = join(dir, 'notes.md');
+    writeFileSync(notes, "It's fixed, and it's O'Brien who found it.\n");
+    const run = runScript(dir, ['--dry-run', '--pack', 'demo', '--notes-file', notes]);
+    assert.equal(run.code, 0, run.stderr);
+
+    const db = new DatabaseSync(':memory:');
+    const migrations = join(REPO, 'migrations');
+    for (const file of readdirSync(migrations).filter((f) => /^000[12]_/.test(f)).sort()) {
+      db.exec(readFileSync(join(migrations, file), 'utf8'));
+    }
+    db.exec(readFileSync(join(dir, '.release-out', 'preview-demo-v1.0.0.sql'), 'utf8'));
+
+    assert.equal(
+      db.prepare('SELECT body_md FROM changelog').get().body_md.trim(),
+      "It's fixed, and it's O'Brien who found it.",
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('the script REFUSES a dirty tree', () => {
   const dir = scratchRepo();
   try {
