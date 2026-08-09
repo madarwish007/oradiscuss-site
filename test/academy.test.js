@@ -232,3 +232,43 @@ test('every inline script under /academy/ compiles', () => {
     }
   }
 });
+
+// ---------------------------------------------------------------------------
+// PAID CONTENT IS NOT INDEXED WHILE ITS DELIVERY MODEL IS UNDECIDED.
+//
+// Academy is the paid Tier 2. Its routes render as ordinary public pages with
+// no gate, because this product deliberately has no login and adding one would
+// reverse the digital-product classification both Merchants of Record were
+// given. How Academy is actually delivered is an open founder decision.
+//
+// The index page previously carried noindex ONLY while the shelf was empty, so
+// the first real course silently made the whole paid course set indexable. That
+// is not reversible the way a flag is: once a search engine has the content,
+// taking the flag back off does not take the content back.
+//
+// So the safe half lands first. This comes off in one line when he rules, and
+// until then a page that loses it fails here rather than quietly going public.
+// ---------------------------------------------------------------------------
+test('every built Academy page refuses indexing while delivery is undecided', () => {
+  const pages = [];
+  const walk = (dir) => {
+    if (!existsSync(dir)) return;
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) walk(full);
+      else if (e.name.endsWith('.html')) pages.push(full);
+    }
+  };
+  walk(join(DIST, 'academy'));
+
+  assert.ok(pages.length >= 3, `only ${pages.length} academy pages found, so this guard is nearly asleep`);
+  const indexable = pages
+    .filter((p) => !/<meta[^>]+name="robots"[^>]+content="noindex/i.test(readFileSync(p, 'utf8')))
+    .map((p) => relative(DIST, p));
+  assert.deepEqual(
+    indexable,
+    [],
+    `paid Academy content is indexable:\n${indexable.join('\n')}\n` +
+      'Academy is Tier 2 and has no gate. Decide delivery before letting it be indexed.',
+  );
+});

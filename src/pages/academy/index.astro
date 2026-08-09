@@ -41,7 +41,15 @@ const description = empty
   ? 'The Academy has no courses in it yet. This page lists them when they exist.'
   : 'Text lab manuals worked through at a terminal. Every lesson states the Oracle releases it was written against and the date it was last reviewed.';
 ---
-<BaseLayout title={title} description={description} noindex={empty}>
+{/* NOINDEX WHILE THE DELIVERY MODEL IS AN OPEN FOUNDER DECISION.
+    Academy is the paid Tier 2 and these routes render as ordinary public
+    pages with no gate, because this product deliberately has no login.
+    Letting a search engine index the full paid course set before the
+    delivery model is decided is not reversible in the way a config flag
+    is: the content is out. So the safe half lands first, and this comes
+    off in one line when he rules. See the Academy delivery block in
+    SESSION_HANDOFF. */}
+<BaseLayout title={title} description={description} noindex={true}>
 <div class="capp">
 
   <section class="capp-head">
