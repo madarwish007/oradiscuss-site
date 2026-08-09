@@ -1,0 +1,31 @@
+# WHICH MEMBERSHIP EACH PACK IS RELEASED TO.
+#
+# Read by scripts/release-pack.sh and written into pack_release.min_tier, which
+# worker/changelog.js turns into the words a visitor reads on /changelog/:
+# min_tier 0 renders "Free tier", 1 renders "Toolkit and above", 2 renders
+# "Toolkit and Academy". That makes this file a customer-facing claim, so it is
+# not a guess and the release script REFUSES rather than defaulting when a pack
+# is missing from it.
+#
+# THE VALUES ARE NOT CHOSEN HERE. They are read off the ratified price truth in
+# migrations/0002_seed_catalog.sql (oradiscuss-membership-spec.md section 2,
+# FINAL, ratified 5 Aug 2026), which names each pack in its blurb:
+#
+#   'free-kit', tier 0  "The full read-only Health Check pack."
+#   'toolkit',  tier 1  "RCA Generator, Audit and Governance, Daily-Ops."
+#
+# A NEW PACK MUST BE ADDED HERE BEFORE IT CAN BE RELEASED, and that is the
+# point. This repository has been bitten twice by a step that names its inputs
+# and then silently drops every input added after it was written. The defence is
+# that both ends are loud: the release script refuses a pack it cannot find
+# here, and test/release.test.js fails the build when packs/ and this file
+# disagree in either direction. A list that cannot go quietly stale is safe to
+# keep; one that can is not.
+#
+# Columns: pack id, min_tier, and where the number came from.
+#
+# pack               min_tier   source
+healthcheck          0          migrations/0002_seed_catalog.sql: 'free-kit' tier 0, "the full read-only Health Check pack"
+rca                  1          migrations/0002_seed_catalog.sql: 'toolkit' tier 1, "RCA Generator"
+audit-governance     1          migrations/0002_seed_catalog.sql: 'toolkit' tier 1, "Audit and Governance"
+daily-ops            1          migrations/0002_seed_catalog.sql: 'toolkit' tier 1, "Daily-Ops"

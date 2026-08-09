@@ -18,57 +18,28 @@
 //   5. Record the outcome on the brief. `sent_at` is what makes "publishing
 //      twice does not send twice" a check against a fact.
 
-import { json, fail, clientKey, readJsonBody } from './http.js';
-import { sha256Hex, timingSafeEqualHex } from './crypto.js';
-import { readSecret, beehiivSendBrief } from './integrations.js';
+import { json, fail, readJsonBody } from './http.js';
+import { beehiivSendBrief } from './integrations.js';
 import { escapeHtml } from './changelog.js';
 import { runWatch, watchStatus } from './watch.js';
+import { authoriseAdmin, throttleAdmin } from './admin-auth.js';
 
 const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,63}$/;
 
 const NOT_CONFIGURED =
   'Publishing is not open on this Worker: WATCH_ADMIN_TOKEN is not set. No brief was changed and nothing was sent.';
-const NOT_AUTHORISED = 'That request is not authorised.';
 
 // Authorisation for every route in this file. Returns a Response on refusal so
 // no caller can forget to act on the verdict.
-async function authorise(request, env) {
-  const secret = readSecret(env, 'WATCH_ADMIN_TOKEN');
-  if (!secret.set) {
-    console.error('watch_publish_not_configured');
-    return fail(503, 'not_configured', NOT_CONFIGURED);
-  }
+//
+// The compare itself lives in worker/admin-auth.js, shared with the release
+// pipeline, which is behind the same token. It was extracted from here rather
+// than copied there: one implementation of a constant time compare is one
+// implementation to fix.
+const GATE = { what: NOT_CONFIGURED, tag: 'watch_publish' };
 
-  const header = request.headers.get('Authorization') ?? '';
-  const presented = /^Bearer\s+(\S.*)$/i.exec(header.trim());
-  if (!presented) return fail(401, 'no_token', NOT_AUTHORISED);
-
-  // Both sides are hashed before the compare. The constant time helper refuses
-  // strings of different lengths, which is right for fixed length digests and
-  // wrong for a token somebody typed: hashing first gives two 64 character hex
-  // strings whatever was presented, so the compare tells an attacker nothing
-  // about the length of the real token.
-  const a = await sha256Hex(presented[1].trim());
-  const b = await sha256Hex(secret.value);
-  if (!timingSafeEqualHex(a, b)) {
-    console.warn('watch_publish_bad_token');
-    return fail(401, 'bad_token', NOT_AUTHORISED);
-  }
-  return null;
-}
-
-// The tight limiter, shared with the delivery routes. Used when it is bound and
-// not fail closed when it is absent, deliberately: the token is the control
-// here, and a founder locked out of his own publish button by a missing binding
-// is a worse failure than an unthrottled endpoint that still needs the token.
-async function throttle(request, env) {
-  if (!env.REISSUE_RATE_LIMIT) {
-    console.warn('watch_publish_unlimited');
-    return null;
-  }
-  const { success } = await env.REISSUE_RATE_LIMIT.limit({ key: clientKey(request) });
-  return success ? null : fail(429, 'rate_limited', 'Too many attempts. Wait a minute and try again.');
-}
+const authorise = (request, env) => authoriseAdmin(request, env, GATE);
+const throttle = (request, env) => throttleAdmin(request, env, GATE);
 
 /* ---------------------------------------------------------------- publish */
 

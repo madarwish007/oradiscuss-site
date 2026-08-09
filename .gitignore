@@ -37,3 +37,6 @@ graphify-out/
 # they are listed here so a crashed run cannot leave the tree dirty.
 .showcase-run/
 .showcase-work/
+
+# release artefacts (zips + generated SQL) from scripts/release-pack.sh
+.release-out/

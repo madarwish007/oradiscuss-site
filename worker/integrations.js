@@ -67,6 +67,7 @@ export function integrationStatus(env) {
   }
 
   const beehiiv = detail.BEEHIIV_API_KEY.set && detail.BEEHIIV_PUBLICATION_ID.set;
+  const releaseSegment = releaseSegmentId(env) !== null;
   const turnstile = detail.TURNSTILE_SECRET.set && detail.TURNSTILE_SITE_KEY.set;
   const paddle = detail.PADDLE_API_KEY.set && detail.PADDLE_WEBHOOK_SECRET.set;
   // Delivery is the half of Phase 6 that needs no payment processor at all: a
@@ -80,6 +81,12 @@ export function integrationStatus(env) {
   // archive shut for a reason that has nothing to do with it.
   const watch_publish = detail.WATCH_ADMIN_TOKEN.set;
   const watch_send = beehiiv && memberSegmentId(env) !== null;
+  // Reported SEPARATELY from watch_send, and it is not the same audience. The
+  // brief goes to members; a release notification says "the kit you have was
+  // updated", and who should hear that is a founder decision rather than an
+  // inference this code may make. Two segments, two booleans, and a release
+  // still records itself with neither of them set.
+  const release_send = beehiiv && releaseSegment;
 
   return {
     configured: {
@@ -92,6 +99,7 @@ export function integrationStatus(env) {
       delivery,
       watch_publish,
       watch_send,
+      release_send,
     },
     detail,
     // Names only. A secret name is configuration state, never a credential.
@@ -226,6 +234,22 @@ export function memberSegmentId(env) {
   return raw.length >= 4 ? raw : null;
 }
 
+// The beehiiv segment a PACK RELEASE notification goes to, and it is a second
+// value rather than a reuse of the one above. Founder ruling 9 Aug 2026 asked
+// for "an acknowledgement about the updated kits only", which is a different
+// sentence to the members-only weekly brief and quite possibly a different
+// audience: somebody holding the free kit has a kit that was updated, and is
+// not a member. Which list hears about a release is a decision with no undo,
+// so this code refuses to infer it from the other segment.
+//
+// REQUIRED rather than defaulted, exactly like memberSegmentId and for the same
+// reason: with no segment named, beehiiv's own default audience is everybody.
+// The absence of this value stops the send instead of widening it.
+export function releaseSegmentId(env) {
+  const raw = typeof env?.BEEHIIV_RELEASE_SEGMENT_ID === 'string' ? env.BEEHIIV_RELEASE_SEGMENT_ID.trim() : '';
+  return raw.length >= 4 ? raw : null;
+}
+
 // THE ONLY FUNCTION IN THIS REPOSITORY THAT CAN MAIL THE LIST, and it is called
 // from exactly one place: the founder's authenticated publish action in
 // worker/watch-publish.js. Nothing scheduled calls it, and a test sweeps the
@@ -254,25 +278,84 @@ export async function beehiivSendBrief(env, { title, subject, body_html }) {
     return { sent: false, status: 'no_segment', detail: 'BEEHIIV_MEMBERS_SEGMENT_ID is not set' };
   }
 
+  return postToSegment(key.value, publication.value, segment, { title, subject, body_html });
+}
+
+// THE SECOND THING IN THIS REPOSITORY THAT CAN MAIL A LIST, and like the first
+// it is called from exactly one place: worker/release.js, behind the founder's
+// token. test/release.test.js sweeps the source tree to keep that true, the way
+// test/watch.test.js does for the brief.
+//
+// UNVERIFIED AGAINST A LIVE ACCOUNT, and this comment is the honest record of
+// that, the same as for the brief above. No beehiiv publication exists yet, and
+// no release notification has ever been sent by this code or any other.
+//
+// It fails CLOSED in every direction: no key, no publication, no segment, a non
+// 2xx answer or an unreachable host all return `sent: false` with a reason
+// word. The RELEASE IS STILL RECORDED either way, because the pack in R2 and
+// the row in D1 are what a customer downloads from, and the email is a
+// notification about them.
+export async function beehiivSendRelease(env, { title, subject, body_html }) {
+  const ready = releaseSendReadiness(env);
+  if (!ready.ready) return { sent: false, status: ready.status, detail: ready.detail };
+  return postToSegment(ready.key, ready.publication, ready.segment, { title, subject, body_html });
+}
+
+// CAN a release notification be sent, asked WITHOUT sending one.
+//
+// This exists because worker/release.js must answer that question BEFORE it
+// takes the notification claim on a release row: a claim burned by a send that
+// was never possible would leave a released pack permanently unannounceable.
+// The first version of that code asked by calling beehiivSendRelease with an
+// empty body, which on a configured Worker would have posted an empty release
+// note to real subscribers. Reading the configuration is the question; calling
+// the sender is the action.
+//
+// The two share this function rather than each testing the same three values,
+// so the answer the pre-flight gives is by construction the answer the send
+// would have given.
+export function releaseSendReadiness(env) {
+  const key = readSecret(env, 'BEEHIIV_API_KEY');
+  const publication = readSecret(env, 'BEEHIIV_PUBLICATION_ID');
+  if (!key.set || !publication.set) {
+    return {
+      ready: false,
+      status: 'not_configured',
+      detail: 'BEEHIIV_API_KEY or BEEHIIV_PUBLICATION_ID is not set',
+    };
+  }
+
+  const segment = releaseSegmentId(env);
+  if (!segment) {
+    return { ready: false, status: 'no_segment', detail: 'BEEHIIV_RELEASE_SEGMENT_ID is not set' };
+  }
+
+  return { ready: true, status: 'ready', detail: null, key: key.value, publication: publication.value, segment };
+}
+
+// The one HTTP call both sends make, shared so that a change to beehiiv's post
+// schema is a change in one place. Every caller has already resolved its own
+// key, publication and SEGMENT before reaching here: this function cannot pick
+// an audience, which is the property worth keeping. A helper that defaulted a
+// missing segment to the publication's whole list is the exact accident the two
+// callers above are written to make impossible.
+async function postToSegment(key, publication, segment, { title, subject, body_html }) {
   let res;
   try {
-    res = await fetch(
-      `${BEEHIIV_API_ROOT}/publications/${encodeURIComponent(publication.value)}/posts`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${key.value}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title,
-          body_content: body_html,
-          status: 'confirmed',
-          recipients: { email: { include_segment_ids: [segment] } },
-          email_settings: { email_subject_line: subject },
-        }),
+    res = await fetch(`${BEEHIIV_API_ROOT}/publications/${encodeURIComponent(publication)}/posts`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
       },
-    );
+      body: JSON.stringify({
+        title,
+        body_content: body_html,
+        status: 'confirmed',
+        recipients: { email: { include_segment_ids: [segment] } },
+        email_settings: { email_subject_line: subject },
+      }),
+    });
   } catch {
     return { sent: false, status: 'unreachable', detail: null };
   }
