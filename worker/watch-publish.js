@@ -127,16 +127,24 @@ export async function publishBrief(env, { slug, actor = 'manual', force = false,
   const config = watchConfig(env);
   const snapshot = parseSnapshot(brief.sources_json);
   const runs = summary ?? (await lastRunSummary(env));
-  const period = brief.period ?? patchCyclePeriod(now);
 
   // "Have we already put a brief out for this Oracle patch cycle" is what tells
   // an empty draft that is parse rot from an empty draft that is simply the day
   // after publication. It is read here rather than passed in, so both callers
   // get the same answer from the same query.
+  //
+  // THE PERIOD ASKED ABOUT IS NOW'S, NEVER THE DRAFT'S, and getting that wrong
+  // masks the exact failure the tripwire exists to catch. A draft carries the
+  // month it was OPENED in, and a draft opened in August by a manual run and
+  // still open in September would ask "did we publish anything for August",
+  // find the August brief, and read September's parse rot as a quiet month.
+  // checkStaleness names patchCyclePeriod(now) in the sentence it writes, so
+  // asking about anything else would also make the query disagree with the
+  // reason it produces.
   const live = await env.DB.prepare(
     "SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live' AND period = ?1",
   )
-    .bind(period)
+    .bind(patchCyclePeriod(now))
     .first();
 
   const breaker = evaluateBreaker({

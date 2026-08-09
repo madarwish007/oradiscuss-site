@@ -1078,6 +1078,47 @@ test('A ZERO ITEM CYCLE IN A MONTH WHOSE PATCH ALREADY DROPPED IS PARSE ROT, not
   assert.equal(earlyStub.to('hooks.example.com').length, 0, 'a quiet cycle must say nothing');
 });
 
+test('A DRAFT CARRIED OVER FROM LAST MONTH CANNOT MASK THIS MONTH\'S PARSE ROT', async () => {
+  // The tripwire asks "have we already covered THIS Oracle patch cycle". A draft
+  // carries the month it was OPENED in, not the month being judged, and the two
+  // come apart the moment a manual run opens a draft after a publication. This
+  // guard is the reachable case: publish in August, open a draft in late August
+  // by hand, then let September's cycle find a parser that has stopped matching.
+  const env = notifiableEnv();
+  const dead = '<html><body>redesigned</body></html>';
+
+  const august = new Date(thirdTuesdayOf(2026, 7).getTime() + 2 * 86400000);
+  const published = await cycle(env, stubFetch(oracleRoutes(august)), august);
+  assert.equal(published.cycle.verdict, 'published', 'the August brief must go out, or this guard is asleep');
+
+  // The founder runs the drafting job by hand a week later. The page is already
+  // rotten, so the draft opens empty and carries period 2026-08.
+  const lateAugust = new Date(august.getTime() + 7 * 86400000);
+  await runWatch(env, { fetcher: stubFetch({ [ORACLE_ALERT_INDEX]: { body: dead } }), now: lateAugust });
+  const carried = await env.DB.prepare("SELECT period, item_count FROM watch_brief WHERE status = 'draft'").first();
+  assert.equal(carried.period, '2026-08', 'the carried draft must be labelled August, or this guard proves nothing');
+  assert.equal(carried.item_count, 0);
+  const liveAugust = await env.DB.prepare(
+    "SELECT COUNT(*) AS n FROM watch_brief WHERE status = 'live' AND period = '2026-08'",
+  ).first();
+  assert.equal(liveAugust.n, 1, 'the August brief must be live, which is the thing that could mask September');
+
+  // September's cycle, two days after Oracle's September release day.
+  const september = new Date(thirdTuesdayOf(2026, 8).getTime() + 2 * 86400000);
+  assert.equal(september.toISOString().slice(0, 10), '2026-09-17', 'the third Thursday of September 2026 moved');
+  const stub = stubFetch({ ...oracleRoutes(september), [ORACLE_ALERT_INDEX]: { body: dead } });
+  const out = await cycle(env, stub, september);
+
+  assert.equal(out.cycle.verdict, 'held', 'September parse rot was read as a quiet month');
+  const row = await lastCycle(env);
+  assert.match(
+    row.reasons,
+    /Oracle's release day for 2026-09 was 2026-09-15/,
+    `the tripwire must judge the CURRENT cycle, got: ${row.reasons}`,
+  );
+  assert.equal(stub.to('hooks.example.com').length, 1, 'and he must be told');
+});
+
 test('A MISSING SEGMENT ID HOLDS THE SEND AND NOT THE PUBLISH, and the split is visible in the record', async () => {
   const env = notifiableEnv({ BEEHIIV_MEMBERS_SEGMENT_ID: '' });
 
