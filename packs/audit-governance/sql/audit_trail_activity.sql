@@ -35,6 +35,23 @@
 --   on DBA_AUDIT_TRAIL. Which one was read is reported, because "no records" and
 --   "read the wrong trail" look identical in a total of zero.
 --
+--   THE NAME OF THE TRAIL THAT WAS READ IS RETURNED BY THE READ ITSELF, as the
+--   first column of the same statement, rather than assigned beside it. Two
+--   reasons, and the second is the one that matters.
+--
+--   It keeps the view name out of the executable text of this file entirely, so
+--   the only place either trail view is named below is inside a dynamic literal.
+--   A guard in this product's test suite asserts exactly that, and it asserts it
+--   over the source rather than over one rendered fixture, so an edit that put a
+--   trail view back into a plain SELECT would be caught here rather than on a
+--   customer's database.
+--
+--   And the label is then a RESULT of the statement that opened the view, so
+--   this report cannot name a trail it did not read: a run that failed over to
+--   the traditional trail has no way to print the unified one. Which branch was
+--   taken is carried in a boolean below, not by comparing that label back to a
+--   name written in this file.
+--
 -- NOT ONE ROW BELOW IS GRADED. A busy trail is not a finding and a quiet one is
 -- not either: how much a database should be recording depends on what it is
 -- for. The counts are the answer, and the reader is the one who knows the rest.
@@ -58,6 +75,7 @@ DECLARE
   l_cnt   t_num;
   n       NUMBER := 0;
   src     VARCHAR2(30) := 'none';
+  l_unified BOOLEAN := FALSE;
 
   -- Ids have to survive the pipe-delimited line format and the briefing's
   -- id-keyed metric pool, so the characters that would break either one are
@@ -70,22 +88,22 @@ DECLARE
 BEGIN
   BEGIN
     EXECUTE IMMEDIATE q'[
-      SELECT COUNT(*) FROM unified_audit_trail
-       WHERE event_timestamp >= SYSDATE - &window_days]' INTO n;
-    src := 'UNIFIED_AUDIT_TRAIL';
+      SELECT 'UNIFIED_AUDIT_TRAIL', COUNT(*) FROM unified_audit_trail
+       WHERE event_timestamp >= SYSDATE - &window_days]' INTO src, n;
+    l_unified := TRUE;
   EXCEPTION WHEN OTHERS THEN
     BEGIN
       EXECUTE IMMEDIATE q'[
-        SELECT COUNT(*) FROM dba_audit_trail
-         WHERE timestamp >= SYSDATE - &window_days]' INTO n;
-      src := 'DBA_AUDIT_TRAIL';
+        SELECT 'DBA_AUDIT_TRAIL', COUNT(*) FROM dba_audit_trail
+         WHERE timestamp >= SYSDATE - &window_days]' INTO src, n;
+      l_unified := FALSE;
     EXCEPTION WHEN OTHERS THEN
       src := 'none';
     END;
   END;
 
   IF src = 'none' THEN
-    DBMS_OUTPUT.PUT_LINE('CHK|TRAIL_SOURCE|NA|Audit trail source|neither UNIFIED_AUDIT_TRAIL nor DBA_AUDIT_TRAIL could be read by this account, so nothing below was collected. Grant the AUDIT_VIEWER role, or SELECT on the trail view your database writes to, and this tier reports on the next run.');
+    DBMS_OUTPUT.PUT_LINE('CHK|TRAIL_SOURCE|NA|Audit trail source|neither trail view could be read by this account, so nothing below was collected. Grant the AUDIT_VIEWER role, or SELECT on the trail view your database writes to, and this tier reports on the next run.');
     RETURN;
   END IF;
 
@@ -104,7 +122,7 @@ BEGIN
   -- between runs and two collections of the same database could not be
   -- compared. The tiebreaker is cheap and the instability is not.
   -- ------------------------------------------------------------------------
-  IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+  IF l_unified THEN
     EXECUTE IMMEDIATE q'[
       SELECT action_name, COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days
@@ -131,7 +149,7 @@ BEGIN
   -- ------------------------------------------------------------------------
   -- Top database users.
   -- ------------------------------------------------------------------------
-  IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+  IF l_unified THEN
     EXECUTE IMMEDIATE q'[
       SELECT dbusername, COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days
@@ -159,7 +177,7 @@ BEGIN
   -- failed logon and a successful one share the LOGON action name and the
   -- ranking would fold them together.
   -- ------------------------------------------------------------------------
-  IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+  IF l_unified THEN
     EXECUTE IMMEDIATE q'[
       SELECT COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days
@@ -184,7 +202,7 @@ BEGIN
   -- which definition produced the number is the difference between a fact and a
   -- number somebody has to reverse engineer.
   -- ------------------------------------------------------------------------
-  IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+  IF l_unified THEN
     EXECUTE IMMEDIATE q'[
       SELECT COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days

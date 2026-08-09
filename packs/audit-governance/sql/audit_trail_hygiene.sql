@@ -29,8 +29,13 @@
 --   The arrival rate is derived from the windowed count instead, which keeps
 --   the expensive read to the two aggregates above.
 --
---   Every trail read here is native dynamic SQL wrapped in its own handler, for
---   the reason set out in sql/audit_trail_activity.sql.
+--   Every trail read here is native dynamic SQL wrapped in its own handler, and
+--   the name of the trail that was read is returned by the read itself as its
+--   first column rather than assigned beside it, both for the reasons set out at
+--   length in sql/audit_trail_activity.sql. The short version: neither trail
+--   view is named anywhere in the executable text of this file, only inside the
+--   dynamic literals, and the label the report prints is a result of the
+--   statement that opened the view rather than an assumption made next to it.
 --
 -- NO ROW HERE IS GRADED. How long a trail should be kept is set by the estate's
 -- own retention policy, which this script has not been given, and a trail
@@ -117,22 +122,25 @@ DECLARE
   v_cnt   NUMBER := NULL;
   v_ts    VARCHAR2(64) := 'none recorded';
   src     VARCHAR2(30) := 'none';
+  l_unified BOOLEAN := FALSE;
 BEGIN
   BEGIN
     EXECUTE IMMEDIATE q'[
-      SELECT NVL(TO_CHAR(MIN(event_timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
+      SELECT 'UNIFIED_AUDIT_TRAIL',
+             NVL(TO_CHAR(MIN(event_timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
              NVL(TO_CHAR(MAX(event_timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
              CAST(MAX(event_timestamp) AS DATE) - CAST(MIN(event_timestamp) AS DATE)
-        FROM unified_audit_trail]' INTO v_old, v_new, v_span;
-    src := 'UNIFIED_AUDIT_TRAIL';
+        FROM unified_audit_trail]' INTO src, v_old, v_new, v_span;
+    l_unified := TRUE;
   EXCEPTION WHEN OTHERS THEN
     BEGIN
       EXECUTE IMMEDIATE q'[
-        SELECT NVL(TO_CHAR(MIN(timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
+        SELECT 'DBA_AUDIT_TRAIL',
+               NVL(TO_CHAR(MIN(timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
                NVL(TO_CHAR(MAX(timestamp), 'YYYY-MM-DD HH24:MI:SS'), 'none'),
                MAX(timestamp) - MIN(timestamp)
-          FROM dba_audit_trail]' INTO v_old, v_new, v_span;
-      src := 'DBA_AUDIT_TRAIL';
+          FROM dba_audit_trail]' INTO src, v_old, v_new, v_span;
+      l_unified := FALSE;
     EXCEPTION WHEN OTHERS THEN
       src := 'none';
     END;
@@ -153,7 +161,7 @@ BEGIN
 
   IF src <> 'none' THEN
     BEGIN
-      IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+      IF l_unified THEN
         EXECUTE IMMEDIATE q'[
           SELECT COUNT(*) FROM unified_audit_trail
            WHERE event_timestamp >= SYSDATE - &window_days]' INTO v_win;

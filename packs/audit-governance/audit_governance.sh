@@ -174,7 +174,14 @@ case "$AUDIT_TOP_N" in
   ''|*[!0-9]*) err "AUDIT_TOP_N must be a whole number of rows. Got: $AUDIT_TOP_N"; exit 2 ;;
 esac
 
-if [ -z "$RENDER_ONLY" ] && [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
+# The client is required by the modes that CONTACT the database, and only by
+# those. --render-only rebuilds outputs from a collection that already ran, and
+# --dry-run only prints the plan; neither opens a connection, so neither has any
+# use for sqlplus. Demanding it anyway would refuse to show a customer the plan
+# for the exact reason they are usually reading it: to see what this would do
+# before pointing it at anything. --render-only was already exempt here and
+# --dry-run was not, which is the whole of the defect.
+if [ -z "$RENDER_ONLY" ] && [ "$DRY_RUN" -eq 0 ] && [ ! -x "$ORACLE_HOME/bin/sqlplus" ]; then
   err "sqlplus not found at \$ORACLE_HOME/bin/sqlplus ($ORACLE_HOME) - check ORACLE_HOME in config"
   exit 2
 fi

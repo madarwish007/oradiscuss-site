@@ -36,6 +36,12 @@
 --   to a trail view the session cannot see fails at compile time and would take
 --   the object half of this tier down with it.
 --
+--   The name of the trail that was read is returned by that read as its first
+--   column, for the same reason and with the same effect: neither trail view is
+--   named in the executable text of this file, only inside the dynamic literals,
+--   and the label this half prints is a result of the statement that opened the
+--   view rather than an assumption written beside it.
+--
 -- License: single-user license, modify allowed, no redistribution.
 -- ============================================================================
 
@@ -110,6 +116,7 @@ DECLARE
   l_cnt   t_num;
   n       NUMBER := 0;
   src     VARCHAR2(30) := 'none';
+  l_unified BOOLEAN := FALSE;
 
   FUNCTION as_id(p IN VARCHAR2) RETURN VARCHAR2 IS
   BEGIN
@@ -118,21 +125,21 @@ DECLARE
 BEGIN
   BEGIN
     EXECUTE IMMEDIATE q'[
-      SELECT COUNT(*) FROM unified_audit_trail
+      SELECT 'UNIFIED_AUDIT_TRAIL', COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days
          AND (action_name LIKE 'CREATE%' OR action_name LIKE 'ALTER%'
            OR action_name LIKE 'DROP%' OR action_name LIKE 'TRUNCATE%'
-           OR action_name LIKE 'RENAME%')]' INTO n;
-    src := 'UNIFIED_AUDIT_TRAIL';
+           OR action_name LIKE 'RENAME%')]' INTO src, n;
+    l_unified := TRUE;
   EXCEPTION WHEN OTHERS THEN
     BEGIN
       EXECUTE IMMEDIATE q'[
-        SELECT COUNT(*) FROM dba_audit_trail
+        SELECT 'DBA_AUDIT_TRAIL', COUNT(*) FROM dba_audit_trail
          WHERE timestamp >= SYSDATE - &window_days
            AND (action_name LIKE 'CREATE%' OR action_name LIKE 'ALTER%'
              OR action_name LIKE 'DROP%' OR action_name LIKE 'TRUNCATE%'
-             OR action_name LIKE 'RENAME%')]' INTO n;
-      src := 'DBA_AUDIT_TRAIL';
+             OR action_name LIKE 'RENAME%')]' INTO src, n;
+      l_unified := FALSE;
     EXCEPTION WHEN OTHERS THEN
       src := 'none';
     END;
@@ -149,7 +156,7 @@ BEGIN
     ' recorded in the last &window_days days, under the same definition used elsewhere in this pack: action names beginning CREATE, ALTER, DROP, TRUNCATE or RENAME.');
   DBMS_OUTPUT.PUT_LINE('MET|CHG_AUDITED_DDL|records|' || n || '|records');
 
-  IF src = 'UNIFIED_AUDIT_TRAIL' THEN
+  IF l_unified THEN
     EXECUTE IMMEDIATE q'[
       SELECT dbusername, action_name, COUNT(*) FROM unified_audit_trail
        WHERE event_timestamp >= SYSDATE - &window_days
