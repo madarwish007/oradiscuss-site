@@ -3,8 +3,11 @@ dist/
 # generated types
 .astro/
 
-# dependencies
+# dependencies. Both forms on purpose: this worktree carries node_modules as a
+# SYMLINK to a sibling checkout, and a trailing-slash pattern does not match a
+# symlink, so `git add -A` committed it once.
 node_modules/
+node_modules
 
 # logs
 npm-debug.log*
