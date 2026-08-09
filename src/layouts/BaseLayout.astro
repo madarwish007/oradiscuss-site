@@ -56,9 +56,15 @@ const imageURL = new URL(image, siteOrigin).href;
 <meta name="twitter:description" content={description} />
 <meta name="twitter:image" content={imageURL} />
 
+<!-- The tab icon is the TWO ARC file. A favicon is never drawn larger than
+     about 24px and the three arc form greys out below that, so /logo.svg is
+     deliberately not used here. mask-icon is Safari's monochrome pinned tab,
+     so it takes the mark's ink rather than an accent. theme-color paints the
+     mobile browser chrome and is matched to the header ground it sits against.
+     Both attributes carried the dropped Oracle red until Phase 2b. -->
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-<link rel="mask-icon" href="/favicon.svg" color="#C74634" />
-<meta name="theme-color" content="#C74634" />
+<link rel="mask-icon" href="/favicon.svg" color="#1C1917" />
+<meta name="theme-color" content="#FAFBFD" />
 <meta name="google-site-verification" content="mQYy7TOgJ0hwpmQH37WEmgHRsuEWktzpNxDRKpUAkKk" />
 
 <link rel="alternate" type="application/rss+xml" title="OraDiscuss RSS" href="/rss.xml" />

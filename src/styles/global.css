@@ -33,6 +33,23 @@
      4.14:1 on that stop and failed. This clears 4.96:1 there. */
   --eyebrow-deep:#FFA592;
 
+  /* ---- Brand lockup, Phase 2b ----
+     The mark and the wordmark are ONE object, so they land together: a new
+     mark beside a wordmark still accented in the dropped Oracle red would put
+     the retired colour right next to the thing that retires it.
+     This is the action colour ratified 8 Aug 2026, and it is SCOPED TO THE
+     LOCKUP on purpose. --act above still carries Oracle red for the rest of
+     the site. That is un-removed code rather than an open question, but
+     repainting every button, eyebrow and chip in the same commit as the logo
+     would put a whole-site look change inside a change the founder asked a
+     narrow question about. Measured on the rendered pixels, on each ground the
+     wordmark actually sits on:
+       --brand-act #8A4B12   6.55 on --field   6.16 on --field-2 (the footer)
+       the red it replaces   4.66 on --field   4.38 on --field-2, which fails
+     The mark's signal #E0A020 is NOT here and never carries a word: it
+     measures 2.09 on the ground, so it is only ever read against ink mass. */
+  --brand-act:#8A4B12;
+
   /* Every muted colour above is sized against the DARKEST ground it is ever
      painted on, not against white, because a token that only passes on
      #FFFFFF fails in the footer and the marquee where the ground is
@@ -218,9 +235,13 @@ body > header{
 }
 .HI{max-width:1360px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;gap:24px}
 .logo{display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0;cursor:pointer}
+/* The mark. logo.svg carries the THREE ARC form, which is correct at the two
+   sizes this slot ever takes, 34px here and 30px below 767px. Anything at or
+   under 24px takes favicon.svg, the two arc file, because the three arc form
+   greys out down there. Proved as pixels in Showcase/brand/logo-contact-sheet.png. */
 .lm{width:34px;height:34px;background:url(/logo.svg) no-repeat center/contain;display:block;font-size:0;line-height:0;color:transparent;text-indent:-9999px;overflow:hidden;flex-shrink:0}
 .ln{font-family:var(--sora);font-size:19px;font-weight:700;color:var(--ink);font-style:normal;letter-spacing:-.03em;line-height:1}
-.ln em{font-style:normal;font-weight:700;color:var(--act)}
+.ln em{font-style:normal;font-weight:700;color:var(--brand-act)}
 
 nav{display:flex;gap:2px}
 nav a{

@@ -1,7 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" role="img" aria-label="OraDiscuss">
-  <rect width="36" height="36" rx="7" fill="#C74634"/>
-  <text x="18" y="23.2" text-anchor="middle" fill="#ffffff"
-        font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
-        font-size="17" font-weight="800" letter-spacing="-0.7">Od</text>
-  <rect x="9" y="28" width="18" height="1.6" rx="0.5" fill="#ffffff" opacity="0.9"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="OraDiscuss"><title>OraDiscuss</title><desc>A database cylinder whose bottom cap runs out into a speech tail, drawn as one outline. Three arcs: the top face and two seams. For 30px and up.</desc><path fill="#1C1917" fill-rule="evenodd" d="M2.551 6.294C2.551 3.719 7.915 1.6 14.434 1.6C20.952 1.6 26.317 3.719 26.317 6.294L26.317 22.454C26.317 22.947 26.12 23.436 25.735 23.904Q28.675 27.152 29.448 30.4Q22.693 28.659 18.106 26.918C14.491 27.382 10.524 27.134 7.449 26.251C4.375 25.369 2.551 23.955 2.551 22.454ZM2.551 12.473C2.551 15.047 7.915 17.166 14.434 17.166C20.952 17.166 26.317 15.047 26.317 12.473L26.317 10.037C26.317 12.612 20.952 14.73 14.434 14.73C7.915 14.73 2.551 12.612 2.551 10.037ZM2.551 17.463C2.551 20.038 7.915 22.157 14.434 22.157C20.952 22.157 26.317 20.038 26.317 17.463L26.317 15.027C26.317 17.602 20.952 19.721 14.434 19.721C7.915 19.721 2.551 17.602 2.551 15.027Z"/><ellipse cx="14.434" cy="6.294" rx="9.684" ry="3.825" fill="#E0A020"/></svg>

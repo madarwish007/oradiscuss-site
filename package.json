@@ -12,7 +12,8 @@
     "test": "node --test \"test/*.test.js\"",
     "astro": "astro",
     "build:showcase": "node scripts/showcase/build.mjs",
-    "test:showcase-guards": "bash scripts/showcase/selftest-guards.sh"
+    "test:showcase-guards": "bash scripts/showcase/selftest-guards.sh",
+    "build:brand": "node scripts/brand/build-logo.mjs && node scripts/brand/contact-sheet.mjs"
   },
   "dependencies": {
     "@astrojs/mdx": "^5.0.3",

@@ -1,6 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="OraDiscuss">
-  <rect width="32" height="32" rx="6" fill="#C74634"/>
-  <text x="16" y="22" text-anchor="middle" fill="#ffffff"
-        font-family="Inter, 'Helvetica Neue', Arial, sans-serif"
-        font-size="17" font-weight="800" letter-spacing="-0.6">Od</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="OraDiscuss"><title>OraDiscuss</title><desc>The same mark reduced for small sizes: two arcs, the top face and one thicker seam. For 16px to 24px.</desc><path fill="#1C1917" fill-rule="evenodd" d="M2.551 6.294C2.551 3.719 7.915 1.6 14.434 1.6C20.952 1.6 26.317 3.719 26.317 6.294L26.317 22.454C26.317 22.947 26.12 23.436 25.735 23.904Q28.675 27.152 29.448 30.4Q22.693 28.659 18.106 26.918C14.491 27.382 10.524 27.134 7.449 26.251C4.375 25.369 2.551 23.955 2.551 22.454ZM2.551 15.8C2.551 18.375 7.915 20.493 14.434 20.493C20.952 20.493 26.317 18.375 26.317 15.8L26.317 12.71C26.317 15.285 20.952 17.404 14.434 17.404C7.915 17.404 2.551 15.285 2.551 12.71Z"/><ellipse cx="14.434" cy="6.294" rx="9.684" ry="3.825" fill="#E0A020"/></svg>
