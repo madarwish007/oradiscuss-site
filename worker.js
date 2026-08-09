@@ -24,7 +24,7 @@ import { changelogPage } from './worker/changelog.js';
 import { handleRetryBatch } from './worker/webhook.js';
 import { withSecurityHeaders } from './worker/http.js';
 import { watchIndexPage, watchBriefPage } from './worker/watch-pages.js';
-import { runWatch } from './worker/watch.js';
+import { runWatchCycle } from './worker/watch-cycle.js';
 
 const BLOCKED = [
   /^\/wp-login\.php$/i,
@@ -119,27 +119,39 @@ export default {
     await handleRetryBatch(batch, env);
   },
 
-  // THE SECURITY WATCH CRON. It drafts and it stops.
+  // THE SECURITY WATCH CRON. It drafts, verifies, publishes, sends, and tells
+  // the founder what it did.
   //
-  // It cannot publish and it cannot mail anybody: publishing a brief is a
-  // founder gate (RUNBOOK, THE STANDING GATES), and the only code that flips a
-  // brief live or calls the list lives in worker/watch-publish.js behind a
-  // token, reached only by an HTTP request a person makes. Nothing in the call
-  // graph below touches either.
+  // FOUNDER RULING 9 Aug 2026, verbatim: "Monthly is okay, and that should be
+  // automated workflow without any human intervention, as a Founder, i need to
+  // get an aknowledgement about the updated kits only." That REVERSES his own
+  // 5 Aug standing gate, under which publishing a brief and sending it were
+  // founder-only actions. He was shown the gate and ruled anyway.
+  //
+  // THIS HANDLER CANNOT SKIP THE CIRCUIT BREAKER, and that is structural rather
+  // than a promise: worker/watch-cycle.js reaches publishing only through
+  // publishBrief, and publishBrief runs the breaker inside the one function in
+  // this repository that can write status = 'live'. A brief that fails any
+  // check stays a draft and the founder is told why.
   async scheduled(event, env) {
     try {
-      const summary = await runWatch(env);
+      const summary = await runWatchCycle(env);
       const failed = summary.sources.filter((s) => !s.ok).map((s) => s.id);
       console.log(
         'watch_run_complete',
         `sources=${summary.sources.length}`,
         `failed=${failed.join(',') || 'none'}`,
         `items_new=${summary.items_new}`,
-        `draft=${summary.brief?.slug ?? 'none'}`,
+        `brief=${summary.cycle.brief_slug ?? 'none'}`,
+        `verdict=${summary.cycle.verdict}`,
+        `send=${summary.cycle.send_status ?? 'none'}`,
+        `notify=${summary.cycle.notify_status}`,
       );
     } catch (err) {
       // A scheduled run that throws leaves no reply anybody would see, so the
-      // log line is the whole record. The next run is a week away.
+      // log line is the whole record. The next run is a month away, which is
+      // exactly why the cycle records itself in D1 as it goes rather than only
+      // at the end.
       console.error('watch_run_failed', err?.stack ?? err);
     }
   },

@@ -328,10 +328,14 @@ const ROUTES = {
   'POST /api/paddle/webhook': (request, env) => handleWebhook(request, env, 'paddle'),
 
   /* Phase 8 Security Watch. All three are behind WATCH_ADMIN_TOKEN and all
-     three refuse when it is not set, because an absent token must mean
-     publishing is impossible rather than unguarded. Publishing is a founder
-     gate: nothing scheduled reaches postPublish, and postWatchRun runs the
-     drafting job that cannot publish. */
+     three refuse when it is not set, because an absent token must mean the
+     manual override is impossible rather than unguarded.
+
+     Founder ruling 9 Aug 2026 made publication AUTOMATIC behind the circuit
+     breaker, so postPublish is the OVERRIDE rather than the only door: the
+     scheduled cycle publishes on its own, and this route is what puts out a
+     brief the breaker held, on the founder's own force flag and recorded as
+     such. postWatchRun still runs the drafting job and stops there. */
   'POST /api/watch/publish': (request, env) => postPublish(request, env),
   'GET /api/watch/status': (request, env) => getWatchStatus(request, env),
   'POST /api/watch/run': (request, env) => postWatchRun(request, env),

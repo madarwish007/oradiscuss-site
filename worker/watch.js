@@ -1,9 +1,15 @@
 // THE SECURITY WATCH PIPELINE. It reads the registry, fetches, and writes
-// DRAFTS. It cannot publish, and there is no branch below that sets a brief
-// live or sends anything to anybody: publishing is a founder gate and lives in
-// worker/watch-publish.js, behind a token, reached only by an HTTP call a
-// person makes. A guard in test/watch.test.js sweeps this file for the words
-// that would break that separation.
+// DRAFTS. IT STOPS THERE, and that is a layering decision rather than a gate:
+// there is no branch below that sets a brief live or mails anybody, because
+// both of those live in worker/watch-publish.js behind the circuit breaker, and
+// worker/watch-cycle.js is what joins the two on the schedule. A guard in
+// test/watch.test.js sweeps this file for the words that would break the
+// separation.
+//
+// Founder ruling 9 Aug 2026 lifted the old publish gate and made publication
+// automatic behind that breaker. Nothing in THIS file changed as a result: a
+// drafting job that could also publish would be a drafting job whose failures
+// reach the public site, which is the shape the breaker exists to prevent.
 //
 // THREE PROPERTIES THIS FILE EXISTS TO HAVE:
 //
@@ -546,9 +552,39 @@ export async function readLiveBrief(env, slug) {
     .first();
 }
 
+// THE LAST RECORDED RUN OF EVERY SOURCE, in the shape runWatch returns, so the
+// circuit breaker has ONE input shape whichever path called it.
+//
+// The scheduled cycle passes the summary of the run it just did, which is the
+// truthful reading of THIS cycle. The manual override has no run in flight, so
+// it reads this instead, and it is worth saying plainly that on that path the
+// evidence is as old as the last run rather than as old as the request.
+export async function lastRunSummary(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT r.source_id, r.ran_at, r.ok, r.http_status, r.items_found, r.items_new, r.error
+       FROM watch_source_run r
+       JOIN (SELECT source_id, MAX(id) AS id FROM watch_source_run GROUP BY source_id) latest
+         ON latest.id = r.id
+      ORDER BY r.source_id`,
+  ).all();
+
+  return {
+    sources: (results ?? []).map((r) => ({
+      id: r.source_id,
+      ran_at: r.ran_at,
+      ok: r.ok === 1,
+      http_status: r.http_status,
+      items_found: r.items_found,
+      items_new: r.items_new,
+      error: r.error,
+    })),
+  };
+}
+
 // The founder's view, behind the token in worker/watch-publish.js. It reports
 // the registry INCLUDING the sources that are not watched, because a source
-// nobody watches must be visible as such, and the last run of each watched one.
+// nobody watches must be visible as such, the last run of each watched one, and
+// the cycle ledger: what the automation decided, when, and why it held.
 export async function watchStatus(env) {
   const drafts = await env.DB.prepare(
     `SELECT slug, title, period, item_count, created_at, updated_at
@@ -567,11 +603,21 @@ export async function watchStatus(env) {
   ).all();
 
   const published = await env.DB.prepare(
-    `SELECT slug, title, published_at, sent_at, send_status
+    `SELECT slug, title, published_at, published_by, item_count, sent_at, send_status
        FROM watch_brief
       WHERE status = 'live'
       ORDER BY published_at DESC, id DESC
       LIMIT 10`,
+  ).all();
+
+  // The acknowledgement ledger. A cycle that held is here with its reasons, and
+  // so is a cycle that published and could not send, which is the state this
+  // view exists to make visible.
+  const cycles = await env.DB.prepare(
+    `SELECT ran_at, period, brief_slug, verdict, item_count, items_new, reasons, send_status, notified, notify_status
+       FROM watch_cycle
+      ORDER BY id DESC
+      LIMIT 20`,
   ).all();
 
   return {
@@ -579,5 +625,6 @@ export async function watchStatus(env) {
     last_run_by_source: runs.results ?? [],
     drafts: drafts.results ?? [],
     published: published.results ?? [],
+    cycles: cycles.results ?? [],
   };
 }

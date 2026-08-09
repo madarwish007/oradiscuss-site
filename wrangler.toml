@@ -45,6 +45,12 @@ enabled = true
 
 [vars]
 ENVIRONMENT = "production"
+# The origin the SCHEDULED cycle builds the brief link from. A cron has no
+# Request, so this cannot be derived the way the HTTP paths derive it, and a
+# member email whose link points at the wrong host is not recoverable once it is
+# sent. worker/watch-breaker.js defaults to this exact value when the var is
+# absent, and accepts https only.
+SITE_ORIGIN = "https://oradiscuss.com"
 
 [[d1_databases]]
 binding = "DB"
@@ -115,19 +121,28 @@ max_retries = 5
 # ARMING IT IS A FOUNDER ACTION, because a production deploy is one. Nothing in
 # this branch armed it: no seat deployed anything.
 #
-# 0 6 * * 1 is 06:00 UTC every Monday. It runs the DRAFTING job and only the
-# drafting job: worker.js `scheduled` calls runWatch, which fetches the registry
-# sources and writes a draft. It cannot publish and it cannot mail the list.
-# Publishing the weekly brief is a founder gate (RUNBOOK, THE STANDING GATES),
-# so the schedule decides when a draft is READY, never when one goes out.
+# WHAT IT RUNS, AND ON WHOSE AUTHORITY. worker.js `scheduled` calls
+# runWatchCycle, which drafts, runs the CIRCUIT BREAKER, and then publishes and
+# mails the member list when every check passes. Founder ruling 9 Aug 2026,
+# verbatim: "Monthly is okay, and that should be automated workflow without any
+# human intervention, as a Founder, i need to get an aknowledgement about the
+# updated kits only." That reverses his own 5 Aug gate under which publishing
+# and sending were founder-only, and this deploy is the moment it takes effect.
 #
 # WHAT THIS SCHEDULE DOES AND DOES NOT PROMISE, stated plainly because a live
-# legal page uses the word "weekly": a weekly cron guarantees a weekly DRAFT. It
-# cannot guarantee a weekly PUBLISHED brief, because a person publishes. See the
-# session report and open item SC4 in SESSION_HANDOFF.md.
+# legal page carries a cadence word: a monthly cron guarantees a monthly CYCLE.
+# It does not guarantee a monthly PUBLISHED brief, because a cycle whose checks
+# fail HOLDS the brief as a draft and tells the founder why, and a month in
+# which Oracle shipped nothing new publishes nothing. Both are correct outcomes
+# and neither is silent. See legal ledger row 9b in SESSION_HANDOFF.md.
 #
-# Verifying the pipeline needs NO cron at all: POST /api/watch/run takes exactly
-# the same path behind the same token.
+# WHAT MUST BE INSTALLED BEFORE THIS CRON MEANS ANYTHING ON PRODUCTION:
+# migrations 0004 and 0005, BEEHIIV_MEMBERS_SEGMENT_ID (without it the brief
+# publishes and the send holds at `no_segment`), and WATCH_NOTIFY_WEBHOOK if the
+# acknowledgement is to reach anywhere other than the Workers log and D1.
+#
+# Verifying the DRAFTING half needs no cron at all: POST /api/watch/run takes
+# exactly the same path behind the same token, and stops at the draft.
 [triggers]
 # MONTHLY, TIMED TWO DAYS AFTER ORACLE PUBLISHES. Founder ruling 9 Aug 2026.
 #
@@ -163,6 +178,11 @@ enabled = true
 
 [env.preview.vars]
 ENVIRONMENT = "preview"
+# SITE_ORIGIN is deliberately NOT set here, and the reason is worth writing down
+# rather than leaving as an omission. Preview has no cron, so no scheduled cycle
+# ever builds a link on this environment, and inventing a preview hostname that
+# nobody has verified would put an unchecked claim in the config. If a preview
+# rehearsal of the send is ever wanted, set it then, to the host that answered.
 
 [[env.preview.d1_databases]]
 binding = "DB"
@@ -206,7 +226,13 @@ max_retries = 5
 # is not a decision. An empty list is the difference between "we decided not to"
 # and "nobody thought about it".
 #
-# To watch the pipeline run on preview, call POST /api/watch/run with the
-# WATCH_ADMIN_TOKEN. It is the same code path the cron takes.
+# AN EMPTY LIST HERE IS ALSO THE KILL SWITCH for the autopublish cycle on this
+# environment, and it is why no separate on/off flag was invented for it: with
+# no trigger, nothing runs, and nothing can publish except a person with the
+# token.
+#
+# To watch the DRAFTING job run on preview, call POST /api/watch/run with the
+# WATCH_ADMIN_TOKEN. It takes the same path the cycle's first stage takes and
+# stops before the breaker, so it cannot publish anything.
 [env.preview.triggers]
 crons = []
