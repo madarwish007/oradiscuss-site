@@ -122,9 +122,30 @@ def census(path):
     }
 
 
-def check(path):
+def check(path, scan_only=False):
+    """scan_only skips the two anti-vacuity assertions.
+
+    They exist so that a blank image, or one that is not the brand mark at all,
+    fails loudly instead of reporting a reassuring zero. That is exactly right
+    for public/logo.svg and the contact sheet, and exactly wrong for an article
+    cover or an ACE badge, which are art rather than the mark and legitimately
+    contain no amber face. Without this mode the register could only ever walk
+    the root of public/, which is how thirteen branded article covers carrying
+    the dropped red stayed outside every sweep. The red rule itself is NOT
+    relaxed here: one implementation, one hue band, no second measurement that
+    could quietly disagree with the first.
+    """
     r = census(path)
     problems = []
+    if scan_only:
+        if r['red_family_pixels']:
+            problems.append(
+                '%s: %d Oracle red family pixels. Largest offending colour: %s at %s degrees '
+                'from red, %d pixels.'
+                % (path, r['red_family_pixels'],
+                   r['largest_red_run']['rgb'], r['largest_red_run']['degrees_from_red'],
+                   r['largest_red_run']['pixels']))
+        return r, problems
     if r['ink_pixels'] < MIN_INK_PIXELS:
         problems.append(
             '%s: %d ink pixels, below %d. The image is blank or the mark did not render, '
@@ -147,12 +168,14 @@ def check(path):
 
 
 def main(argv):
+    scan_only = '--scan-only' in argv
+    argv = [a for a in argv if a != '--scan-only']
     if not argv:
-        raise SystemExit('usage: check-brand-red.py IMAGE [IMAGE...]')
+        raise SystemExit('usage: check-brand-red.py [--scan-only] IMAGE [IMAGE...]')
     images = []
     problems = []
     for path in argv:
-        r, found = check(path)
+        r, found = check(path, scan_only=scan_only)
         images.append(r)
         problems.extend(found)
     out = {

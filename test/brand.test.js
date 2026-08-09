@@ -198,6 +198,135 @@ test('the brand red register is exhaustive, so a red asset cannot hide by not be
   }
 });
 
+// ---------------------------------------------------------------------------
+// THE SAME REGISTER, ONE DIRECTORY DEEPER, WHERE THIRTEEN BRANDED COVERS WERE
+// SITTING OUTSIDE EVERY SWEEP.
+//
+// The test above reads readdirSync(PUBLIC), which is NOT recursive, so it only
+// ever saw the root. public/images/blog/ holds the per-article cover images,
+// and ArticleLayout.astro branches to data.cover BEFORE falling back to the
+// site card, so each of those files is the og:image for its own article. They
+// are per-article social cards of exactly the class that was just fixed at the
+// site level, and no red, credential or brand sweep in this project had ever
+// looked at them.
+//
+// Measured on 9 Aug 2026 with the project's own checker, and LOOKED AT on a
+// contact sheet rather than judged by filename:
+//
+//   THIRTEEN are OraDiscuss-branded covers in the RETIRED identity: the red
+//   "Od" square top right, ORADISCUSS.COM bottom left, red furniture on a dark
+//   ground. These are the defect. They belong to Phase 2b and are deliberately
+//   NOT fixed here, because regenerating them amber while global.css still
+//   declares --act:#C74634 would put amber covers on a red site.
+//
+//   FIVE are Oracle's own product screenshots and logotypes, where the red is
+//   Oracle's UI being documented, not our brand borrowing it. Those are
+//   legitimate and must not be swept.
+//
+// Every one is pinned with its measured count, so a new red asset cannot hide,
+// a pinned one cannot quietly get redder, and FIXING one fails this test.
+// ---------------------------------------------------------------------------
+const KNOWN_RED_NESTED = {
+  // Category A: our own covers, retired identity. Fixing these closes the pin.
+  'images/blog/awr-is-talking-are-you-listening.png': 130249,
+  'images/blog/bidirectional-replication-12c.png': 106574,
+  'images/blog/cover-part3.png': 55984,
+  'images/blog/dbcs-to-exacs-migration-untold-story.png': 200285,
+  'images/blog/enable-disable-options-with-chopt.png': 116286,
+  'images/blog/fix-ora-01017-asmsnmp-missing.png': 524012,
+  'images/blog/gc-buffer-busy-acquired-rac.png': 201608,
+  'images/blog/online-partition-dbms-redefinition.png': 77727,
+  'images/blog/rman-backup-progress-monitoring.png': 80528,
+  'images/blog/ZDT02.png': 10851,
+  'images/blog/oradiscuss-zdt-oms-24108-cover-1920x764.png': 9528,
+  'images/blog/oradiscuss-db-19-28-to-19-30-cover.png': 36031,
+  'images/blog/oradiscuss-db-19-28-to-19-30-cover-1920x764.png': 36033,
+  'images/blog/oradiscuss-omr-24ai-cover (1).png': 37612,
+  // Category B: Oracle's own product surfaces. Red here is theirs, not ours.
+  'images/blog/OEM24aiR8.png': 39805,
+  'images/blog/oem24ai-1.png': 51262,
+  'images/blog/oem24ai.png': 2747,
+  'images/blog/OEM_Arch01.png': 40,
+  'images/blog/OCI_DBSystem_masked.png': 1,
+};
+
+test('the nested image register is exhaustive, so an article cover cannot hide in a subdirectory', () => {
+  const found = [];
+  const walk = (dir, rel) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      const relPath = rel ? `${rel}/${e.name}` : e.name;
+      if (e.isDirectory()) walk(full, relPath);
+      else if (/\.(png|jpg|jpeg|webp)$/i.test(e.name) && rel) found.push({ full, relPath });
+    }
+  };
+  walk(PUBLIC, '');
+  assert.ok(
+    found.length >= 15,
+    `only ${found.length} nested image assets found under ${PUBLIC}, so this register is measuring nothing`
+  );
+
+  const script = join(SCRIPTS, 'check-brand-red.py');
+  const r = spawnSync('python3', [script, '--scan-only', ...found.map((f) => f.full)], { encoding: 'utf8' });
+  let report = null;
+  try { report = JSON.parse(r.stdout); } catch { /* reported below */ }
+  assert.notEqual(report, null, `the brand colour guard produced no JSON report.\n${r.stderr || ''}`);
+  assert.equal(report.images.length, found.length, 'the checker did not report on every nested asset');
+
+  const byPath = new Map(found.map((f) => [f.full, f.relPath]));
+  const offenders = [];
+  for (const img of report.images) {
+    const rel = byPath.get(img.path) ?? img.path;
+    const pinned = KNOWN_RED_NESTED[rel];
+    if (pinned === undefined) {
+      if (img.red_family_pixels > 0) {
+        offenders.push(
+          `${rel}: ${img.red_family_pixels} red family pixels and it is not in KNOWN_RED_NESTED. ` +
+          `If it is a new asset, measure it and pin it with a reason. If it is one of ours, it should not be red at all.`
+        );
+      }
+      continue;
+    }
+    if (img.red_family_pixels !== pinned) {
+      offenders.push(
+        `${rel}: ${img.red_family_pixels} red family pixels, pinned at ${pinned}. ` +
+        `If this cover was REDRAWN in the ratified palette, delete its pin, which is how Phase 2b closes for it.`
+      );
+    }
+  }
+  assert.deepEqual(offenders, []);
+
+  for (const rel of Object.keys(KNOWN_RED_NESTED)) {
+    assert.ok(
+      found.some((f) => f.relPath === rel),
+      `KNOWN_RED_NESTED names ${rel}, which is not under ${PUBLIC} any more. Delete the entry.`
+    );
+  }
+});
+
+test('every article cover an article actually points at is registered', () => {
+  // Anti-vacuity from the other direction: the register above walks the
+  // filesystem, so a cover referenced by an article but MISSING from disk would
+  // simply not be walked and nothing would notice. This walks the articles.
+  const blog = join(REPO, 'src', 'content', 'blog');
+  const covers = [];
+  for (const f of readdirSync(blog)) {
+    if (!/\.mdx?$/.test(f)) continue;
+    const m = readFileSync(join(blog, f), 'utf8').match(/^cover:\s*(\S+)\s*$/m);
+    if (m) covers.push({ article: f, cover: m[1] });
+  }
+  assert.ok(covers.length >= 10, `only ${covers.length} articles declare a cover, so this guard is nearly asleep`);
+
+  const missing = covers.filter(
+    (c) => c.cover.startsWith('/') && !existsSync(join(PUBLIC, c.cover.replace(/^\//, '')))
+  );
+  assert.deepEqual(
+    missing.map((c) => `${c.article} -> ${c.cover}`),
+    [],
+    'article(s) declare a cover file that does not exist, so their og:image is a 404'
+  );
+});
+
 // ===========================================================================
 // 2. THE MARK FILES THEMSELVES
 // ===========================================================================
