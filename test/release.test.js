@@ -1163,6 +1163,9 @@ test('nothing this branch adds carries an em dash', () => {
   ];
   for (const file of files) {
     const src = readFileSync(file, 'utf8');
-    assert.ok(!src.includes('—'), `${relative(REPO, file)} contains an em dash`);
+    // The needle is an ESCAPE rather than the character. The rule is "no em
+    // dashes anywhere", and a guard that carries one to search for it puts the
+    // character in the repository, which is the thing being forbidden.
+    assert.ok(!src.includes('\u2014'), `${relative(REPO, file)} contains an em dash`);
   }
 });
