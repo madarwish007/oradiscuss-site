@@ -39,6 +39,16 @@ const VERSION_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$/;
 const NOT_CONFIGURED =
   'The release pipeline is not open on this Worker: WATCH_ADMIN_TOKEN is not set. No release was changed and nothing was sent.';
 
+// Both routes read notified_at and notify_status, which migration 0005 adds.
+// Neither preview nor production has it yet, so without this the first call
+// either route ever received would be a 500 carrying a raw SQLite message.
+// A named cause and a 503 is what the rest of this Worker does with a
+// dependency that is not wired, and it names the exact remedy.
+const MIGRATION_MISSING =
+  'The release pipeline is not open on this database: migrations/0005_release_notify.sql is not applied. Nothing was changed and nothing was sent.';
+
+const isMissingColumn = (err) => /no such column/i.test(String(err?.message ?? err));
+
 const GATE = { what: NOT_CONFIGURED, tag: 'release_admin' };
 
 const authorise = (request, env) => authoriseAdmin(request, env, GATE);
@@ -57,6 +67,22 @@ export const REVIEW_ENTITLEMENT_TTL_SECONDS = 900;
 const REVIEW_TIER = 2;
 
 /* ------------------------------------------------------------- the reader */
+
+// Answers { release } or { refusal }, so a database that has not had migration
+// 0005 applied refuses in the same shape every other unwired dependency does
+// rather than throwing a raw SQLite message at the caller. Both routes go
+// through here; neither calls readRelease directly.
+async function loadRelease(env, pack, version) {
+  try {
+    return { release: await readRelease(env, pack, version) };
+  } catch (err) {
+    if (isMissingColumn(err)) {
+      console.error('release_migration_missing', String(err?.message ?? err));
+      return { refusal: fail(503, 'not_configured', MIGRATION_MISSING) };
+    }
+    throw err;
+  }
+}
 
 // Deliberately NOT reused from worker/delivery.js, and deliberately not added
 // to it either. Every reader in that file filters on the caller's tier, which is
@@ -148,7 +174,9 @@ export async function postReleaseAnnounce(request, env) {
   if (target.refusal) return target.refusal;
   const { pack, version } = target;
 
-  const release = await readRelease(env, pack, version);
+  const loaded = await loadRelease(env, pack, version);
+  if (loaded.refusal) return loaded.refusal;
+  const release = loaded.release;
   if (!release) {
     return fail(
       404,
@@ -312,7 +340,9 @@ export async function postReleaseLink(request, env) {
   if (target.refusal) return target.refusal;
   const { pack, version } = target;
 
-  const release = await readRelease(env, pack, version);
+  const loaded = await loadRelease(env, pack, version);
+  if (loaded.refusal) return loaded.refusal;
+  const release = loaded.release;
   if (!release) {
     return fail(
       404,

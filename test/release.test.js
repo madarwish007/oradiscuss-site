@@ -36,7 +36,7 @@ import { getDownload } from '../worker/delivery.js';
 import { changelogPage } from '../worker/changelog.js';
 import { releaseSendReadiness, releaseSegmentId } from '../worker/integrations.js';
 import { REVIEW_ENTITLEMENT_TTL_SECONDS } from '../worker/release.js';
-import { makeEnv, makeR2, captureConsole, everythingWritten } from './support/system-env.js';
+import { makeEnv, makeD1, makeR2, captureConsole, everythingWritten } from './support/system-env.js';
 
 const REPO = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const SCRIPT = join(REPO, 'scripts', 'release-pack.sh');
@@ -206,6 +206,39 @@ test('announcing "the latest" is refused: the version has to be named', async ()
   assert.equal(res.status, 400);
   assert.equal(body.code, 'bad_version');
   assert.equal(fetchStub.calls.length, 0);
+});
+
+// The state BOTH environments are actually in today. Every other test in this
+// file runs against the full schema, which no deployed database has, so without
+// this one the first real call either route ever received would have been a 500
+// carrying a raw SQLite message and nobody would have known why.
+test('against a database without migration 0005, both routes refuse and name the migration', async () => {
+  for (const path of ['/api/release/announce', '/api/release/link']) {
+    const env = sendableEnv({ DB: makeD1({ only: /^000[12]_/ }) });
+    await env.DB.prepare(
+      `INSERT INTO pack_release (pack, version, r2_key, sha256, min_tier, released_at)
+       VALUES (?1, ?2, ?3, ?4, 1, '2026-08-09T00:00:00Z')`,
+    )
+      .bind(PACK, VERSION, R2_KEY, SHA)
+      .run();
+
+    const fetchStub = beehiivOk();
+    const log = captureConsole();
+    let res;
+    let body;
+    try {
+      ({ res, body } = await withFetch(fetchStub, () => call(path, env, { pack: PACK, version: VERSION })));
+    } finally {
+      log.restore();
+    }
+
+    assert.equal(res.status, 503, `${path} answered ${res.status} instead of refusing`);
+    assert.equal(body.code, 'not_configured');
+    assert.match(body.error, /0005_release_notify\.sql is not applied/);
+    assert.equal(fetchStub.calls.length, 0, `${path} reached the network on an unmigrated database`);
+    assert.match(log.text(), /release_migration_missing/);
+    assert.equal(env.ENTITLEMENT.writes.length, 0, `${path} granted an entitlement on an unmigrated database`);
+  }
 });
 
 /* ============================================== the send, and sending ONCE */
@@ -1105,6 +1138,14 @@ test('the script prints its next commands ONE PER LINE, never joined', () => {
     assert.match(run.stdout, /wrangler d1 execute oradiscuss-preview --remote --file=/);
     assert.match(run.stdout, /api\/release\/announce/);
     assert.match(run.stdout, /api\/release\/link/);
+
+    // The prerequisite the endpoints actually have. Without it the founder
+    // follows these instructions verbatim and the announce answers 503.
+    assert.match(
+      run.stdout,
+      /--file=migrations\/0005_release_notify\.sql/,
+      'the runbook does not tell the founder to apply the migration the release endpoints need',
+    );
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

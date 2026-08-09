@@ -17,9 +17,19 @@ import { join } from 'node:path';
 
 const MIGRATIONS = new URL('../../migrations', import.meta.url).pathname;
 
-export function makeD1() {
+// `only` restricts which migrations are applied, and it exists for one reason:
+// the deployed databases are BEHIND this repository. Preview and production
+// carry 0001 and 0002 today, so a test that wants to know how the Worker
+// behaves against the schema that actually exists has to be able to build it.
+// Every existing caller passes nothing and gets the full schema, as before.
+export function makeD1({ only = null } = {}) {
   const db = new DatabaseSync(':memory:');
-  for (const file of readdirSync(MIGRATIONS).filter((f) => f.endsWith('.sql')).sort()) {
+  const files = readdirSync(MIGRATIONS)
+    .filter((f) => f.endsWith('.sql'))
+    .filter((f) => (only ? only.test(f) : true))
+    .sort();
+  if (files.length === 0) throw new Error('no migrations matched, the harness would build an empty database');
+  for (const file of files) {
     db.exec(readFileSync(join(MIGRATIONS, file), 'utf8'));
   }
 

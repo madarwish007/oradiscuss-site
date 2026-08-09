@@ -364,7 +364,13 @@ while IFS= read -r PACK_ID; do
   cat "$SQL_FILE"
   printf -- '----- end SQL -----\n\n'
 
-  printf 'Apply it, then announce it. ONE COMMAND PER LINE, run them one at a time:\n\n'
+  printf 'ONCE PER ENVIRONMENT, BEFORE THE FIRST RELEASE EVER. The two release\n'
+  printf 'endpoints read columns that this migration adds, and until it is applied\n'
+  printf 'they answer 503 and name it. It is not re-runnable: applied twice it fails\n'
+  printf 'loudly on the first ALTER, which is the behaviour we want.\n\n'
+  printf '  npx wrangler d1 execute %s --remote --file=migrations/0005_release_notify.sql\n\n' "$D1_NAME"
+  printf 'Then apply this release, and announce it. ONE COMMAND PER LINE, run them\n'
+  printf 'one at a time:\n\n'
   printf '  npx wrangler d1 execute %s --remote --file=%s\n' "$D1_NAME" "$SQL_FILE"
   printf '  curl -sS -X POST %s/api/release/announce -H "Authorization: Bearer $WATCH_ADMIN_TOKEN" -H "Content-Type: application/json" -d '"'"'{"pack":"%s","version":"%s"}'"'"'\n' \
     "$HOST" "$PACK_ID" "$VERSION"
