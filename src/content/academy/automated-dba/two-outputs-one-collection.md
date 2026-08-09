@@ -181,8 +181,9 @@ bash "$ODC_PACK/health_check.sh" \
   --render-only "$LAB/lab_collection.txt"
 ```
 
-Captured from a `--render-only` replay of the collection above, on 9 August 2026.
-No database was contacted; the collection is written by hand and is synthetic.
+Captured from a `--render-only` replay of the collection above, on 9 August 2026,
+with the lab directory paths shortened to fit. No database was contacted; the
+collection is written by hand and is synthetic.
 
 ```text
 [health_check] render-only: rebuilding outputs from .../lab_collection.txt, the database is not contacted
@@ -304,10 +305,15 @@ python3 -c "import json,sys; print('document says:', json.load(open(sys.argv[1])
   "$LAB/reports/health_LABDB_latest.json"
 ```
 
-Both print 2 for the collection above, because it carries a CRIT check. Change
-the `TS_UNDOTBS1` line from CRIT to OK, rerun, and both numbers move together to
-1. If only one of them moves, the two outputs of that run are describing
-different states.
+Both print 2 for the collection above, because it carries a CRIT check. Now change
+the `TS_UNDOTBS1` line from CRIT to OK and rerun. On the machine this was captured
+on, both printed 1, the WARN rows remaining. Your listener row can hold that
+number higher, for the reason the first item of "Read it wrong" gives, so the
+value is not the thing to check.
+
+The invariant is the equality. Whatever the number is, the shell and the document
+must agree on it. If they ever differ, the two outputs of that run are describing
+different states, and neither can be trusted.
 
 ## Where this goes next
 
