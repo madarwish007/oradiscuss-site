@@ -61,8 +61,6 @@ for v in ORACLE_SID OUTPUT_DIR RETENTION_DAYS EMAIL_ENABLED; do
 done
 case "$RETENTION_DAYS" in ''|*[!0-9]*) err "RETENTION_DAYS must be an integer"; exit 2 ;; esac
 
-mkdir -p "$OUTPUT_DIR/runs"
-
 # --- mutual exclusion: refuse to overlap with another run -------------------
 #
 # flock ships with util-linux, so it is present on the Linux hosts this pack
@@ -96,6 +94,12 @@ if [ "$DRY_RUN" -eq 1 ]; then
   fi
   exit 0
 fi
+
+# Created AFTER the dry-run branch has exited, deliberately. A dry run prints a
+# plan and must leave the filesystem exactly as it found it: it says what it
+# WOULD collect into, and creating that directory makes the sentence false.
+# A test asserts a dry run adds no files.
+mkdir -p "$OUTPUT_DIR/runs"
 
 RUN_DIR="$OUTPUT_DIR/runs/$(date '+%Y-%m-%d_%H%M%S')_${ORACLE_SID}"
 mkdir -p "$RUN_DIR"

@@ -1,0 +1,116 @@
+WIN|30|2026-07-10 06:40:00|2026-08-09 06:40:00
+SEC|Report scope
+CHK|SCOPE|OK|Report scope|container PDB1 only. These views describe the container this session is connected to, so accounts, grants, profiles and objects belonging to other pluggable databases are NOT in this report. Run it once per container you are responsible for.
+CHK|WINDOW|OK|Reporting window|The time-bounded tiers below cover the last 30 days, from 2026-07-10 06:40:00 to 2026-08-09 06:40:00 as the database clock recorded them. Rows outside that period were not read, so this report says nothing about them. The window comes from AUDIT_WINDOW_DAYS in the configuration file.
+MET|WINDOW|window_days|30|days
+SEC|Audit posture
+CHK|AUD_UNIFIED|OK|Unified auditing mode|V$OPTION reports Unified Auditing = FALSE. TRUE is pure unified mode, where the traditional trail is no longer written. FALSE is mixed mode, where unified policies and the traditional audit_trail setting below can both be active at the same time.
+CHK|AUD_TRAIL_PARAM|OK|audit_trail parameter|set to DB, EXTENDED. This governs the TRADITIONAL trail only.
+CHK|AUD_DEST|OK|Traditional trail destination|audit_syslog_level is not set and audit_file_dest is D:\oracle\admin\ORCL\adump, with "audit_syslog_level" unset, pipe | inside the detail. When audit_syslog_level carries a value, operating system audit records go to syslog and therefore off this host.
+CHK|AUD_POL_DEFINED|OK|Unified audit policies defined|21 policies are defined in this container. Defined is not the same as enabled.
+CHK|AUD_POL_ENABLED|OK|Unified audit policies enabled|2 policies are enabled. A policy that is defined but not enabled records nothing.
+CHK|AUDPOL_ORA_SECURECONFIG|OK|Enabled audit policy|ORA_SECURECONFIG is enabled through 1 enablement rows in this container, audit on success YES, audit on failure YES.
+CHK|AUDPOL_ORA_LOGON_FAILURES|OK|Enabled audit policy|ORA_LOGON_FAILURES is enabled through 1 enablement rows in this container, audit on success NO, audit on failure YES.
+MET|AUD_POL_DEFINED|policies_defined|21|policies
+MET|AUD_POL_ENABLED|policies_enabled|2|policies
+SEC|Audit trail activity
+CHK|TRAIL_SOURCE|OK|Audit trail source|read from UNIFIED_AUDIT_TRAIL, covering the last 30 days. Records outside that window were not read, so every count below describes that period only.
+CHK|TRAIL_TOTAL|OK|Audited records in the window|418223 records in UNIFIED_AUDIT_TRAIL over the last 30 days.
+CHK|TRAILACT_LOGON|OK|Audited action|LOGON was recorded 291044 times in the last 30 days.
+CHK|TRAILACT_CREATE_TABLE|OK|Audited action|CREATE TABLE was recorded 37 times in the last 30 days.
+CHK|TRAILUSR_APP_BATCH|OK|Audited account|APP_BATCH produced 288901 audited records in the last 30 days.
+CHK|TRAIL_FAILED_LOGON|OK|Logon attempts that did not succeed|1904 recorded in the last 30 days. A count on its own carries no meaning: routine application reconnect storms and a password being guessed both land here, and only the account names and the times separate them.
+CHK|TRAIL_DDL|OK|Audited statements that changed object definitions|64 recorded in the last 30 days. Definition used, so the number can be checked: action names beginning CREATE, ALTER, DROP, TRUNCATE or RENAME.
+MET|TRAIL_TOTAL|records|418223|records
+MET|TRAILACT_LOGON|records|291044|records
+MET|TRAILACT_CREATE_TABLE|records|37|records
+MET|TRAILUSR_APP_BATCH|records|288901|records
+MET|TRAIL_FAILED_LOGON|records|1904|records
+MET|TRAIL_DDL|records|64|records
+SEC|Audit trail hygiene
+CHK|HYG_SEGMENTS|OK|Space held by audit trail segments|14.72 GB across 9 segments, of which 14.10 GB belongs to the unified trail owned by AUDSYS and the rest to the traditional trails owned by SYS. A database in mixed mode holds both.
+CHK|HYGSEG_AUDSYS.AUD$UNIFIED|OK|Audit trail segment|AUDSYS.AUD$UNIFIED (TABLE PARTITION in SYSAUX) holds 14.10 GB.
+CHK|HYG_SPAN|OK|How far back the trail reaches|UNIFIED_AUDIT_TRAIL holds records from 2024-02-11 22:04:51 to 2026-08-09 06:39:12, a span of 909.4 days. Whether that matches the retention this estate intends is a question this pack has not been told the answer to.
+CHK|HYG_RATE|OK|Records arriving|418223 records were written in the last 30 days, which is 13940,8 per day averaged across the window. Arrival is uneven on most estates, so this is an average and not a daily figure.
+CHK|HYG_ARCHIVE|OK|Archive timestamp set for purging|0 rows in DBA_AUDIT_MGMT_LAST_ARCH_TS, newest none recorded. That timestamp is what a purge uses to decide which records it may remove, so a trail with none set has nothing telling a purge where to stop.
+CHK|HYG_PURGE|NA|Purge events recorded|DBA_AUDIT_MGMT_CLEAN_EVENTS could not be read (ORA-00942: table or view does not exist). The AUDIT_ADMIN role, or SELECT on that view, would make it readable.
+MET|HYG_SEGMENTS|total_gb|14.72|GB
+MET|HYG_SEGMENTS|segments|9|segments
+MET|HYGSEG_AUDSYS.AUD$UNIFIED|size_gb|14.10|GB
+MET|HYG_SPAN|days_held|909.4|days
+MET|HYG_RATE|records_in_window|418223|records
+MET|HYG_RATE|records_per_day|13940,8|records/day
+MET|HYG_ARCHIVE|rows|0|rows
+SEC|Privilege and access
+CHK|PRIV_DBA_ROLE|OK|Grantees of the DBA role|4 grantees hold DBA in this container. A grantee can be an account or another role, and a role holding DBA passes it to everyone who holds that role.
+CHK|DBAROLE_APP_OWNER|OK|DBA role holder|APP_OWNER holds DBA. Admin option NO, default role YES.
+CHK|PRIV_ANY_TOTAL|OK|System privileges that apply across all schemas|173 such grants are held in this container by 11 grantees. Oracle names these privileges with the word ANY, which is what makes them reach every schema rather than one.
+CHK|PRIVANY_APP_OWNER|OK|Holder of cross-schema privileges|APP_OWNER holds 26 privileges whose name contains ANY, of which 0 carry the admin option, meaning that grantee can pass them on.
+CHK|PRIV_PUBLIC_OBJ|OK|Object privileges held by PUBLIC|29144 object grants are held by PUBLIC, of which 28903 are on objects owned by SYS. Oracle makes several thousand of these itself when the database is created, so a large number here is the shipped state rather than something anybody did.
+CHK|PRIV_DEFPWD|OK|Accounts whose password matches a shipped default|3 accounts appear in DBA_USERS_WITH_DEFPWD. That view compares against the passwords Oracle ships with its own accounts. It does not measure password strength and it does not look at accounts you created.
+CHK|DEFPWD_SCOTT|OK|Account on the shipped default password list|SCOTT, account status OPEN, profile DEFAULT.
+CHK|DEFPWD_DBSNMP|OK|Account on the shipped default password list|DBSNMP, account status EXPIRED AND LOCKED, profile DEFAULT.
+CHK|PRIV_PWFILE|OK|Accounts in the password file|2 accounts are listed in V$PWFILE_USERS. An account here can connect with administrative privilege before the database is open, which is a separate route from any role listed above.
+MET|PRIV_DBA_ROLE|grantees|4|grantees
+MET|PRIV_ANY_TOTAL|grants|173|grants
+MET|PRIV_ANY_TOTAL|grantees|11|grantees
+MET|PRIVANY_APP_OWNER|privileges|26|privileges
+MET|PRIV_PUBLIC_OBJ|grants|29144|grants
+MET|PRIV_PUBLIC_OBJ|grants_not_owned_by_sys|241|grants
+MET|PRIV_DEFPWD|accounts|3|accounts
+MET|PRIV_PWFILE|accounts|2|accounts
+SEC|Package grants held by PUBLIC
+CHK|PKG_PUBLIC_EXEC_ALL|OK|EXECUTE grants held by PUBLIC in total|3112 objects have EXECUTE granted to PUBLIC in this container, 3090 of them owned by SYS. Oracle makes most of these itself when the database is created.
+CHK|PKG_UTL_FILE|OK|EXECUTE grant to PUBLIC|UTL_FILE (reads and writes files on the database server file system): EXECUTE is granted to PUBLIC, owner SYS, granted by SYS.
+CHK|PKG_UTL_TCP|OK|EXECUTE grant to PUBLIC|UTL_TCP (opens outbound TCP connections from the database server): no EXECUTE grant to PUBLIC in this container.
+CHK|PKG_WATCHED_TOTAL|OK|Named packages carrying the grant|6 of 14 packages on the list above have EXECUTE granted to PUBLIC in this container.
+MET|PKG_PUBLIC_EXEC_ALL|grants|3112|grants
+MET|PKG_UTL_FILE|public_execute_grants|1|grants
+MET|PKG_UTL_TCP|public_execute_grants|0|grants
+MET|PKG_WATCHED_TOTAL|packages_granted|6|packages
+SEC|Profile and password policy
+CHK|PROFILES_DEFINED|OK|Profiles defined|4 profiles exist in this container.
+CHK|PROFILES_WITH_VERIFY|OK|Profiles naming a password verify function|1 of 4 profiles name a verify function. The rest carry the four literal characters NULL in the LIMIT column, which is how DBA_PROFILES records that none is set, rather than a row being missing.
+CHK|PROF_DEFAULT|OK|Profile settings|DEFAULT: PASSWORD_VERIFY_FUNCTION NULL, PASSWORD_LIFE_TIME 180, FAILED_LOGIN_ATTEMPTS 10, PASSWORD_LOCK_TIME 1, PASSWORD_GRACE_TIME 7, PASSWORD_REUSE_MAX UNLIMITED, IDLE_TIME UNLIMITED. A limit of DEFAULT takes its value from the DEFAULT profile, and UNLIMITED means the limit is not applied.
+CHK|PROFUSR_DEFAULT|OK|Accounts on this profile|DEFAULT governs 47 accounts, of which 12 are not locked.
+MET|PROFILES_DEFINED|profiles|4|profiles
+MET|PROFILES_WITH_VERIFY|profiles|1|profiles
+MET|PROFUSR_DEFAULT|accounts|47|accounts
+MET|PROFUSR_DEFAULT|accounts_not_locked|12|accounts
+SEC|Change inventory
+CHK|CHG_TOTAL|OK|Objects with a definition timestamp inside the window|312 objects have LAST_DDL_TIME within the last 30 days, across 6 schemas. LAST_DDL_TIME also moves when an object is recompiled or when a grant on it changes, so this counts objects whose recorded definition timestamp falls in the window rather than deliberate changes.
+CHK|CHGOWN_APP|OK|Schema with changed objects|APP holds 287 objects whose definition timestamp falls in the last 30 days, most recently 2026-08-08 23:41:07.
+CHK|CHGOBJ_APP.ORDER_LINES|OK|Object with a recent definition timestamp|APP.ORDER_LINES (TABLE, status VALID) last recorded at 2026-08-08 23:41:07.
+CHK|CHG_AUDIT_SOURCE|OK|Audited change source|read from UNIFIED_AUDIT_TRAIL. Only statements a policy was auditing at the time appear here, so a change absent from this half may still have happened and be present in the dictionary half above.
+CHK|CHG_AUDITED_DDL|OK|Audited statements that changed definitions|64 recorded in the last 30 days, under the same definition used elsewhere in this pack: action names beginning CREATE, ALTER, DROP, TRUNCATE or RENAME.
+CHK|CHGDDL_APP_OWNER_CREATE_TABLE|OK|Audited definition change|APP_OWNER issued CREATE TABLE 37 times in the last 30 days.
+MET|CHG_TOTAL|objects|312|objects
+MET|CHG_TOTAL|schemas|6|schemas
+MET|CHGOWN_APP|objects|287|objects
+MET|CHG_AUDITED_DDL|records|64|records
+MET|CHGDDL_APP_OWNER_CREATE_TABLE|records|37|records
+SEC|Database links
+CHK|DBL_TOTAL|OK|Database links defined|3 links exist in this container, owned by 2 accounts and reaching 3 distinct connect strings. 1 of them are owned by PUBLIC, which means every account in the container can use them.
+CHK|DBLINK_APP.WEIRD_LINK|OK|Database link|APP.WEIRD_LINK connects as REPORTER to the alias in D:\oracle\network\admin\tnsnames.ora named "PROD_DW", pipe | inside the detail, created 2026-07-14 09:12:33.
+CHK|DBLINK_PUBLIC.LEGACY_DW|OK|Database link|PUBLIC.LEGACY_DW connects as the connected user, so it carries whatever privileges the caller has on the far side to LEGACY_DW, created 2019-03-02 11:55:41.
+MET|DBL_TOTAL|links|3|links
+MET|DBL_TOTAL|public_links|1|links
+MET|DBL_TOTAL|distinct_hosts|3|hosts
+SEC|Encryption at rest
+CHK|TDE|NA|Encryption at rest tier|this tier produced nothing and was not read. What would make it readable: SELECT on V$ENCRYPTION_WALLET, V$ENCRYPTED_TABLESPACES, V$TABLESPACE and DBA_ENCRYPTED_COLUMNS. On a database with no keystore configured these views are readable and simply empty.
+SEC|Option and feature usage
+CHK|FEAT_NOTICE|OK|What this section reports|usage FACTS only: what V$OPTION says was linked into this Oracle home, what Oracle's own sampling recorded as used, how many times, and on which dates. It reaches no conclusion about any licence, because the terms of an agreement are not readable from inside a database and this pack has never seen yours. These numbers exist so you can take them to whoever holds the agreement.
+CHK|FEAT_OPTIONS_INSTALLED|OK|Options reported installed|41 of 83 rows in V$OPTION report TRUE. Installed describes what was linked into this Oracle home, which is a different question from whether anything ever used it.
+CHK|FEATOPT_PARTITIONING|OK|Option reported installed|Partitioning = TRUE.
+CHK|FEAT_USED_COUNT|OK|Features with recorded usage|38 features carry at least one detected usage against this database's current DBID. Oracle samples these itself on its own schedule, so a feature used once between two samples can be missed, and a count of zero means nothing was detected rather than that nothing happened.
+CHK|FEAT_PARTITIONING_USER|OK|Feature usage recorded|Partitioning (user): 14 detected usages, currently in use TRUE, first recorded 2026-03-12, last recorded 2026-08-08, sampled against version 19.0.0.0.0.
+CHK|FEAT_ORACLE_JAVA_VIRTUAL_MACHINE_USER|OK|Feature usage recorded|Oracle Java Virtual Machine (user): 3 detected usages, currently in use FALSE, first recorded 2025-11-30, last recorded 2026-01-04, sampled against version 19.0.0.0.0.
+CHK|FEAT_REALTIME_SQL_MONITORING|OK|Feature usage recorded|Real-Time SQL Monitoring: 9 detected usages, currently in use TRUE, first recorded 2026-02-01, last recorded 2026-08-09, sampled against version 19.0.0.0.0.
+CHK|FEAT_NAMING|OK|Why the two counts above cannot be subtracted|V$OPTION names OPTIONS and DBA_FEATURE_USAGE_STATISTICS names FEATURES, and the two vocabularies do not line up: one option can appear as several features, as one, or as none at all. The difference between the two numbers above is not a quantity that means anything. Read each list on its own terms.
+MET|FEAT_OPTIONS_INSTALLED|options_installed|41|options
+MET|FEAT_OPTIONS_INSTALLED|options_total|83|options
+MET|FEAT_USED_COUNT|features|38|features
+MET|FEAT_USED_COUNT|features_currently_used|21|features
+MET|FEAT_PARTITIONING_USER|detected_usages|14|usages
+MET|FEAT_ORACLE_JAVA_VIRTUAL_MACHINE_USER|detected_usages|3|usages
+MET|FEAT_REALTIME_SQL_MONITORING|detected_usages|9|usages

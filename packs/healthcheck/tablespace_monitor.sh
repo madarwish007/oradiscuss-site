@@ -78,7 +78,6 @@ export ORACLE_SID ORACLE_HOME
 export PATH="$ORACLE_HOME/bin:$PATH"
 export NLS_LANG="${NLS_LANG:-AMERICAN_AMERICA.AL32UTF8}"
 
-mkdir -p "$OUTPUT_DIR/logs"
 CSV="$OUTPUT_DIR/logs/tablespace_usage_${ORACLE_SID}.csv"
 
 if [ -z "$RENDER_ONLY" ]; then
@@ -104,6 +103,12 @@ if [ "$DRY_RUN" -eq 1 ]; then
   log "dry-run: WOULD append CSV rows to $CSV"
   exit 0
 fi
+
+# Created AFTER the dry-run branch has exited, deliberately. A dry run
+# prints a plan and must leave the filesystem exactly as it found it: it
+# says it writes nothing, and creating an output directory would make that
+# sentence false. A test asserts a dry run adds no files.
+mkdir -p "$OUTPUT_DIR/logs"
 
 # --- current usage snapshot ------------------------------------------------
 PROJ="$(mktemp)"

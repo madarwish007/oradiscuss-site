@@ -86,6 +86,29 @@ const PACKS = [
     // and an incident is the worst possible moment to be holding an exception.
     allowlist: [],
   },
+  {
+    id: 'audit-governance',
+    expects: [
+      'audit_governance.sh',
+      'lib/odc_briefing.sh',
+      'schema/briefing.schema.json',
+      'prompts/audit-review.md',
+      'sql/audit_mode_check.sql',
+      'sql/audit_trail_activity.sql',
+      'sql/audit_trail_hygiene.sql',
+      'sql/privilege_review.sql',
+      'sql/sensitive_grants_check.sql',
+      'sql/profile_policy_check.sql',
+      'sql/change_inventory.sql',
+      'sql/db_links_inventory.sql',
+      'sql/tde_encryption_check.sql',
+      'sql/feature_usage_check.sql',
+    ],
+    // Empty, and it is the pack where that matters most. An audit tool holding
+    // a write exception has no answer to the only question a customer will ask
+    // about it. Every tier here is a dictionary read.
+    allowlist: [],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -386,6 +409,69 @@ for (const pack of PACKS) {
     );
   });
 }
+
+// ---------------------------------------------------------------------------
+// A DRY RUN PRINTS A PLAN AND LEAVES THE FILESYSTEM EXACTLY AS IT FOUND IT.
+//
+// Every one of these scripts created its output directory BEFORE reaching the
+// dry-run branch, while rca_generator's own dry-run text said, in words a
+// customer reads, "Nothing here writes to the database or to the OS". Creating
+// a directory is writing to the OS, so that sentence was false.
+//
+// It is a small untruth and that is exactly why it earns a guard: this product
+// is sold on its claims being literally checkable, and a reader who verifies
+// the smallest claim and finds it wrong has no reason to trust the large one
+// about read-only access.
+//
+// Asserted by MEASURING the directory before and after rather than by reading
+// the source for a mkdir, because the next way this breaks will not be a mkdir.
+// ---------------------------------------------------------------------------
+
+test('every --dry-run leaves the output directory untouched', () => {
+  const plausible = (name) => {
+    if (name === 'ORACLE_CONNECT') return '"/ as sysdba"';
+    if (name === 'ORACLE_SID') return 'ODCDEMO';
+    if (name === 'ORACLE_HOME') return '/nonexistent';
+    if (name.endsWith('_TABLE')) return 'ORADISCUSS_TS_HISTORY';
+    return '1';
+  };
+
+  let checked = 0;
+  for (const pack of PACKS) {
+    for (const rel of pack.shipped) {
+      if (!rel.endsWith('.sh') || rel.includes('/')) continue;
+      const src = readFileSync(join(pack.dir, rel), 'utf8');
+      if (!/--dry-run\)/.test(src)) continue;
+
+      const out = mkdtempSync(join(tmpdir(), 'odc-dry-'));
+      const cfg = join(out, 'config.env');
+      const vars = new Set(requiredConfigVars(src));
+      vars.add('OUTPUT_DIR');
+      writeFileSync(
+        cfg,
+        [...vars].map((v) => (v === 'OUTPUT_DIR' ? `OUTPUT_DIR=${out}` : `${v}=${plausible(v)}`)).join('\n'),
+      );
+
+      const before = readdirSync(out).sort();
+      try {
+        execFileSync('bash', [join(pack.dir, rel), '--config', cfg, '--dry-run'], { stdio: 'pipe' });
+      } catch {
+        // A dry run that REFUSES to run is a different defect, caught by that
+        // pack's own tests. What must never happen here is a WRITE.
+      }
+      const after = readdirSync(out).sort();
+      assert.deepEqual(
+        after,
+        before,
+        `${pack.id}/${rel} --dry-run created ${after.filter((f) => !before.includes(f)).join(', ')}. ` +
+          'A dry run prints a plan and writes nothing.',
+      );
+      checked += 1;
+      rmSync(out, { recursive: true, force: true });
+    }
+  }
+  assert.ok(checked >= 5, `only ${checked} scripts with a --dry-run were exercised, so this guard is nearly asleep`);
+});
 
 test('the shared dual-output layer is byte-identical in every pack that ships it', () => {
   for (const rel of SHARED_FILES) {
@@ -1634,6 +1720,441 @@ test('awr_triage: the report states the Diagnostics Pack requirement on its face
   const html = readFileSync(join(r.dir, r.html), 'utf8');
   assert.match(html, /Diagnostics Pack license/i);
 });
+
+// ---------------------------------------------------------------------------
+// AUDIT AND GOVERNANCE: the pack whose entire design is "report what is, never
+// what it means".
+//
+// Its guards are unlike the other packs' because its risk is unlike theirs. A
+// tablespace at 96% is a threshold the customer configured, so calling it CRIT
+// is arithmetic. There is no configured threshold for how many accounts should
+// hold a privilege that reaches every schema, and inventing one would be this
+// product issuing a judgement it has no standing to issue. So the guards below
+// assert the ABSENCE of judgement: no status above OK about the database, an
+// empty needs_attention, and a banned vocabulary that must not appear in the
+// source or in the rendered output.
+// ---------------------------------------------------------------------------
+
+const AG = PACKS.find((p) => p.id === 'audit-governance');
+
+function renderAuditGovernance() {
+  const out = mkdtempSync(join(tmpdir(), 'odc-ag-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(
+    cfg,
+    [
+      'ORACLE_SID=ORCLCDB',
+      'ORACLE_HOME=/nonexistent',
+      'ORACLE_CONNECT="/ as sysdba"',
+      `OUTPUT_DIR=${out}`,
+      'AUDIT_WINDOW_DAYS=30',
+      'AUDIT_TOP_N=25',
+    ].join('\n'),
+  );
+  const raw = join(AG.dir, 'test-fixtures/audit_raw_hostile.txt');
+  const before = readFileSync(raw, 'utf8');
+  try {
+    execFileSync('bash', [
+      join(AG.dir, 'audit_governance.sh'), '--config', cfg, '--render-only', raw,
+    ], { stdio: 'pipe' });
+  } catch (err) {
+    if (err.status !== 1 && err.status !== 2) throw err;
+  }
+  const dir = join(out, 'audit');
+  return {
+    dir,
+    html: readdirSync(dir).find((f) => f.endsWith('.html') && !f.includes('latest')),
+    json: readdirSync(dir).find((f) => f.endsWith('.json') && !f.includes('latest')),
+    rawUnchanged: readFileSync(raw, 'utf8') === before,
+  };
+}
+
+test('audit-governance: ONE collection produces BOTH the report and the briefing', () => {
+  const r = renderAuditGovernance();
+  assert.ok(r.html, 'no HTML report was written');
+  assert.ok(r.json, 'the HTML was written but the briefing was not, which is half a run');
+  assert.ok(readFileSync(join(r.dir, r.html), 'utf8').includes('<!DOCTYPE html>'));
+  JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+});
+
+test('audit-governance: --render-only leaves the collection it read exactly as it found it', () => {
+  assert.ok(renderAuditGovernance().rawUnchanged, '--render-only modified the raw collection it was given');
+});
+
+test('audit-governance: the briefing validates against the shipped schema', () => {
+  const schema = JSON.parse(readFileSync(join(AG.dir, 'schema/briefing.schema.json'), 'utf8'));
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  assert.deepEqual(validate(schema, doc), []);
+  assert.equal(doc.kind, 'state');
+  assert.ok(!('incident' in doc), 'a state collector emitted an incident block');
+});
+
+test('audit-governance: the briefing survives hostile collector output', () => {
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const byId = (id) => doc.checks.find((c) => c.id === id);
+
+  const link = byId('DBLINK_APP.WEIRD_LINK');
+  assert.ok(link, 'the hostile link row is missing, so this guard proved nothing');
+  assert.match(link.detail, /D:\\oracle\\network/, 'a Windows path did not survive JSON escaping');
+  assert.match(link.detail, /"PROD_DW"/, 'a quoted name did not survive');
+  assert.match(link.detail, /pipe \| inside/, 'a pipe inside a detail truncated the field');
+  assert.match(byId('AUD_DEST').detail, /"audit_syslog_level"/, 'a quoted parameter name did not survive');
+
+  // A German-locale session emits 13940,8. It must degrade to null rather than
+  // taking the whole document down, and the original text stays in the detail.
+  assert.equal(byId('HYG_RATE').metrics.records_per_day.value, null);
+  assert.equal(byId('HYG_RATE').metrics.records_in_window.value, 418223);
+  assert.match(byId('HYG_RATE').detail, /13940,8/);
+});
+
+test('audit-governance: metrics are keyed by check id, never by position', () => {
+  // Every MET line in the fixture sits in a block AFTER every CHK line of its
+  // section, and the sections interleave. A parser attaching each metric to
+  // whichever check it saw last would misfile all of them.
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const byId = (id) => doc.checks.find((c) => c.id === id);
+  assert.equal(byId('TRAILACT_LOGON').metrics.records.value, 291044);
+  assert.equal(byId('TRAILACT_CREATE_TABLE').metrics.records.value, 37);
+  assert.equal(byId('PRIV_PUBLIC_OBJ').metrics.grants_not_owned_by_sys.value, 241);
+  assert.equal(byId('FEAT_PARTITIONING_USER').metrics.detected_usages.value, 14);
+  assert.equal(byId('FEAT_REALTIME_SQL_MONITORING').metrics.detected_usages.value, 9);
+  assert.equal(byId('PKG_UTL_TCP').metrics.public_execute_grants.value, 0);
+});
+
+test('audit-governance: NOTHING in the document is a verdict about the database', () => {
+  // The signature of this pack's design, asserted as one shape: only OK and NA
+  // ever appear on a check, needs_attention is empty, and the only reason the
+  // summary rises above OK is that the COLLECTION was incomplete. If a future
+  // change starts colouring an observation as a finding, this is what stops it.
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+
+  const statuses = [...new Set(doc.checks.map((c) => c.status))].sort();
+  assert.deepEqual(statuses, ['NA', 'OK'], `a check carries a verdict status: ${statuses.join(', ')}`);
+  assert.equal(doc.summary.counts.WARN, 0);
+  assert.equal(doc.summary.counts.CRIT, 0);
+  assert.deepEqual(doc.summary.needs_attention, [], 'needs_attention must stay empty in this pack');
+
+  // And the summary still tells the truth about the collection itself.
+  assert.ok(doc.summary.counts.NA > 0, 'the fixture has no NA checks, so this guard is asleep');
+  assert.equal(doc.summary.overall_status, 'WARN');
+  assert.equal(doc.collection.collector_exit_code, 1, 'the summary and the exit code disagree');
+});
+
+// The vocabulary a verdict is written in. Scoped to THIS pack on purpose: the
+// other three use one or two of these words in design commentary about their
+// own behaviour ("the dangerous version of a health check is the one that..."),
+// which is not a judgement about a customer's database. Here the subject matter
+// makes every one of them a live hazard in customer-facing prose.
+const VERDICT_WORDS = [
+  /\bnon-?compliant\b/i, /\bcomplian(?:ce|t)\b/i, /\bout of compliance\b/i,
+  /\bviolat(?:e|es|ed|ion|ions)\b/i,
+  /\bPCI\b/, /\bSOX\b/, /\bHIPAA\b/, /\bGDPR\b/, /\bCIS\b/,
+  /\binsecure\b/i, /\bvulnerabilit(?:y|ies)\b/i, /\bvulnerable\b/i,
+  /\bunsafe\b/i, /\bdangerous\b/i, /\brisk(?:y|s)?\b/i, /\bweak(?:ness|nesses)?\b/i,
+  /\byou should\b/i, /\byou must\b/i, /\bbest practice/i, /\bremediat/i,
+  /\bunlicensed\b/i, /\bexcessive\b/i, /\bover-?privileged\b/i,
+  /\bleast privilege\b/i, /\bharden(?:ing|ed)?\b/i,
+];
+
+test('audit-governance: no verdict vocabulary anywhere in the shipped pack', () => {
+  // Asserted against the SOURCE, not only against one rendered fixture. The
+  // fixture exercises the rows somebody chose to put in it; the source is every
+  // row the pack can ever emit, and a sentence written into a .sql detail string
+  // reaches every customer who runs it.
+  const offenders = [];
+  for (const rel of AG.shipped) {
+    const src = readFileSync(join(AG.dir, rel), 'utf8');
+    for (const re of VERDICT_WORDS) {
+      const m = re.exec(src);
+      if (m) offenders.push(`${rel}: ${m[0]}`);
+    }
+  }
+  assert.deepEqual(
+    offenders,
+    [],
+    `this pack reports facts and never verdicts, including in its own prose:\n${offenders.join('\n')}`,
+  );
+});
+
+test('audit-governance: no verdict vocabulary in either rendered output', () => {
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const prose = [
+    readFileSync(join(r.dir, r.html), 'utf8'),
+    ...doc.checks.flatMap((c) => [c.title, c.detail]),
+  ].join('\n');
+  for (const re of VERDICT_WORDS) {
+    assert.ok(!re.test(prose), `the rendered report reads as a verdict: ${re}`);
+  }
+});
+
+test('audit-governance: the option and feature section reports facts and refuses the conclusion', () => {
+  // The section the founder's own registered scope singled out. Two things are
+  // asserted: the usage FACTS are present and machine-readable, and the report
+  // says in its own words that it draws no licence conclusion. The second has to
+  // be in the artefact rather than in the README, because a report outlives the
+  // README it shipped with.
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+
+  const feats = doc.checks.filter((c) => c.id.startsWith('FEAT_') && c.metrics.detected_usages);
+  assert.ok(feats.length > 0, 'no feature usage rows in the fixture, so this guard is asleep');
+  for (const c of feats) {
+    assert.equal(c.status, 'OK', `${c.id} carries status ${c.status}; a usage fact is not a finding`);
+    assert.equal(typeof c.metrics.detected_usages.value, 'number', `${c.id} carries no usage count`);
+    assert.match(c.detail, /first recorded \d{4}-\d{2}-\d{2}/, `${c.id} does not carry the date the database recorded`);
+  }
+
+  const notice = doc.checks.find((c) => c.id === 'FEAT_NOTICE');
+  assert.ok(notice, 'the section does not state what it is');
+  assert.match(notice.detail, /reaches no conclusion about any licence/i);
+  assert.match(html, /reaches no conclusion about any licence/i, 'the HTML report must carry the notice too');
+
+  // The arithmetic trap the two counts invite, stated in the document.
+  const naming = doc.checks.find((c) => c.id === 'FEAT_NAMING');
+  assert.ok(naming, 'the document does not warn that the two counts cannot be subtracted');
+  assert.match(naming.detail, /not a quantity that means anything/i);
+});
+
+test('audit-governance: a tier that could not run is NA and names what would make it run', () => {
+  // A silently absent tier looks exactly like a tier that found nothing, and in
+  // an access review those are opposite answers.
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const nas = doc.checks.filter((c) => c.status === 'NA');
+  assert.ok(nas.length >= 2, `expected the fixture's unreadable tiers, got ${nas.length}`);
+  for (const c of nas) {
+    assert.match(
+      c.detail,
+      /\b(grant|role|SELECT on)\b/i,
+      `${c.id} is NA without naming what would make it readable, which is just a shrug`,
+    );
+    assert.ok(!doc.summary.needs_attention.includes(c.id), `${c.id} is NA and must not be listed for attention`);
+  }
+
+  // And the report states its own incompleteness in words the document supports,
+  // rather than leaving a reader to count NA rows by eye.
+  const c = doc.summary.counts;
+  const total = c.OK + c.WARN + c.CRIT + c.NA;
+  assert.match(
+    readFileSync(join(r.dir, r.html), 'utf8'),
+    new RegExp(`${c.NA} of ${total} checks could not be read`),
+    'the report does not state its own incompleteness',
+  );
+});
+
+test('audit-governance: the report states its container scope and its window', () => {
+  // An unstated scope is indistinguishable from a complete one: a clean access
+  // review from a CDB root says nothing about the pluggable database the
+  // accounts actually live in. Same family as tbs_manager's SCOPE and rca's
+  // NODESCOPE.
+  const r = renderAuditGovernance();
+  const doc = JSON.parse(readFileSync(join(r.dir, r.json), 'utf8'));
+  const html = readFileSync(join(r.dir, r.html), 'utf8');
+
+  const scope = doc.checks.find((c) => c.id === 'SCOPE');
+  assert.ok(scope, 'the briefing carries no SCOPE check');
+  assert.match(scope.detail, /container/i);
+  assert.match(html, /Report scope/, 'the HTML report does not show the scope section');
+
+  // The window is bounded by config, carried in the data, and restated on the
+  // report's face. A reader must never have to open config.env to know which
+  // period they are looking at.
+  const win = doc.checks.find((c) => c.id === 'WINDOW');
+  assert.ok(win, 'the briefing carries no WINDOW check');
+  assert.equal(win.metrics.window_days.value, 30);
+  assert.equal(doc.thresholds.audit_window_days, 30);
+  assert.match(win.detail, /AUDIT_WINDOW_DAYS/);
+  assert.match(html, /last 30 days/);
+});
+
+// ---------------------------------------------------------------------------
+// Structural guards over the pack's SQL. These read the source rather than one
+// rendered fixture, because the fixture only ever exercises the rows somebody
+// chose to write into it.
+// ---------------------------------------------------------------------------
+
+// Reads every ORDER BY clause and counts its TOP-LEVEL sort keys. Paren aware
+// on purpose, and this is the second version: the first was a regex that
+// stopped at the first ')', which truncated "COUNT(*) DESC, grantee" to
+// "COUNT(*" and reported a tiebreaker that was there as missing, while counting
+// the comma inside NVL(g.n, 0) as a tiebreaker that was not.
+function orderByClauses(src) {
+  const body = stripSqlComments(src);
+  const out = [];
+  const re = /\bORDER\s+BY\b/gi;
+  let m;
+  while ((m = re.exec(body)) !== null) {
+    let depth = 0, keys = 1, text = '';
+    for (let i = m.index + m[0].length; i < body.length; i++) {
+      const c = body[i];
+      if (c === "'") { const j = body.indexOf("'", i + 1); i = j === -1 ? body.length : j; continue; }
+      if (c === '(') depth++;
+      else if (c === ')') { if (depth === 0) break; depth--; }
+      else if (c === ';' && depth === 0) break;
+      else if (c === ',' && depth === 0) keys++;
+      else if (depth === 0 && /[A-Za-z]/.test(c) && /^FETCH\b/i.test(body.slice(i))) break;
+      text += c;
+    }
+    out.push({ keys, text: text.replace(/\s+/g, ' ').trim() });
+  }
+  return out;
+}
+
+test('audit-governance: every ranked query carries an explicit ORDER BY tiebreaker', () => {
+  // Load bearing rather than tidiness. A check row and its metric rows are
+  // SEPARATE executions of the same ranked query. With ties in the ranking
+  // column and no tiebreaker, Oracle may return a different set of rows to
+  // each, and the result is a measurement recorded against a check id that is
+  // not in the document. The briefing stays valid JSON and still passes its
+  // schema, which is exactly why it has to be caught here.
+  const offenders = [];
+  let total = 0;
+  for (const rel of AG.shipped.filter((f) => f.endsWith('.sql'))) {
+    for (const [i, c] of orderByClauses(readFileSync(join(AG.dir, rel), 'utf8')).entries()) {
+      total++;
+      if (c.keys < 2) offenders.push(`${rel} ORDER BY #${i + 1}: ${c.text}`);
+    }
+  }
+  assert.ok(total > 20, `only ${total} ORDER BY clauses were parsed, so this guard is asleep`);
+  assert.deepEqual(offenders, [], `single-key ORDER BY, so ties are resolved by the optimiser:\n${offenders.join('\n')}`);
+});
+
+test('audit-governance: the audit trail is only ever reached through dynamic SQL', () => {
+  // UNIFIED_AUDIT_TRAIL needs AUDIT_VIEWER, which SELECT_CATALOG_ROLE does not
+  // imply, so a STATIC reference fails when the statement is compiled and takes
+  // the whole tier down over one view. Every read of it is a plain literal
+  // inside EXECUTE IMMEDIATE, which the read-only gate can still read and pass.
+  // Asserted structurally: a future edit that adds a static reference would run
+  // fine on the author's SYS connection and fail on every customer without it.
+  const spansOf = (body) => {
+    const spans = [];
+    const re = /\bEXECUTE\s+IMMEDIATE\b/gi;
+    let m;
+    while ((m = re.exec(body)) !== null) {
+      const start = m.index + m[0].length;
+      const lit = readSqlLiteral(body.slice(start));
+      if (lit) spans.push([start, start + lit.length]);
+    }
+    return spans;
+  };
+
+  const offenders = [];
+  let seen = 0;
+  for (const rel of AG.shipped.filter((f) => f.endsWith('.sql'))) {
+    const body = stripSqlComments(readFileSync(join(AG.dir, rel), 'utf8'));
+    const spans = spansOf(body);
+    for (const m of body.matchAll(/\b(?:unified_audit_trail|dba_audit_trail)\b/gi)) {
+      seen++;
+      if (!spans.some(([a, b]) => m.index >= a && m.index < b)) {
+        offenders.push(`${rel}: static reference to ${m[0]}`);
+      }
+    }
+  }
+  assert.ok(seen > 4, `only ${seen} trail references were examined, so this guard is asleep`);
+  assert.deepEqual(offenders, [], `a trail view is referenced statically:\n${offenders.join('\n')}`);
+});
+
+test('audit-governance: the README tier table and the collector agree', () => {
+  // The defect this exists for shipped in the RCA pack's first draft: the
+  // header, the dry-run plan and the README all described tiers the collector
+  // did not have. Here the dry-run plan is PRINTED from the collector's tier
+  // table so it cannot drift at all, and this closes the remaining gap between
+  // that table and the README.
+  const script = readFileSync(join(AG.dir, 'audit_governance.sh'), 'utf8');
+  const readme = readFileSync(join(AG.dir, 'README.md'), 'utf8');
+
+  const heredoc = /cat <<'TIERS'\n([\s\S]*?)\nTIERS\n/.exec(script);
+  assert.ok(heredoc, 'could not find the tier table in audit_governance.sh');
+  const collector = heredoc[1].split('\n').filter(Boolean).map((l) => {
+    const [id, sql] = l.split('|');
+    return { id, sql };
+  });
+  assert.equal(collector.length, 10, `expected ten tiers, the collector declares ${collector.length}`);
+
+  const documented = [...readme.matchAll(/^\|[^|]+\|\s*`([A-Z_]+)`\s*\|\s*`sql\/([a-z_]+\.sql)`\s*\|/gm)]
+    .map((m) => ({ id: m[1], sql: m[2] }));
+  assert.ok(documented.length >= 10, `only ${documented.length} tier rows found in the README table`);
+
+  assert.deepEqual(
+    documented.map((t) => `${t.id}:${t.sql}`).sort(),
+    collector.map((t) => `${t.id}:${t.sql}`).sort(),
+    'the README tier table and the collector disagree about which tiers exist',
+  );
+
+  // And every tier's collector actually ships, so neither list can promise a
+  // file that is not in the customer package.
+  for (const t of collector) {
+    assert.ok(AG.shipped.includes(`sql/${t.sql}`), `tier ${t.id} names sql/${t.sql}, which the pack does not ship`);
+    assert.ok(AG.expects.includes(`sql/${t.sql}`), `sql/${t.sql} is not in the pack's expects list`);
+  }
+});
+
+test('audit-governance: --dry-run prints every tier and promises nothing else', () => {
+  const out = mkdtempSync(join(tmpdir(), 'odc-agdry-'));
+  const cfg = join(out, 'config.env');
+  writeFileSync(cfg, [
+    'ORACLE_SID=ORCLCDB', 'ORACLE_HOME=/nonexistent', 'ORACLE_CONNECT="/ as sysdba"',
+    `OUTPUT_DIR=${out}`, 'AUDIT_WINDOW_DAYS=45', 'AUDIT_TOP_N=25',
+  ].join('\n'));
+  const plan = execFileSync('bash', [
+    join(AG.dir, 'audit_governance.sh'), '--config', cfg, '--dry-run',
+  ], { encoding: 'utf8' });
+
+  const heredoc = /cat <<'TIERS'\n([\s\S]*?)\nTIERS\n/.exec(readFileSync(join(AG.dir, 'audit_governance.sh'), 'utf8'));
+  for (const line of heredoc[1].split('\n').filter(Boolean)) {
+    const [id, sql] = line.split('|');
+    assert.ok(plan.includes(id), `the dry-run plan does not name tier ${id}`);
+    assert.ok(plan.includes(`sql/${sql}`), `the dry-run plan does not name sql/${sql}`);
+  }
+  assert.match(plan, /the last 45 days/, 'the plan must state the window it would use');
+  assert.match(plan, /issue any statement that changes anything/);
+  assert.match(plan, /draw a conclusion about any licence agreement/);
+  rmSync(out, { recursive: true, force: true });
+});
+
+test('audit-governance: config.env carries every variable the collector refuses to run without', () => {
+  // Same guard as daily-ops, for the same reason: the documented path is "copy
+  // config.env and edit it", so a script that starts requiring a variable the
+  // shipped config does not declare exits 2 on a customer's very first run.
+  const declared = new Set(
+    [...readFileSync(join(AG.dir, 'config.env'), 'utf8').matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1]),
+  );
+  const required = requiredConfigVars(readFileSync(join(AG.dir, 'audit_governance.sh'), 'utf8'));
+  assert.ok(required.length > 0, 'no required config variables were parsed, so this guard is asleep');
+  assert.ok(required.includes('AUDIT_WINDOW_DAYS'), 'the window must be a required variable, not an optional one');
+  const missing = required.filter((v) => !declared.has(v)).sort();
+  assert.deepEqual(missing, [], `config.env is missing ${missing.join(', ')}`);
+});
+
+test('audit-governance: the README says the pack has never run against a real database', () => {
+  // The standing rule for this project: state what has NOT been proven rather
+  // than implying coverage the work does not have. The field test is the
+  // founder's gate and the README has to say so in its own words.
+  const readme = readFileSync(join(AG.dir, 'README.md'), 'utf8');
+  assert.match(readme, /has never run against a real Oracle database/i);
+  assert.match(readme, /field test/i);
+});
+
+for (const pack of PACKS) {
+  test(`${pack.id}: every shipped shell script parses`, () => {
+    // NOT a formality. A `//` comment inside a shell script, or an unclosed
+    // heredoc, produces a file that looks perfect and dies at the first line.
+    // The healthcheck pack has had this guard since Phase 4; every pack needs
+    // it, and the tier table in audit_governance.sh is a quoted heredoc, which
+    // is exactly the construct that fails this way.
+    const scripts = pack.shipped.filter((f) => f.endsWith('.sh'));
+    assert.ok(scripts.length > 0, `${pack.id} ships no shell script, so this guard is asleep`);
+    for (const rel of scripts) {
+      execFileSync('bash', ['-n', join(pack.dir, rel)], { stdio: 'pipe' });
+    }
+  });
+}
 
 test('SELF-TEST: odc_br_document emits valid JSON when thresholds is omitted', () => {
   // REGRESSION GUARD. The default used to be written inline as ${8:-{\}},
