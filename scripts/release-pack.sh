@@ -200,7 +200,15 @@ while IFS= read -r PACK_ID; do
 
   # The version is DERIVED from the pack's own scripts and cross-checked, never
   # passed in, exactly as publish-pack-to-project.sh derives it.
-  VERSION="$(grep -ho '^VERSION="[^"]*"' "$SRC"/*.sh 2>/dev/null | sed 's/VERSION="//; s/"//' | sort -u)"
+  #
+  # The `|| true` is load bearing and was found by watching the guard below fail
+  # to fire. grep exits 1 when it matches nothing, `set -o pipefail` promotes
+  # that to the pipeline's status, and a plain assignment carries it, so under
+  # `set -e` a pack with no VERSION= killed the script at exit 1 with NO MESSAGE
+  # and the two refusals underneath were unreachable code. The same defect is in
+  # publish-pack-to-project.sh, where it has never been noticed because every
+  # pack committed so far happens to declare a version.
+  VERSION="$(grep -ho '^VERSION="[^"]*"' "$SRC"/*.sh 2>/dev/null | sed 's/VERSION="//; s/"//' | sort -u || true)"
   if [ -z "$VERSION" ]; then
     err "$PACK declares no VERSION= in any top-level script"
     exit 2
