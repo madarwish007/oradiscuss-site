@@ -11,11 +11,11 @@ VALUES
    0, 0, 'USD', 'once', 1, 0),
 
   ('toolkit', 1, 'Toolkit',
-   'RCA Generator, Audit and Governance, Daily-Ops. Every pack read-only, every pack dual-output. Weekly Security Watch and quarterly updates included.',
+   'RCA Generator, Audit and Governance, Daily-Ops. Every pack read-only, every pack dual-output. Monthly Security Watch and quarterly updates included.',
    9900, 14900, 'USD', 'year', 1, 1),
 
   ('toolkit-academy', 2, 'Toolkit + Academy',
-   'Everything in Toolkit, plus all the text lab-manual courses and one new module every quarter.',
+   'Everything in Toolkit, plus all the Academy courses and one new module every quarter.',
    19900, 24900, 'USD', 'year', 1, 2);
 
 -- Roadmap courses, from course-outlines.md. Counts start at 0 and are only ever

@@ -107,3 +107,36 @@ test('the pricing page still says checkout is not open, because that sentence is
     'the pricing page no longer says what has to happen before checkout opens'
   );
 });
+
+/* The catalogue blurbs are NOT in a built page: /pricing/ renders them from the
+ * catalog table at request time, so the dist sweep above cannot see them. This
+ * guards the SOURCE of that truth, the seed migration, because two blurbs once
+ * shipped to the live site contradicting locked rulings: "Weekly Security Watch"
+ * (the cadence is monthly, founder ruling 9 Aug) and "text lab-manual courses"
+ * (the Academy format was ruled interactive, 10 Aug). It fails if either lie,
+ * or a generic build-descriptor, returns to the seed a customer's price is read
+ * from. The production rows are corrected by migrations/0006 at promote; this
+ * keeps the source they are re-seeded from honest.
+ */
+test('the seed catalogue blurbs do not contradict a locked ruling', () => {
+  const seed = readFileSync(
+    new URL('../migrations/0002_seed_catalog.sql', import.meta.url).pathname,
+    'utf8'
+  );
+  /* Anti-vacuity: prove we are reading the real seed before trusting a clean
+   * sweep, so a renamed or emptied file fails loudly rather than passing empty. */
+  assert.match(seed, /INSERT OR REPLACE INTO catalog/, 'the seed migration is not where this guard reads it');
+  assert.match(seed, /'toolkit'/, "the 'toolkit' row is missing from the seed this guard reads");
+
+  const FORBIDDEN = [
+    { re: /weekly/i, why: 'the Security Watch cadence is monthly (founder ruling 9 Aug), never weekly' },
+    { re: /lab[\s-]?manual/i, why: 'the Academy format was ruled interactive (10 Aug); a blurb must not pin it to text lab manuals' },
+    ...BANNED,
+  ];
+  const hits = [];
+  for (const { re, why } of FORBIDDEN) {
+    const m = seed.match(re);
+    if (m) hits.push(`"${m[0]}" (${why})`);
+  }
+  assert.equal(hits.length, 0, `${hits.length} seed-blurb defect(s):\n  ` + hits.join('\n  '));
+});
