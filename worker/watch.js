@@ -263,8 +263,14 @@ async function fetchPage(url, fetcher) {
   const init = {
     headers: {
       // Says who we are and where to complain. A watcher that hides is a
-      // scraper; this one is a reader.
-      'User-Agent': 'OraDiscussSecurityWatch/1.0 (+https://oradiscuss.com/watch/)',
+      // scraper; this one is a reader. Oracle's Akamai edge 403s a User-Agent
+      // that carries a "(+url)" contact comment, verified 14 Aug 2026 from the
+      // deployed Worker and reproduced locally, so the identity stays in the UA
+      // and the contact moves to the standard From header, which Akamai serves
+      // 200. The bare UA alone also passes; the From header is the courteous
+      // half the URL comment used to carry.
+      'User-Agent': 'OraDiscussSecurityWatch/1.0',
+      From: 'watch@oradiscuss.com',
       Accept: 'text/html, application/xhtml+xml, application/rss+xml, application/atom+xml, */*;q=0.8',
     },
   };
