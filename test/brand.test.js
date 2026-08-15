@@ -230,20 +230,17 @@ test('the brand red register is exhaustive, so a red asset cannot hide by not be
 // a pinned one cannot quietly get redder, and FIXING one fails this test.
 // ---------------------------------------------------------------------------
 const KNOWN_RED_NESTED = {
-  // Category A: our own covers, retired identity. Fixing these closes the pin.
-  'images/blog/awr-is-talking-are-you-listening.png': 130249,
-  'images/blog/bidirectional-replication-12c.png': 106574,
-  'images/blog/cover-part3.png': 55984,
-  'images/blog/dbcs-to-exacs-migration-untold-story.png': 200285,
-  'images/blog/enable-disable-options-with-chopt.png': 116286,
-  'images/blog/fix-ora-01017-asmsnmp-missing.png': 524012,
-  'images/blog/gc-buffer-busy-acquired-rac.png': 201608,
-  'images/blog/online-partition-dbms-redefinition.png': 77727,
-  'images/blog/rman-backup-progress-monitoring.png': 80528,
+  // Category A: our own covers in the retired red identity. Phase 2b (15 Aug
+  // 2026) redrew the 12 that render on live articles into the ratified palette:
+  // the 8 dark cartoon covers were re-skinned gold #E0A020 via
+  // scripts/local-covers.mjs, and the 4 light covers were hue-remapped red->amber
+  // in place (the founder's hand-made art preserved, only the retired colour
+  // moved). Each pin is DELETED as this guard instructs once its cover is redrawn.
+  // What remains are two ORPHANS: on disk but referenced by no article anywhere
+  // in the repo (whole-repo sweep, 15 Aug 2026), so they render nowhere and are
+  // not a launch seam. They stay pinned until the founder rules on deleting the
+  // files themselves (source deletion is his gate).
   'images/blog/ZDT02.png': 10851,
-  'images/blog/oradiscuss-zdt-oms-24108-cover-1920x764.png': 9528,
-  'images/blog/oradiscuss-db-19-28-to-19-30-cover.png': 36031,
-  'images/blog/oradiscuss-db-19-28-to-19-30-cover-1920x764.png': 36033,
   'images/blog/oradiscuss-omr-24ai-cover (1).png': 37612,
   // Category B: Oracle's own product surfaces. Red here is theirs, not ours.
   'images/blog/OEM24aiR8.png': 39805,

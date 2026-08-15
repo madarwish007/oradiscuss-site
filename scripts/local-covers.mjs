@@ -6,8 +6,8 @@
 //   --bg        #0d0c0a   deep charcoal
 //   --bg2       #1a1614   lifted charcoal
 //   --bg3       #2b2623   warm slate
-//   --red       #c74634   Oracle red (primary accent)
-//   --red-hi    #e86454   lighter red (highlights / rim)
+//   --gold      #E0A020   signal gold (primary accent on dark; the logo's own accent)
+//   --gold-hi   #EBB84D   lighter warm gold (highlights / rim)
 //   --cream     #faf7f2   warm off-white (highlight edges)
 //   --line      #3a3532   subtle stroke
 
@@ -31,15 +31,15 @@ const DEFS = `
     <stop offset="100%" stop-color="#0d0c0a"/>
   </linearGradient>
   <radialGradient id="spot" cx="50%" cy="55%" r="55%">
-    <stop offset="0%" stop-color="#c74634" stop-opacity="0.28"/>
-    <stop offset="60%" stop-color="#c74634" stop-opacity="0"/>
+    <stop offset="0%" stop-color="#E0A020" stop-opacity="0.28"/>
+    <stop offset="60%" stop-color="#E0A020" stop-opacity="0"/>
   </radialGradient>
   <pattern id="grid" width="56" height="56" patternUnits="userSpaceOnUse">
     <circle cx="28" cy="28" r="1.3" fill="#3a3532"/>
   </pattern>
   <linearGradient id="redcard" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="0%" stop-color="#e86454"/>
-    <stop offset="100%" stop-color="#c74634"/>
+    <stop offset="0%" stop-color="#EBB84D"/>
+    <stop offset="100%" stop-color="#E0A020"/>
   </linearGradient>
   <linearGradient id="creamgrad" x1="0" y1="0" x2="0" y2="1">
     <stop offset="0%" stop-color="#faf7f2"/>
@@ -62,17 +62,17 @@ const BACKGROUND = `
 <rect width="${W}" height="${H}" fill="url(#bg)"/>
 <rect width="${W}" height="${H}" fill="url(#grid)" opacity="0.35"/>
 <rect width="${W}" height="${H}" fill="url(#spot)"/>
-<rect x="0" y="0" width="14" height="${H}" fill="#c74634"/>
+<rect x="0" y="0" width="14" height="${H}" fill="#E0A020"/>
 `;
 
 // Top-right Od mark
 const OD_MARK = `
 <g transform="translate(${W - 180}, 80)">
-  <rect width="100" height="100" rx="18" fill="#c74634"/>
+  <rect width="100" height="100" rx="18" fill="#E0A020"/>
   <text x="50" y="68" text-anchor="middle"
         font-family="Inter, Helvetica, sans-serif" font-size="48" font-weight="800"
-        fill="#ffffff" letter-spacing="-1.4">Od</text>
-  <rect x="26" y="76" width="48" height="5" rx="2" fill="#ffffff" opacity="0.9"/>
+        fill="#1C1917" letter-spacing="-1.4">Od</text>
+  <rect x="26" y="76" width="48" height="5" rx="2" fill="#1C1917" opacity="0.9"/>
 </g>
 `;
 
@@ -98,7 +98,7 @@ ${WATERMARK}
 // A cartoon "server rack" character. Optional facial expression.
 function serverRack({ x, y, w = 220, h = 340, tilt = 0, expression = 'neutral', tint = '#2b2623', glowColor = null, leds = 'normal' }) {
   // LED colors
-  const ledOn = '#e86454';
+  const ledOn = '#EBB84D';
   const ledDim = '#5a4e47';
   const slits = [];
   for (let i = 0; i < 6; i++) {
@@ -141,7 +141,7 @@ function serverRack({ x, y, w = 220, h = 340, tilt = 0, expression = 'neutral', 
       <rect width="${w}" height="${h}" rx="14" fill="${tint}" stroke="#3a3532" stroke-width="2"/>
       <rect x="0" y="0" width="${w}" height="${h}" rx="14" fill="url(#creamgrad)" opacity="0.04"/>
       <!-- top display panel -->
-      <rect x="8" y="8" width="${w - 16}" height="36" rx="6" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.4"/>
+      <rect x="8" y="8" width="${w - 16}" height="36" rx="6" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.4"/>
       ${face}
       ${slits.join('\n      ')}
       <!-- base -->
@@ -152,7 +152,7 @@ function serverRack({ x, y, w = 220, h = 340, tilt = 0, expression = 'neutral', 
 
 // A glowing red "data block" (the contested packet in gc-buffer-busy scene).
 function redCube({ x, y, size = 120, extraGlow = true }) {
-  const glow = extraGlow ? `<rect x="${x - size*0.4}" y="${y - size*0.4}" width="${size * 1.8}" height="${size * 1.8}" rx="${size}" fill="#c74634" opacity="0.35" filter="url(#glow)"/>` : '';
+  const glow = extraGlow ? `<rect x="${x - size*0.4}" y="${y - size*0.4}" width="${size * 1.8}" height="${size * 1.8}" rx="${size}" fill="#E0A020" opacity="0.35" filter="url(#glow)"/>` : '';
   return `
     ${glow}
     <g transform="translate(${x},${y})">
@@ -167,9 +167,9 @@ function categoryTag(label, x = 88, y = 120) {
   const w = Math.max(200, label.length * 14 + 56);
   return `
     <g transform="translate(${x},${y})">
-      <rect width="${w}" height="48" rx="8" fill="#c74634" fill-opacity="0.16" stroke="#c74634" stroke-opacity="0.5" stroke-width="1.5"/>
+      <rect width="${w}" height="48" rx="8" fill="#E0A020" fill-opacity="0.16" stroke="#E0A020" stroke-opacity="0.5" stroke-width="1.5"/>
       <text x="${w/2}" y="32" text-anchor="middle" font-family="Inter, Helvetica, sans-serif"
-            font-size="15" font-weight="800" fill="#e86454" letter-spacing="2.4">${label}</text>
+            font-size="15" font-weight="800" fill="#EBB84D" letter-spacing="2.4">${label}</text>
     </g>
   `;
 }
@@ -191,8 +191,8 @@ function redCable({ x1, y1, x2, y2, curve = 0.15, dashed = false, thick = 6 }) {
   const mx = (x1 + x2) / 2;
   const my = (y1 + y2) / 2 - (Math.abs(x2 - x1) * curve);
   const dash = dashed ? ' stroke-dasharray="14,10"' : '';
-  return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" stroke="#c74634" stroke-width="${thick}" fill="none" stroke-linecap="round"${dash} filter="url(#glow)"/>
-          <path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" stroke="#e86454" stroke-width="${thick / 2}" fill="none" stroke-linecap="round"${dash}/>`;
+  return `<path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" stroke="#E0A020" stroke-width="${thick}" fill="none" stroke-linecap="round"${dash} filter="url(#glow)"/>
+          <path d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}" stroke="#EBB84D" stroke-width="${thick / 2}" fill="none" stroke-linecap="round"${dash}/>`;
 }
 
 function particles(count = 30, area = [400, 200, 1100, 800]) {
@@ -203,7 +203,7 @@ function particles(count = 30, area = [400, 200, 1100, 800]) {
     const py = minY + Math.random() * (maxY - minY);
     const r = 1 + Math.random() * 3;
     const op = 0.2 + Math.random() * 0.6;
-    const c = Math.random() > 0.5 ? '#e86454' : '#faf7f2';
+    const c = Math.random() > 0.5 ? '#EBB84D' : '#faf7f2';
     out.push(`<circle cx="${px.toFixed(0)}" cy="${py.toFixed(0)}" r="${r.toFixed(1)}" fill="${c}" opacity="${op.toFixed(2)}"/>`);
   }
   return out.join('');
@@ -222,7 +222,7 @@ function seeded(seed) {
 
 function sceneGcBufferBusy() {
   // Racks pushed into the lower third so they never touch the 3-line title.
-  const r1 = serverRack({ x: 250, y: 540, expression: 'stressed', tint: '#2b2623', leds: 'error', glowColor: '#c74634' });
+  const r1 = serverRack({ x: 250, y: 540, expression: 'stressed', tint: '#2b2623', leds: 'error', glowColor: '#E0A020' });
   const r2 = serverRack({ x: 1450, y: 540, expression: 'smug', tint: '#1f1a17' });
   // Contested red cube centered between them, midline of the racks is ~ y=710
   const cube = redCube({ x: 900, y: 660, size: 140 });
@@ -252,37 +252,37 @@ function sceneRedef() {
       <rect x="0" y="260" width="380" height="10" fill="#0d0c0a"/>
       <rect x="0" y="400" width="380" height="10" fill="#0d0c0a"/>
       <!-- data flow dots -->
-      <circle cx="60" cy="60" r="3" fill="#e86454"/>
-      <circle cx="120" cy="180" r="3" fill="#e86454"/>
-      <circle cx="300" cy="220" r="3" fill="#e86454"/>
-      <circle cx="80" cy="320" r="3" fill="#e86454"/>
-      <circle cx="260" cy="460" r="3" fill="#e86454"/>
+      <circle cx="60" cy="60" r="3" fill="#EBB84D"/>
+      <circle cx="120" cy="180" r="3" fill="#EBB84D"/>
+      <circle cx="300" cy="220" r="3" fill="#EBB84D"/>
+      <circle cx="80" cy="320" r="3" fill="#EBB84D"/>
+      <circle cx="260" cy="460" r="3" fill="#EBB84D"/>
       <!-- windows -->
-      <rect x="30" y="30" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.4"/>
-      <rect x="30" y="170" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.4"/>
-      <rect x="30" y="310" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.4"/>
-      <rect x="30" y="450" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.4"/>
+      <rect x="30" y="30" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.4"/>
+      <rect x="30" y="170" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.4"/>
+      <rect x="30" y="310" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.4"/>
+      <rect x="30" y="450" width="80" height="30" rx="4" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.4"/>
     </g>
   `;
   // Laser sheets cutting horizontally
   const lasers = `
     <g opacity="0.9" filter="url(#glow)">
-      <rect x="740" y="478" width="460" height="4" fill="#e86454"/>
-      <rect x="740" y="618" width="460" height="4" fill="#e86454"/>
-      <rect x="740" y="758" width="460" height="4" fill="#e86454"/>
+      <rect x="740" y="478" width="460" height="4" fill="#EBB84D"/>
+      <rect x="740" y="618" width="460" height="4" fill="#EBB84D"/>
+      <rect x="740" y="758" width="460" height="4" fill="#EBB84D"/>
     </g>
   `;
   // Worker-bots at the base
   const bot = (x) => `
     <g transform="translate(${x}, 870)">
-      <rect x="-22" y="-30" width="44" height="46" rx="8" fill="#3a3532" stroke="#c74634" stroke-opacity="0.5"/>
-      <rect x="-15" y="-22" width="30" height="10" rx="2" fill="#e86454"/>
+      <rect x="-22" y="-30" width="44" height="46" rx="8" fill="#3a3532" stroke="#E0A020" stroke-opacity="0.5"/>
+      <rect x="-15" y="-22" width="30" height="10" rx="2" fill="#EBB84D"/>
       <circle cx="-8" cy="-6" r="3" fill="#faf7f2"/>
       <circle cx="8" cy="-6" r="3" fill="#faf7f2"/>
       <rect x="-24" y="16" width="48" height="8" rx="3" fill="#1a1614"/>
       <!-- antenna -->
-      <line x1="0" y1="-30" x2="0" y2="-42" stroke="#c74634" stroke-width="2"/>
-      <circle cx="0" cy="-44" r="3" fill="#e86454"/>
+      <line x1="0" y1="-30" x2="0" y2="-42" stroke="#E0A020" stroke-width="2"/>
+      <circle cx="0" cy="-44" r="3" fill="#EBB84D"/>
       <!-- package -->
       <rect x="-14" y="-48" width="28" height="16" rx="2" fill="url(#redcard)" stroke="#faf7f2" stroke-opacity="0.3"/>
     </g>
@@ -306,7 +306,7 @@ function sceneAwr() {
       <!-- fedora -->
       <ellipse cx="120" cy="-10" rx="110" ry="18" fill="#1a1614"/>
       <rect x="60" y="-60" width="120" height="54" rx="20" fill="#1a1614"/>
-      <rect x="60" y="-50" width="120" height="12" fill="#c74634"/>
+      <rect x="60" y="-50" width="120" height="12" fill="#E0A020"/>
       <!-- head silhouette -->
       <ellipse cx="120" cy="40" rx="70" ry="56" fill="#0d0c0a"/>
       <!-- trenchcoat body -->
@@ -320,14 +320,14 @@ function sceneAwr() {
   // Magnifying glass
   const glass = `
     <g transform="translate(1100,650)" filter="url(#softshadow)">
-      <circle r="160" fill="#1a1614" stroke="#c74634" stroke-width="10"/>
+      <circle r="160" fill="#1a1614" stroke="#E0A020" stroke-width="10"/>
       <circle r="146" fill="#0d0c0a" stroke="#3a3532" stroke-width="2"/>
       <!-- handle -->
-      <rect x="100" y="100" width="200" height="34" rx="12" transform="rotate(30 100 100)" fill="#c74634" stroke="#faf7f2" stroke-opacity="0.25"/>
+      <rect x="100" y="100" width="200" height="34" rx="12" transform="rotate(30 100 100)" fill="#E0A020" stroke="#faf7f2" stroke-opacity="0.25"/>
       <!-- waveform inside the lens -->
       <g clip-path="circle(146px at 0 0)">
         <path d="M -140 40 L -110 40 L -95 -20 L -80 60 L -65 -40 L -50 80 L -30 -30 L -10 50 L 10 -50 L 30 40 L 50 -20 L 70 60 L 90 -40 L 110 40 L 140 40"
-              stroke="#e86454" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+              stroke="#EBB84D" stroke-width="4" fill="none" stroke-linecap="round" filter="url(#glow)"/>
         <path d="M -140 90 L 140 90" stroke="#3a3532" stroke-width="1" stroke-dasharray="4,4"/>
         <path d="M -140 -10 L 140 -10" stroke="#3a3532" stroke-width="1" stroke-dasharray="4,4"/>
       </g>
@@ -354,7 +354,7 @@ function sceneDbcsExacs() {
       <rect x="200" y="100" width="60" height="140" rx="6" fill="#2b2623" stroke="#3a3532"/>
       <rect x="270" y="140" width="60" height="100" rx="6" fill="#1f1a17" stroke="#3a3532"/>
       <!-- windows -->
-      <g fill="#c74634" opacity="0.65">
+      <g fill="#E0A020" opacity="0.65">
         <rect x="50" y="100" width="12" height="8"/><rect x="70" y="100" width="12" height="8"/>
         <rect x="50" y="130" width="12" height="8"/><rect x="70" y="160" width="12" height="8"/>
         <rect x="120" y="60" width="14" height="10"/><rect x="142" y="60" width="14" height="10"/>
@@ -364,7 +364,7 @@ function sceneDbcsExacs() {
         <rect x="280" y="160" width="12" height="8"/><rect x="300" y="190" width="12" height="8"/>
       </g>
       <!-- label block -->
-      <rect x="130" y="0" width="100" height="28" rx="6" fill="#c74634"/>
+      <rect x="130" y="0" width="100" height="28" rx="6" fill="#E0A020"/>
       <text x="180" y="19" text-anchor="middle" font-family="Inter, sans-serif" font-size="13" font-weight="800" fill="#faf7f2" letter-spacing="1">DBCS</text>
     </g>
   `;
@@ -372,12 +372,12 @@ function sceneDbcsExacs() {
     <g transform="translate(1380, 520)" filter="url(#softshadow)">
       <ellipse cx="200" cy="280" rx="240" ry="32" fill="#1a1614"/>
       <!-- futuristic tall towers -->
-      <rect x="40" y="80" width="60" height="200" rx="6" fill="#2b2623" stroke="#c74634" stroke-opacity="0.4"/>
-      <rect x="120" y="20" width="90" height="260" rx="8" fill="#1f1a17" stroke="#c74634" stroke-opacity="0.7"/>
-      <rect x="230" y="60" width="70" height="220" rx="6" fill="#2b2623" stroke="#c74634" stroke-opacity="0.4"/>
-      <rect x="320" y="100" width="60" height="180" rx="6" fill="#1f1a17" stroke="#c74634" stroke-opacity="0.3"/>
+      <rect x="40" y="80" width="60" height="200" rx="6" fill="#2b2623" stroke="#E0A020" stroke-opacity="0.4"/>
+      <rect x="120" y="20" width="90" height="260" rx="8" fill="#1f1a17" stroke="#E0A020" stroke-opacity="0.7"/>
+      <rect x="230" y="60" width="70" height="220" rx="6" fill="#2b2623" stroke="#E0A020" stroke-opacity="0.4"/>
+      <rect x="320" y="100" width="60" height="180" rx="6" fill="#1f1a17" stroke="#E0A020" stroke-opacity="0.3"/>
       <!-- sleek light strips -->
-      <g fill="#e86454">
+      <g fill="#EBB84D">
         <rect x="50" y="100" width="40" height="4"/>
         <rect x="50" y="140" width="40" height="4"/>
         <rect x="50" y="180" width="40" height="4"/>
@@ -399,17 +399,17 @@ function sceneDbcsExacs() {
         <rect x="330" y="240" width="40" height="4"/>
       </g>
       <!-- label block -->
-      <rect x="140" y="-10" width="120" height="32" rx="8" fill="#c74634"/>
+      <rect x="140" y="-10" width="120" height="32" rx="8" fill="#E0A020"/>
       <text x="200" y="11" text-anchor="middle" font-family="Inter, sans-serif" font-size="14" font-weight="800" fill="#faf7f2" letter-spacing="1">EXACS</text>
     </g>
   `;
   // Suspension bridge
   const bridge = `
     <g>
-      <path d="M 480 690 Q 960 540 1440 690" stroke="#c74634" stroke-width="12" fill="none" stroke-linecap="round" filter="url(#glow)"/>
-      <path d="M 480 690 Q 960 540 1440 690" stroke="#e86454" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M 480 690 Q 960 540 1440 690" stroke="#E0A020" stroke-width="12" fill="none" stroke-linecap="round" filter="url(#glow)"/>
+      <path d="M 480 690 Q 960 540 1440 690" stroke="#EBB84D" stroke-width="4" fill="none" stroke-linecap="round"/>
       <!-- cables -->
-      <path d="M 480 690 Q 960 540 1440 690" stroke="#c74634" stroke-width="1" fill="none" stroke-dasharray="2,20" opacity="0.8"/>
+      <path d="M 480 690 Q 960 540 1440 690" stroke="#E0A020" stroke-width="1" fill="none" stroke-dasharray="2,20" opacity="0.8"/>
       <!-- tower pillars -->
       <rect x="478" y="580" width="10" height="130" fill="#3a3532"/>
       <rect x="1432" y="580" width="10" height="130" fill="#3a3532"/>
@@ -441,12 +441,12 @@ function sceneReplication() {
       <ellipse cx="140" cy="200" rx="140" ry="26" fill="none" stroke="#3a3532"/>
       <ellipse cx="140" cy="240" rx="140" ry="26" fill="#1a1614"/>
       <!-- face -->
-      <circle cx="100" cy="100" r="8" fill="#e86454"/>
-      <circle cx="180" cy="100" r="8" fill="#e86454"/>
-      <path d="M 100 150 Q 140 170 180 150" stroke="#e86454" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="100" cy="100" r="8" fill="#EBB84D"/>
+      <circle cx="180" cy="100" r="8" fill="#EBB84D"/>
+      <path d="M 100 150 Q 140 170 180 150" stroke="#EBB84D" stroke-width="4" fill="none" stroke-linecap="round"/>
       <!-- hand/port -->
-      <rect x="270" y="110" width="48" height="30" rx="8" fill="#c74634"/>
-      <circle cx="322" cy="125" r="14" fill="#e86454" filter="url(#glow)"/>
+      <rect x="270" y="110" width="48" height="30" rx="8" fill="#E0A020"/>
+      <circle cx="322" cy="125" r="14" fill="#EBB84D" filter="url(#glow)"/>
     </g>
   `;
   const rightDb = `
@@ -459,24 +459,24 @@ function sceneReplication() {
       <ellipse cx="140" cy="200" rx="140" ry="26" fill="none" stroke="#3a3532"/>
       <ellipse cx="140" cy="240" rx="140" ry="26" fill="#1a1614"/>
       <!-- face -->
-      <circle cx="100" cy="100" r="8" fill="#e86454"/>
-      <circle cx="180" cy="100" r="8" fill="#e86454"/>
-      <path d="M 100 150 Q 140 170 180 150" stroke="#e86454" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="100" cy="100" r="8" fill="#EBB84D"/>
+      <circle cx="180" cy="100" r="8" fill="#EBB84D"/>
+      <path d="M 100 150 Q 140 170 180 150" stroke="#EBB84D" stroke-width="4" fill="none" stroke-linecap="round"/>
       <!-- hand/port to left -->
-      <rect x="-38" y="110" width="48" height="30" rx="8" fill="#c74634"/>
-      <circle cx="-14" cy="125" r="14" fill="#e86454" filter="url(#glow)"/>
+      <rect x="-38" y="110" width="48" height="30" rx="8" fill="#E0A020"/>
+      <circle cx="-14" cy="125" r="14" fill="#EBB84D" filter="url(#glow)"/>
     </g>
   `;
   // Figure-8 energy loop between them
   const loop = `
     <g filter="url(#glow)">
-      <path d="M 862 665 C 910 620 950 620 980 665 C 1010 710 1050 710 1098 665" stroke="#c74634" stroke-width="8" fill="none" stroke-linecap="round"/>
-      <path d="M 1098 665 C 1050 620 1010 620 980 665 C 950 710 910 710 862 665" stroke="#e86454" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 862 665 C 910 620 950 620 980 665 C 1010 710 1050 710 1098 665" stroke="#E0A020" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <path d="M 1098 665 C 1050 620 1010 620 980 665 C 950 710 910 710 862 665" stroke="#EBB84D" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
     </g>
     <g>
       <circle cx="910" cy="640" r="5" fill="#faf7f2"/>
       <circle cx="1050" cy="690" r="5" fill="#faf7f2"/>
-      <circle cx="980" cy="665" r="4" fill="#e86454"/>
+      <circle cx="980" cy="665" r="4" fill="#EBB84D"/>
     </g>
   `;
   return wrap(`
@@ -511,7 +511,7 @@ function sceneOra01017() {
       </g>
       <!-- dial handle -->
       <rect x="238" y="240" width="24" height="140" rx="12" fill="#faf7f2" opacity="0.9"/>
-      <circle cx="250" cy="310" r="14" fill="#c74634"/>
+      <circle cx="250" cy="310" r="14" fill="#E0A020"/>
       <!-- warning glyph at top -->
       <g transform="translate(200, 70)">
         <path d="M 50 0 L 100 80 L 0 80 Z" fill="#faf7f2" stroke="#0d0c0a" stroke-width="4"/>
@@ -519,13 +519,13 @@ function sceneOra01017() {
       </g>
     </g>
     <!-- Red light leaking from door edges -->
-    <rect x="1060" y="340" width="580" height="700" rx="28" fill="#c74634" opacity="0.25" filter="url(#glow)"/>
+    <rect x="1060" y="340" width="580" height="700" rx="28" fill="#E0A020" opacity="0.25" filter="url(#glow)"/>
   `;
   // Alarm beams (cones from keyhole)
   const beams = `
     <g opacity="0.35">
-      <path d="M 1330 670 L 450 420 L 1330 700 Z" fill="#e86454"/>
-      <path d="M 1330 670 L 520 900 L 1330 700 Z" fill="#e86454"/>
+      <path d="M 1330 670 L 450 420 L 1330 700 Z" fill="#EBB84D"/>
+      <path d="M 1330 670 L 520 900 L 1330 700 Z" fill="#EBB84D"/>
     </g>
   `;
   // Little DBA-bot standing to the left with oversized key
@@ -539,12 +539,12 @@ function sceneOra01017() {
       <circle cx="16" cy="-42" r="6" fill="#faf7f2"/>
       <path d="M -14 -18 Q 0 -10 14 -18" stroke="#faf7f2" stroke-width="3" fill="none" stroke-linecap="round"/>
       <!-- antenna -->
-      <line x1="0" y1="-70" x2="0" y2="-92" stroke="#c74634" stroke-width="3"/>
-      <circle cx="0" cy="-95" r="5" fill="#e86454" filter="url(#glow)"/>
+      <line x1="0" y1="-70" x2="0" y2="-92" stroke="#E0A020" stroke-width="3"/>
+      <circle cx="0" cy="-95" r="5" fill="#EBB84D" filter="url(#glow)"/>
       <!-- arm reaching right with oversized key -->
       <rect x="40" y="40" width="160" height="24" rx="10" fill="#3a3532"/>
       <!-- key -->
-      <g transform="translate(200, 52)" fill="#c74634">
+      <g transform="translate(200, 52)" fill="#E0A020">
         <circle r="22"/>
         <rect x="20" y="-6" width="60" height="12" rx="2"/>
         <rect x="60" y="-12" width="8" height="14"/>
@@ -589,9 +589,9 @@ function sceneChopt() {
         <!-- knob -->
         <circle cx="0" cy="${on ? 40 : 130}" r="34" fill="${on ? 'url(#redcard)' : '#3a3532'}" stroke="${on ? '#faf7f2' : '#5a4e47'}" stroke-opacity="0.4" stroke-width="2"/>
         ${on ? `<circle cx="0" cy="40" r="8" fill="#faf7f2" opacity="0.9"/>` : ''}
-        ${on ? `<circle cx="0" cy="40" r="60" fill="#c74634" opacity="0.25" filter="url(#glow)"/>` : ''}
+        ${on ? `<circle cx="0" cy="40" r="60" fill="#E0A020" opacity="0.25" filter="url(#glow)"/>` : ''}
         <!-- LED -->
-        <circle cx="0" cy="180" r="5" fill="${on ? '#e86454' : '#4a4138'}"/>
+        <circle cx="0" cy="180" r="5" fill="${on ? '#EBB84D' : '#4a4138'}"/>
       </g>
     `;
   }).join('\n');
@@ -611,8 +611,8 @@ function sceneChopt() {
         <circle cx="26" cy="-22" r="6" fill="#faf7f2"/>
         <circle cx="54" cy="-22" r="6" fill="#faf7f2"/>
         <path d="M 26 -2 Q 40 6 54 -2" stroke="#faf7f2" stroke-width="3" fill="none" stroke-linecap="round"/>
-        <line x1="40" y1="-50" x2="40" y2="-70" stroke="#c74634" stroke-width="3"/>
-        <circle cx="40" cy="-72" r="4" fill="#e86454"/>
+        <line x1="40" y1="-50" x2="40" y2="-70" stroke="#E0A020" stroke-width="3"/>
+        <circle cx="40" cy="-72" r="4" fill="#EBB84D"/>
       </g>
     </g>
   `;
@@ -632,13 +632,13 @@ function sceneRman() {
       <rect x="-20" y="-20" width="700" height="260" rx="28" fill="#1a1614" stroke="#3a3532" stroke-width="3"/>
       <rect x="0" y="0" width="660" height="220" rx="16" fill="#0d0c0a" stroke="#3a3532" stroke-width="2"/>
       <!-- status LED -->
-      <circle cx="24" cy="-44" r="6" fill="#e86454"/>
+      <circle cx="24" cy="-44" r="6" fill="#EBB84D"/>
       <rect x="40" y="-52" width="84" height="16" rx="4" fill="#2b2623"/>
       <rect x="140" y="-52" width="60" height="16" rx="4" fill="#2b2623"/>
       <!-- main progress track -->
       <rect x="40" y="80" width="580" height="60" rx="30" fill="#1a1614" stroke="#3a3532"/>
       <rect x="40" y="80" width="440" height="60" rx="30" fill="url(#redcard)"/>
-      <rect x="40" y="80" width="440" height="60" rx="30" fill="#c74634" opacity="0.4" filter="url(#glow)"/>
+      <rect x="40" y="80" width="440" height="60" rx="30" fill="#E0A020" opacity="0.4" filter="url(#glow)"/>
       <rect x="474" y="72" width="12" height="76" rx="4" fill="#faf7f2" opacity="0.9"/>
       <text x="520" y="128" font-family="Inter, sans-serif" font-size="44" font-weight="800" fill="#faf7f2" letter-spacing="-1">76%</text>
       <!-- tick marks -->
@@ -651,10 +651,10 @@ function sceneRman() {
       </g>
       <!-- rows-processed sub-meter above main bar -->
       <rect x="40" y="20" width="580" height="40" rx="8" fill="#1a1614" stroke="#3a3532"/>
-      <rect x="40" y="20" width="380" height="40" rx="8" fill="#c74634" opacity="0.25"/>
+      <rect x="40" y="20" width="380" height="40" rx="8" fill="#E0A020" opacity="0.25"/>
       ${Array.from({ length: 11 }, (_, i) => {
         const op = i < 8 ? 1 : (0.3 + (10 - i) * 0.12);
-        return `<rect x="${60 + i * 22}" y="32" width="10" height="16" fill="#e86454" opacity="${op.toFixed(2)}"/>`;
+        return `<rect x="${60 + i * 22}" y="32" width="10" height="16" fill="#EBB84D" opacity="${op.toFixed(2)}"/>`;
       }).join('')}
     </g>
   `;
@@ -662,15 +662,15 @@ function sceneRman() {
     <g transform="translate(260, 580)" filter="url(#softshadow)">
       <rect x="-55" y="0" width="110" height="150" rx="14" fill="#2b2623" stroke="#3a3532" stroke-width="2"/>
       <rect x="-45" y="-85" width="90" height="80" rx="16" fill="#2b2623" stroke="#3a3532" stroke-width="2"/>
-      <rect x="-36" y="-70" width="72" height="50" rx="6" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.6"/>
-      <circle cx="-16" cy="-48" r="8" fill="#e86454"/>
+      <rect x="-36" y="-70" width="72" height="50" rx="6" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.6"/>
+      <circle cx="-16" cy="-48" r="8" fill="#EBB84D"/>
       <circle cx="-16" cy="-48" r="3" fill="#faf7f2"/>
-      <circle cx="16" cy="-48" r="8" fill="#e86454"/>
+      <circle cx="16" cy="-48" r="8" fill="#EBB84D"/>
       <circle cx="16" cy="-48" r="3" fill="#faf7f2"/>
-      <line x1="0" y1="-85" x2="0" y2="-110" stroke="#c74634" stroke-width="3"/>
-      <circle cx="0" cy="-114" r="5" fill="#e86454" filter="url(#glow)"/>
-      <rect x="-30" y="20" width="60" height="28" rx="4" fill="#0d0c0a" stroke="#c74634" stroke-opacity="0.5"/>
-      <circle cx="-18" cy="34" r="4" fill="#e86454"/>
+      <line x1="0" y1="-85" x2="0" y2="-110" stroke="#E0A020" stroke-width="3"/>
+      <circle cx="0" cy="-114" r="5" fill="#EBB84D" filter="url(#glow)"/>
+      <rect x="-30" y="20" width="60" height="28" rx="4" fill="#0d0c0a" stroke="#E0A020" stroke-opacity="0.5"/>
+      <circle cx="-18" cy="34" r="4" fill="#EBB84D"/>
       <circle cx="-2" cy="34" r="4" fill="#c5720a"/>
       <circle cx="14" cy="34" r="4" fill="#2f7e4b"/>
       <rect x="-60" y="144" width="120" height="14" rx="4" fill="#1a1614"/>
@@ -682,15 +682,15 @@ function sceneRman() {
         <rect x="0" y="0" width="140" height="80" rx="8" fill="#2b2623" stroke="#3a3532"/>
         <circle cx="40" cy="40" r="20" fill="#1a1614" stroke="#3a3532"/>
         <circle cx="100" cy="40" r="20" fill="#1a1614" stroke="#3a3532"/>
-        <circle cx="40" cy="40" r="8" fill="#c74634"/>
-        <circle cx="100" cy="40" r="8" fill="#c74634"/>
+        <circle cx="40" cy="40" r="8" fill="#E0A020"/>
+        <circle cx="100" cy="40" r="8" fill="#E0A020"/>
       </g>
       <g transform="translate(1600, 730)">
         <rect x="0" y="0" width="140" height="80" rx="8" fill="#2b2623" stroke="#3a3532"/>
         <circle cx="40" cy="40" r="20" fill="#1a1614" stroke="#3a3532"/>
         <circle cx="100" cy="40" r="20" fill="#1a1614" stroke="#3a3532"/>
-        <circle cx="40" cy="40" r="8" fill="#c74634"/>
-        <circle cx="100" cy="40" r="8" fill="#c74634"/>
+        <circle cx="40" cy="40" r="8" fill="#E0A020"/>
+        <circle cx="100" cy="40" r="8" fill="#E0A020"/>
       </g>
     </g>
   `;
