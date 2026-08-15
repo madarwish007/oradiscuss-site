@@ -4,39 +4,48 @@
 
 ## Visual theme
 
-A pale, cool instrument panel lit by a slow aurora, anchored by a deep navy structural band. The light is atmosphere; the navy is authority; Oracle red is the only thing that asks you to act.
+A warm, quiet instrument panel anchored by a deep navy structural band. The warm ground carries the calm; the navy is authority; Instrument Amber is the only thing that asks you to act.
 
-**Colour strategy: Committed.** Navy carries the structure, the aurora field carries the mood, red carries every action. Not restrained-neutral, not drenched.
+**Colour strategy: Committed.** Navy carries the structure, the warm ground carries the calm, amber carries every action. Not restrained-neutral, not drenched. This superseded the 5 Aug cool-navy reading: the palette was regrounded to Instrument Amber under founder delegation on 8 Aug and applied to the site in Phase 2b (15 Aug). Oracle red is dropped entirely.
 
 **Theme: light.** The scene: a DBA at a desk in an office at 10am, mid-morning, checking whether last night's batch held. Not an incident. Not 3am. Light is correct.
 
 ## Palette
 
+Instrument Amber, applied 15 Aug 2026 (Phase 2b). Every value below is the shipped token in `src/styles/global.css`. The logo, the email design system and the pack HTML outputs carry the same palette.
+
 | Role | Value | Use |
 |---|---|---|
-| Field | `#FAFBFD` | page ground, cool near-white tinted toward navy |
+| Field | `#F7F5F1` | page ground, warm near-white |
 | Surface | `#FFFFFF` | cards, panels |
-| Ink | `#0B1B34` | headlines, primary text |
-| Ink 2 | `#4D5A74` | body |
-| Ink 3 | `#626C80` | captions, muted |
-| Hairline | `#DFE5EE` | borders, rules |
-| **Action (Oracle red)** | `#C74634` | buttons, eyebrows, wordmark accent, selected plan |
-| Action hover | `#A83A2B` | |
-| Deep (navy band) | `#0B1B34` to `#0E2A52` to `#0B4A6F` | the structural band, 158deg |
+| Field 2 (panel) | `#EFEAE2` | recessed ground: strips, table heads, code chips |
+| Ink | `#1C1917` | headlines, primary text |
+| Ink 2 | `#4A443D` | body |
+| Ink 3 | `#6A6156` | captions, muted |
+| Hairline | `#E0D9CD` | borders, rules |
+| **Action (Instrument Amber)** | `#8A4B12` | buttons, eyebrows, wordmark accent, selected plan. 6.23:1 on Field, white-on-action 6.78:1 |
+| Action hover | `#6E3B0E` | |
+| Signal (gold), mark | `#E0A020` | marks only. 2.09:1 as text, so **never a word** |
+| Signal (gold), text | `#7E5E08` | the legible variant, 5.52:1 on Field, for the rare signal-in-text |
+| Deep (navy band) | `#0B1B34` to `#0E2A52` to `#0B4A6F` | the structural band, 158deg. **Unchanged: navy carries the structure** |
 | On deep | `#9FB6D4` | every word on the navy band that is not a heading |
-| Quiet blue | `#1F5AA8` | the emphasised headline clause |
-| Signal OK, mark | `#1FA37A` | the live dot, borders, fills. **Never a word.** |
-| Signal OK, text | `#17785A` | the same signal written out: "read-only", "Clear", the price lock |
+| Deep eyebrow | `#EBB84D` | the eyebrow on the navy band, amber-gold, 5.17:1 on the lightest band stop `#0B4A6F`. The coral it replaced was a tint of the dropped red |
+| Quiet blue | `#1F5AA8` | the emphasised headline clause. Kept, navy family, 6.25:1 on Field |
+| Signal OK, mark | `#2A9160` | the live dot, borders, fills. **Never a word.** |
+| Signal OK, text | `#1F6B45` | the same signal written out: "read-only", "Clear". 5.94:1 on Field (ratified "done") |
 
 There is no fourth ink. `--ink-4` existed at `#8592A8`, a near duplicate of Ink 3 that
 measured 3.04:1 on the field while carrying price text; it now resolves to `--ink3` and
 the name survives only for its remaining call sites.
 
 Muted colours are sized against the **darkest ground they are ever painted on**, which is
-`--field-2 #F1F4FA` in the footer and the marquee, not white. Measured on rendered pixels:
-Ink 3 4.79:1, Signal OK text 4.80:1 on that ground.
+`--field-2 #EFEAE2` in the footer and the marquee, not white. Measured on rendered pixels:
+Ink 3 5.07:1, Signal OK text 5.40:1 on that ground. **Ink 3 is a web floor.** The cross-surface
+email design system ratifies Ink 3 as `#787065`, which measures 4.07:1 on the warm panel and
+fails the 4.5 web rule for 11px labels, so the website darkens it to `#6A6156`. The email value
+is retained for email (its type sits larger); the divergence is a measured delta, not drift.
 
-**Aurora field**, three blooms at low opacity behind the hero, blurred 46px: navy `rgba(31,90,168,.42)` upper left, teal `rgba(31,163,122,.36)` upper right, Oracle red `rgba(199,70,52,.30)` centre. The red bloom is what stops this being the stock purple-orange SaaS aurora: the light belongs to this brand.
+**Aurora: DELETED (Phase 2b, 8 Aug ruling).** The system previously carried three blurred blooms behind the hero, one of them Oracle red. It is gone entirely: the red bloom was a tint of the dropped colour, and its 28s drift dropped the hero eyebrow to 3.01:1. The hero now sits on the plain warm ground.
 
 Never `#000` or `#fff` for text. No gradient text anywhere. No glass except the single hero artifact panel.
 
@@ -62,23 +71,22 @@ Cards only where they are the right affordance: plans and packs. Bordered white,
 
 Purposeful only. Everything below early-returns to its final state under `prefers-reduced-motion` or at `max-width: 767px`.
 
-- **Aurora drift**: the field translates and scales very slowly, 28s, infinite alternate. Life without distraction.
 - **Hero entrance**: staggered reveal, 70ms apart, `cubic-bezier(.16,1,.3,1)` (ease-out-expo). Eyebrow, headline lines in sequence, lede, actions, meta strip.
 - **The artifact panel**: enters last, lifts in, and its rows fill in sequence with the check count animating up. This dramatizes the product's actual output, which is the point.
 - **Scroll reveals**: sections rise 18px and fade in via IntersectionObserver, once, never repeating.
-- **Hover**: plan cards lift 3px with a red border on the selected tier; buttons deepen and lift 1px.
+- **Hover**: plan cards lift 3px with an amber border on the selected tier; buttons deepen and lift 1px.
 - **The live dot** pulses at 2.4s.
 
 Never animate layout properties. Transform and opacity only.
 
 ## Components
 
-- **Eyebrow**: mono, uppercase, `.16em`, Oracle red.
-- **Button primary**: red, 9px radius, 15px Archivo 600, shadow `0 8px 22px rgba(199,70,52,.26)`.
+- **Eyebrow**: mono, uppercase, `.16em`, Instrument Amber.
+- **Button primary**: amber, 9px radius, 15px Archivo 600, shadow `0 8px 22px rgba(138,75,18,.26)`.
 - **Button secondary**: white, hairline border, same geometry.
 - **Artifact panel**: the one glass surface. `rgba(255,255,255,.62)` + `blur(18px)`, 16px radius, showing a real report with the dual-output pair at its foot.
 - **Meta strip**: mono labels above Archivo values, separated by a hairline.
-- **Plan card**: white, hairline border, 13px radius; the selected tier takes a 1.5px red border and a red eyebrow.
+- **Plan card**: white, hairline border, 13px radius; the selected tier takes a 1.5px amber border and an amber eyebrow.
 
 ## Accessibility
 
@@ -89,15 +97,12 @@ Colour that is not text (the live dot, a border, a fill) carries no ratio requir
 keeps its brightness. Focus states are visible on every interactive element. The live-state
 colour is always paired with a word, never colour alone.
 
-Two known exceptions, both Oracle red, both predating the Instrument rebuild, neither one
-resolvable without a founder decision:
+The two known exceptions were both Oracle red and are both **resolved by Phase 2b**:
 
-- **The hero eyebrow on the aurora.** `#C74634` at 11px over the blue bloom measures
-  **3.01:1 at its worst point in the 28s drift** (worst ground `#BCCEE5`). Clearing 4.5
-  needs either the brand red darkened or the blue bloom's declared alpha cut from `.42` to
-  about `.03`, which is the aurora deleted. Even `--act-2 #A83A2B` only reaches 4.01:1 there.
-- **Red on the red-tinted chips.** `.ace-btn` label 4.16:1, `.ab-p` badge 3.99:1. Oracle red
-  on `--red-faint`, a pairing the site has carried since before this system.
+- **The hero eyebrow on the aurora** measured 3.01:1 over the drifting blue bloom. The aurora
+  is deleted, so the eyebrow now sits amber `#8A4B12` on the plain warm ground at 6.23:1.
+- **Amber on the amber-tinted chips.** `#8A4B12` on `--red-faint` `rgba(138,75,18,.07)` over the
+  warm ground measures **5.62:1**, up from 4.16:1 (`.ace-btn`) and 3.99:1 (`.ab-p`) in Oracle red.
 
 ## Superseded legacy classes
 
@@ -132,7 +137,7 @@ Deliberately **not** cards, leave them: `.ai-result` (a scrolling output well),
 
 ### Eyebrows
 
-`.i-eyebrow` (mono 11px 600, `.16em`, Oracle red) supersedes `.SK`, `.EBW span`, `.art-cat`,
+`.i-eyebrow` (mono 11px 600, `.16em`, Instrument Amber) supersedes `.SK`, `.EBW span`, `.art-cat`,
 `.CC`, `.promo-cta`, and the label half of `.inst-onward`.
 `.i-eyebrow.i-eyebrow-deep` supersedes `.NK`.
 

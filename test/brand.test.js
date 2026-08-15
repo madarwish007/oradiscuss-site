@@ -215,9 +215,12 @@ test('the brand red register is exhaustive, so a red asset cannot hide by not be
 //
 //   THIRTEEN are OraDiscuss-branded covers in the RETIRED identity: the red
 //   "Od" square top right, ORADISCUSS.COM bottom left, red furniture on a dark
-//   ground. These are the defect. They belong to Phase 2b and are deliberately
-//   NOT fixed here, because regenerating them amber while global.css still
-//   declares --act:#C74634 would put amber covers on a red site.
+//   ground. These are the defect. global.css is now amber (Phase 2b landed), so
+//   these red covers are the remaining seam, and they render ON-PAGE (listing and
+//   article cards), not only as og:meta. They are regenerated in a dedicated
+//   covers lane, a LAUNCH BLOCKER, rather than here: they are heterogeneous PNGs
+//   across several pipelines and some are hand-made, craft work that would hold
+//   this mechanical palette diff hostage. Each pin closes as its cover is redrawn.
 //
 //   FIVE are Oracle's own product screenshots and logotypes, where the red is
 //   Oracle's UI being documented, not our brand borrowing it. Those are
