@@ -252,6 +252,17 @@ const COVERS = [
     eyebrow: 'OEM 24ai UPGRADE · PART 3 OF 3', keyword: 'AGENTS', tag: 'OCI',
     headline: 'Updating the Agents from RU5 to RU8, One Estate, One Version',
     dek: 'The mass agent update via OEM Agent Patching, off-peak batching across DEV, UAT, PROD.' },
+  // These two replace the last non-editorial covers (an Oracle product screenshot
+  // and the ACE badge) so every cover shares the site's look and feel (founder,
+  // 15 Aug: "in all cases the website should have the same look and feel").
+  { file: 'OEM24aiR8.png', w: 1920, h: 1080,
+    eyebrow: 'ENTERPRISE MANAGER · OCI', keyword: 'OEM', tag: 'OCI',
+    headline: 'Oracle Enterprise Manager 24ai, An Old Friend Got a Serious Update',
+    dek: 'The new features in 24ai, and why they are worth your time to try.' },
+  { file: 'badge-ace-apprentice-2026-hx.png', w: 1920, h: 1080,
+    eyebrow: 'COMMUNITY · ORACLE ACE', keyword: 'ACE', tag: 'COMMUNITY',
+    headline: 'I just became an Oracle ACE Apprentice!',
+    dek: 'A personal note on joining the Oracle ACE program and how the four-level path works.' },
 ];
 
 async function main() {

@@ -230,21 +230,17 @@ test('the brand red register is exhaustive, so a red asset cannot hide by not be
 // a pinned one cannot quietly get redder, and FIXING one fails this test.
 // ---------------------------------------------------------------------------
 const KNOWN_RED_NESTED = {
-  // Category A: our own covers in the retired red identity. Phase 2b (15 Aug
-  // 2026) redrew the 12 that render on live articles into the ratified palette:
-  // the 8 dark cartoon covers were re-skinned gold #E0A020 via
-  // scripts/local-covers.mjs, and the 4 light covers were hue-remapped red->amber
-  // in place via scripts/brand/remap-cover-red.py (the founder's hand-made art
-  // preserved, only the retired colour moved). Each pin is DELETED as this guard
-  // instructs once its cover is redrawn.
-  // What remains are two ORPHANS: on disk but referenced by no article anywhere
-  // in the repo (whole-repo sweep, 15 Aug 2026), so they render nowhere and are
-  // not a launch seam. They stay pinned until the founder rules on deleting the
-  // files themselves (source deletion is his gate).
-  'images/blog/ZDT02.png': 10851,
-  'images/blog/oradiscuss-omr-24ai-cover (1).png': 37612,
-  // Category B: Oracle's own product surfaces. Red here is theirs, not ours.
-  'images/blog/OEM24aiR8.png': 39805,
+  // Category A (OUR own covers in the retired red identity) is now EMPTY: all 13
+  // article covers were redrawn as pure-typography editorial covers in the site's
+  // identity (scripts/brand/editorial-covers.mjs), red-family-pixels 0. The two
+  // former orphans (ZDT02.png, oradiscuss-omr-24ai-cover (1).png) were DELETED on
+  // the founder's word (15 Aug 2026), and the last screenshot cover (OEM24aiR8.png)
+  // was replaced by an editorial cover, so none of those three is pinned any more.
+  // Category B: four Oracle product screenshots (OEM UI, architecture, OCI DB
+  // system). Verified referenced by NO article (whole-repo sweep 15 Aug 2026), so
+  // they are also unused orphans, but the red is Oracle's own UI, not ours. Kept
+  // pinned pending the founder's source-deletion word: he approved deleting the
+  // two Category-A orphans above, but these four were not part of that flag.
   'images/blog/oem24ai-1.png': 51262,
   'images/blog/oem24ai.png': 2747,
   'images/blog/OEM_Arch01.png': 40,
