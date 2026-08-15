@@ -44,3 +44,8 @@ graphify-out/
 
 # release artefacts (zips + generated SQL) from scripts/release-pack.sh
 .release-out/
+
+# Editorial cover build fonts — provenance in scripts/brand/.fonts/{fetch-fonts.sh,instance-fonts.py}
+scripts/brand/.fonts/*.ttf
+scripts/brand/.fonts/out/
+scripts/brand/.fonts/contact-sheet.png
