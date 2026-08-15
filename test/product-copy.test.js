@@ -39,6 +39,7 @@ const PRODUCT_PAGES = [
   'academy/index.html',
   'tools/index.html',
   'services/index.html',
+  'samples/healthcheck/index.html',
 ];
 
 function visibleText(html) {

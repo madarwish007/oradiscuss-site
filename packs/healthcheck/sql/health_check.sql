@@ -59,7 +59,10 @@ SPOOL &ODC_SPOOL
 -- ---------------------------------------------------------------------------
 -- SECTION 1: Instance & database status
 -- ---------------------------------------------------------------------------
-SELECT 'SEC|Instance & Database' FROM DUAL;
+-- The '&' is emitted with CHR(38) so SQL*Plus (DEFINE is ON for the &1..&9
+-- threshold arguments) does not read "& Database" as a substitution variable
+-- and stop to prompt for it. Same reason on the other section titles below.
+SELECT 'SEC|Instance ' || CHR(38) || ' Database' FROM DUAL;
 
 SELECT 'CHK|INSTANCE_STATUS|' ||
        CASE WHEN i.status = 'OPEN' THEN 'OK' ELSE 'CRIT' END ||
@@ -69,16 +72,20 @@ SELECT 'CHK|INSTANCE_STATUS|' ||
        ', up since ' || TO_CHAR(i.startup_time, 'YYYY-MM-DD HH24:MI')
 FROM v$instance i;
 
+-- DATABASE_STATUS (ACTIVE / SUSPENDED / INSTANCE RECOVERY) is a column of
+-- V$INSTANCE, not V$DATABASE. Reading it off V$DATABASE raises ORA-00904 on
+-- every Oracle version, so open_mode comes from V$DATABASE and the status from
+-- V$INSTANCE, joined one-to-one.
 SELECT 'CHK|DATABASE_STATUS|' ||
-       CASE WHEN d.open_mode LIKE 'READ WRITE%' AND d.database_status = 'ACTIVE'
+       CASE WHEN d.open_mode LIKE 'READ WRITE%' AND vi.database_status = 'ACTIVE'
             THEN 'OK'
-            WHEN d.open_mode LIKE 'READ ONLY%' AND d.database_status = 'ACTIVE'
+            WHEN d.open_mode LIKE 'READ ONLY%' AND vi.database_status = 'ACTIVE'
             THEN 'OK'
             ELSE 'CRIT' END ||
        '|Database status|' ||
        d.name || ' (' || d.database_role || ') open_mode=' || d.open_mode ||
        ', log_mode=' || d.log_mode
-FROM v$database d;
+FROM v$database d CROSS JOIN v$instance vi;
 
 -- ---------------------------------------------------------------------------
 -- CLUSTER SCOPE (added v1.0)
@@ -191,7 +198,7 @@ ORDER BY m.tablespace_name;
 -- ---------------------------------------------------------------------------
 -- SECTION 3: Invalid objects
 -- ---------------------------------------------------------------------------
-SELECT 'SEC|Objects & Jobs' FROM DUAL;
+SELECT 'SEC|Objects ' || CHR(38) || ' Jobs' FROM DUAL;
 
 SELECT 'CHK|INVALID_OBJECTS|' ||
        CASE WHEN COUNT(*) >= &ODC_INV_WARN THEN 'WARN' ELSE 'OK' END ||
@@ -223,14 +230,34 @@ WHERE broken = 'Y';
 
 -- ---------------------------------------------------------------------------
 -- SECTION 4: Alert log scan (ADR-aware) - ORA- errors in the last 24h
--- Uses X$DBGALERTEXT (the ADR alert log as a table). Diagnostic destination
--- is reported from V$DIAG_INFO.
+-- Reads V$DIAG_ALERT_EXT (the alert log exposed as a view). Diagnostic
+-- destination is reported from V$DIAG_INFO.
+--
+-- The ORA-error scan is a PRIVILEGED, BEST-EFFORT check: V$DIAG_ALERT_EXT needs
+-- more than the SELECT_CATALOG_ROLE this pack documents and is not exposed in
+-- every container. Both statements stay STATIC, SELECT-only SQL - no dynamic
+-- SQL, so the read-only guarantee is trivially auditable by reading the file -
+-- and WHENEVER SQLERROR is set to CONTINUE across just these two statements. An
+-- account that cannot see the view gets an ORA-00942 that is written to the raw
+-- file and ignored by the parser (it matches no SEC|/CHK|/MET| prefix), never a
+-- failure that aborts the whole collection. EXIT-on-error is restored
+-- immediately afterwards, so a genuine error in any later section still stops
+-- the run. Run the pack as SYSDBA, or grant read on the alert view, to see this
+-- section populated; every other section runs on SELECT_CATALOG_ROLE alone.
+--
+-- DEFINE is turned OFF across this section: alert-log message text is arbitrary
+-- and can legitimately contain '&', which SQL*Plus would otherwise read as a
+-- substitution variable and stop to prompt for, aborting the whole collection.
+-- No &-threshold argument is used here, so switching DEFINE off is safe.
 -- ---------------------------------------------------------------------------
+SET DEFINE OFF
 SELECT 'SEC|Alert Log (last 24h)' FROM DUAL;
 
 SELECT 'CHK|ADR_LOCATION|NA|ADR diagnostic destination|' ||
        MAX(CASE WHEN name = 'Diag Trace' THEN value END)
 FROM v$diag_info;
+
+WHENEVER SQLERROR CONTINUE
 
 SELECT 'CHK|ALERT_ORA_ERRORS|' ||
        CASE WHEN COUNT(*) = 0 THEN 'OK'
@@ -238,7 +265,7 @@ SELECT 'CHK|ALERT_ORA_ERRORS|' ||
             ELSE 'WARN' END ||
        '|ORA- errors in alert log (24h)|' ||
        COUNT(*) || ' ORA- error line(s) in the last 24 hours'
-FROM x$dbgalertext
+FROM v$diag_alert_ext
 WHERE originating_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY
   AND message_text LIKE '%ORA-%';
 
@@ -247,16 +274,19 @@ SELECT 'CHK|ALERT_SAMPLE_' || ROWNUM || '|NA|Recent ORA- sample|' ||
        TO_CHAR(originating_timestamp, 'MM-DD HH24:MI') || ' ' ||
        REPLACE(SUBSTR(message_text, 1, 180), '|', '/')
 FROM (SELECT originating_timestamp, message_text
-      FROM x$dbgalertext
+      FROM v$diag_alert_ext
       WHERE originating_timestamp > SYSTIMESTAMP - INTERVAL '1' DAY
         AND message_text LIKE '%ORA-%'
       ORDER BY originating_timestamp DESC)
 WHERE ROWNUM <= 5;
 
+WHENEVER SQLERROR EXIT SQL.SQLCODE
+SET DEFINE ON
+
 -- ---------------------------------------------------------------------------
 -- SECTION 5: Archivelog mode & FRA / DB_RECOVERY_FILE_DEST usage
 -- ---------------------------------------------------------------------------
-SELECT 'SEC|Archivelog & FRA' FROM DUAL;
+SELECT 'SEC|Archivelog ' || CHR(38) || ' FRA' FROM DUAL;
 
 SELECT 'CHK|ARCHIVELOG_MODE|' ||
        CASE WHEN log_mode = 'ARCHIVELOG' THEN 'OK' ELSE 'WARN' END ||

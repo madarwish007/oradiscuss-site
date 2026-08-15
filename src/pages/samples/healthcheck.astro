@@ -1,0 +1,186 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { readFileSync } from 'node:fs';
+
+/* The ungated sample page for the Health Check pack. RUNBOOK.md: "Every SKU page
+   carries a REAL sanitized sample report." This page carries the pack's own two
+   outputs so a visitor sees what they get before they pay, with no email gate.
+
+   HONESTY: the artifacts here are the SYNTHETIC showcase assets, produced by
+   `npm run build:showcase` and governed by Showcase/STANDARDS.md. They are read
+   from Showcase/samples/healthcheck/ at build time and EMBEDDED, never copied,
+   so this page can never drift from the guarded originals. The provenance
+   sentence that STANDARDS.md binds to every published asset is rendered in
+   visible text below, because report.html and briefing.json have no burned-in
+   pixel backstop the way the framed images do.
+
+   noindex: this page stays out of the index until the SAME decision that opens
+   checkout (the single launch; no early promotion). It is not bound to a proxy
+   condition. When checkout opens, drop noindex here as part of that flip. */
+
+const SAMPLE = new URL('../../../Showcase/samples/healthcheck/', import.meta.url);
+const reportHtml = readFileSync(new URL('report.html', SAMPLE), 'utf8');
+const briefingJson = JSON.stringify(
+  JSON.parse(readFileSync(new URL('briefing.json', SAMPLE), 'utf8')),
+  null,
+  2,
+);
+
+/* Verbatim from Showcase/STANDARDS.md section 1 and Showcase/MANIFEST.json. A
+   softened version is a defect of the same class as a wrong number. */
+const PROVENANCE =
+  'Sample rendered from a synthetic lab collection. Not output from a real Oracle database.';
+---
+<BaseLayout
+  title="See a sample: the Health Check report and its AI briefing"
+  description="The Health Check pack produces two things from one read-only collection: a report you open and a briefing your own AI reads. Here is a full sample of both, no email required."
+  noindex={true}
+>
+<div class="capp">
+
+  <section class="capp-head">
+    <div class="i-shell">
+      <p class="i-eyebrow rv">Sample &middot; Health Check pack</p>
+      <h1 class="rv" style="--d:70ms">See exactly what one run produces.</h1>
+      <p class="capp-lede rv" style="--d:140ms">
+        The pack reads your database once and writes the same evidence twice: a report you
+        open in a browser, and a briefing your own AI reads. Both are below in full, nothing
+        is blurred, and there is no email to leave first.
+      </p>
+    </div>
+  </section>
+
+  <div class="i-shell smp-body">
+
+    <!-- ARTIFACT 1: the report, as the pack writes it, in a brand mount. -->
+    <section class="smp-sec rv">
+      <h2>The report you read</h2>
+      <p class="smp-note">
+        A self-contained page. No server, no upload, nothing to install to read it. It states
+        what the database recorded and stops there: the judgement stays with you.
+      </p>
+      <figure class="smp-mount">
+        <div class="smp-head">
+          <span class="smp-mark"><span class="smp-dot"></span>OraDiscuss</span>
+          <span class="smp-tag">Health Check Pack v1.0.0 &middot; report.html</span>
+        </div>
+        <div class="smp-shot">
+          <iframe
+            class="smp-report"
+            title="Sample Health Check report, rendered from a synthetic lab collection"
+            srcdoc={reportHtml}
+            sandbox=""
+            loading="lazy"
+          ></iframe>
+        </div>
+        <figcaption class="smp-cap">
+          <span class="smp-pill">Synthetic lab data</span>
+          <span class="smp-captext"><b>{PROVENANCE}</b> The report exactly as the pack writes it, scroll it inside the frame.</span>
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- ARTIFACT 2: the briefing, the second output of the same collection. -->
+    <section class="smp-sec rv">
+      <h2>The briefing your AI reads</h2>
+      <p class="smp-note">
+        The same evidence, structured for a machine, so your assistant reasons over numbers
+        instead of parsing them back out of English. Your AI, your subscription, your data.
+        We never receive any of it: there is no account, no endpoint, and nothing is uploaded.
+      </p>
+      <div class="smp-mount">
+        <div class="smp-head">
+          <span class="smp-mark"><span class="smp-dot"></span>OraDiscuss</span>
+          <span class="smp-tag">Health Check Pack v1.0.0 &middot; briefing.json</span>
+        </div>
+        <pre class="smp-json"><code>{briefingJson}</code></pre>
+        <figcaption class="smp-cap">
+          <span class="smp-pill">Synthetic lab data</span>
+          <span class="smp-captext"><b>{PROVENANCE}</b> Written by the same run, from the same collection.</span>
+        </figcaption>
+      </div>
+    </section>
+
+    <!-- The "why not a chatbot" point, made concretely by the two artifacts. -->
+    <section class="smp-sec rv">
+      <h2>Why not just ask a chatbot</h2>
+      <p class="smp-note">
+        Because a chatbot cannot see your database, and you cannot paste a production estate
+        into one. The pack is what stands between the two: it runs on your machine, reads only,
+        and hands your assistant a briefing that is current for your version. The report is for
+        you. The briefing is for the assistant you already pay for. One collection feeds both.
+      </p>
+    </section>
+
+    <a class="capp-onward rv" href="/kit/">Get the free kit that produces this</a>
+  </div>
+
+</div>
+
+<style>
+  /* The report/briefing mount mirrors the showcase frame
+     (scripts/showcase/templates/frame.html): a dark product artifact on a light
+     brand mount, so it reads as a screenshot of the product on a brand page
+     rather than a page that cannot decide on a theme. Palette is the warm
+     Instrument Amber system, matching that frame verbatim. Oracle red is not
+     used anywhere in this chrome. */
+  .smp-body { max-width: 900px; padding-bottom: 40px; }
+  .smp-sec { margin: 0 0 44px; }
+  .smp-sec > h2 {
+    font-size: 15px; margin: 0 0 8px; color: var(--ink-3, #6A6156);
+    text-transform: uppercase; letter-spacing: .06em;
+  }
+  .smp-note { max-width: 68ch; margin: 0 0 18px; }
+
+  .smp-mount {
+    background: #F7F5F1;
+    border: 1px solid #E0D9CD;
+    border-radius: 16px;
+    padding: 18px 18px 16px;
+  }
+  .smp-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 14px;
+  }
+  .smp-mark {
+    font-size: 17px; font-weight: 700; letter-spacing: -.018em; color: #1C1917;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .smp-dot { width: 9px; height: 9px; border-radius: 50%; background: #8A4B12; }
+  .smp-tag {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: #6A6156; text-align: right;
+  }
+  .smp-shot {
+    border: 1px solid #E0D9CD; border-radius: 12px; overflow: hidden;
+    background: #0A0B0D; box-shadow: 0 18px 44px rgba(28, 25, 23, .11); line-height: 0;
+  }
+  .smp-report { display: block; width: 100%; height: 600px; border: 0; background: #0A0B0D; }
+  .smp-json {
+    margin: 0; border: 1px solid #E0D9CD; border-radius: 12px; overflow: auto;
+    max-height: 560px; background: #0A0B0D; color: #E8E9EB;
+    box-shadow: 0 18px 44px rgba(28, 25, 23, .11);
+    padding: 16px 18px; line-height: 1.5;
+  }
+  .smp-json code {
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; white-space: pre; color: #E8E9EB;
+  }
+  .smp-cap { display: flex; align-items: flex-start; gap: 12px; margin-top: 14px; }
+  .smp-pill {
+    flex: none; font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: .11em; text-transform: uppercase;
+    color: #8A4B12; border: 1px solid #8A4B12; border-radius: 999px; padding: 4px 10px;
+    line-height: 1.1; white-space: nowrap;
+  }
+  .smp-captext { font-size: 13px; line-height: 1.5; color: #4A443D; max-width: 78ch; }
+  .smp-captext b { color: #1C1917; font-weight: 600; }
+
+  @media (max-width: 600px) {
+    .smp-tag { display: none; }
+    .smp-report { height: 460px; }
+    .smp-cap { flex-direction: column; gap: 8px; }
+  }
+</style>
+</BaseLayout>

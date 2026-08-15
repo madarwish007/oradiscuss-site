@@ -60,8 +60,13 @@ So on RAC:
 - **These are already cluster-wide:** tablespaces, invalid objects, jobs, RMAN
   backup recency, FRA, ASM diskgroups.
 
-Everything the pack reads needs `SELECT_CATALOG_ROLE` or equivalent, including
-the `GV$` views used for the instance census.
+Almost everything the pack reads needs `SELECT_CATALOG_ROLE` or equivalent,
+including the `GV$` views used for the instance census. The one exception is the
+alert-log ORA-error scan, which reads the alert log through a diagnostic view
+that needs more than `SELECT_CATALOG_ROLE` on some releases: it is a privileged,
+best-effort check that skips itself and reports nothing rather than failing when
+your account cannot read it. Run the pack as `SYSDBA` (the default) to see that
+one section populated; every other check runs on `SELECT_CATALOG_ROLE` alone.
 
 ## Quick start
 
@@ -110,9 +115,11 @@ about our care and not a warranty about your environment. Estates differ,
 versions differ, and a read-only query can still consume resources on a system
 under pressure.
 
-Written for Oracle 19c/21c on Linux. The collector needs `SELECT_CATALOG_ROLE`
-or equivalent. `sql/awr_triage.sql` reads `DBA_HIST_*` views and therefore
-requires a Diagnostics Pack licence; do not run it where you are not licensed.
+Written for Oracle 19c/21c on Linux. The collector runs on `SELECT_CATALOG_ROLE`
+or equivalent, with one privileged best-effort exception noted above (the
+alert-log ORA-error scan, which skips itself rather than failing when it lacks
+access). `sql/awr_triage.sql` reads `DBA_HIST_*` views and therefore requires a
+Diagnostics Pack licence; do not run it where you are not licensed.
 
 ## Support
 

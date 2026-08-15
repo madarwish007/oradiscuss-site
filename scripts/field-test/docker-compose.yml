@@ -1,0 +1,36 @@
+# Always-available Oracle test target for field-testing the packs.
+#
+# This is NOT a customer production estate. It is a local, throwaway Oracle
+# Database 23ai Free instance whose only purpose is to let a pack be RUN against
+# a real Oracle before it ships, so a field test is an evening instead of a
+# project. Nothing here is "field-tested on a real estate" in the sense the pack
+# READMEs mean; that claim still belongs to a run on a real production database.
+#
+# Bring it up:   docker compose -f scripts/field-test/docker-compose.yml up -d
+# Field-test:    scripts/field-test/run-field-test.sh healthcheck
+# Tear it down:  docker compose -f scripts/field-test/docker-compose.yml down -v
+
+services:
+  db:
+    image: gvenzl/oracle-free:23-slim
+    container_name: odc-fieldtest-db
+    environment:
+      # Throwaway lab password. This instance holds no real data and is not
+      # exposed beyond localhost.
+      ORACLE_PASSWORD: odc_fieldtest_pw
+    ports:
+      - "1521:1521"
+    volumes:
+      # The packs, read-only: the lab never mutates the source under test.
+      - ../../packs:/packs:ro
+      # The setup SQL (creates the customer-shaped reader user).
+      - ./sql:/field-test-sql:ro
+      # Where outputs land, on the host, so you can read them after teardown.
+      - ./out:/field-test-out
+    healthcheck:
+      # gvenzl ships healthcheck.sh; it goes healthy only once the DB is open.
+      test: ["CMD", "healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 40
+      start_period: 30s

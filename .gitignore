@@ -45,6 +45,12 @@ graphify-out/
 # release artefacts (zips + generated SQL) from scripts/release-pack.sh
 .release-out/
 
+# Field-test lab output: reports, raw collections, and the generated per-run
+# config.env files (which carry the throwaway lab DB password). The compose
+# file, runner, SQL and README under scripts/field-test/ ARE committable; only
+# the run output is not.
+scripts/field-test/out/
+
 # Editorial cover build fonts — provenance in scripts/brand/.fonts/{fetch-fonts.sh,instance-fonts.py}
 scripts/brand/.fonts/*.ttf
 scripts/brand/.fonts/out/
