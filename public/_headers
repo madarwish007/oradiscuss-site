@@ -28,6 +28,13 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Blog article covers are NOT immutable: they change (rebrands, future updates),
+# and they live at stable URLs, so a byte swap must reach returning readers. A
+# day's cache with revalidation propagates a new cover without renaming the file.
+# (Placed after /*.png so last-match-wins gives these the revalidating policy.)
+/images/blog/*
+  Cache-Control: public, max-age=86400, must-revalidate
+
 # Sveltia CMS shell — short cache so config.yml updates propagate quickly
 /admin/*
   Cache-Control: public, max-age=300, must-revalidate

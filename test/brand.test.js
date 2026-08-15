@@ -234,8 +234,9 @@ const KNOWN_RED_NESTED = {
   // 2026) redrew the 12 that render on live articles into the ratified palette:
   // the 8 dark cartoon covers were re-skinned gold #E0A020 via
   // scripts/local-covers.mjs, and the 4 light covers were hue-remapped red->amber
-  // in place (the founder's hand-made art preserved, only the retired colour
-  // moved). Each pin is DELETED as this guard instructs once its cover is redrawn.
+  // in place via scripts/brand/remap-cover-red.py (the founder's hand-made art
+  // preserved, only the retired colour moved). Each pin is DELETED as this guard
+  // instructs once its cover is redrawn.
   // What remains are two ORPHANS: on disk but referenced by no article anywhere
   // in the repo (whole-repo sweep, 15 Aug 2026), so they render nowhere and are
   // not a launch seam. They stay pinned until the founder rules on deleting the

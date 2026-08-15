@@ -494,9 +494,11 @@ function sceneOra01017() {
     <g transform="translate(1080,360)" filter="url(#softshadow)">
       <!-- Door frame -->
       <rect x="-20" y="-20" width="540" height="660" rx="24" fill="#1a1614" stroke="#3a3532" stroke-width="3"/>
-      <!-- Door body -->
-      <rect x="0" y="0" width="500" height="620" rx="16" fill="url(#redcard)"/>
-      <rect x="10" y="10" width="480" height="600" rx="12" fill="none" stroke="#faf7f2" stroke-opacity="0.25" stroke-width="2"/>
+      <!-- Door body: charcoal slab with a gold rim, so the gold reads as an
+           accent framing the vault rather than a flat high-luminance panel. -->
+      <rect x="0" y="0" width="500" height="620" rx="16" fill="#26211d"/>
+      <rect x="6" y="6" width="488" height="608" rx="14" fill="none" stroke="#E0A020" stroke-opacity="0.55" stroke-width="3"/>
+      <rect x="16" y="16" width="468" height="588" rx="10" fill="none" stroke="#faf7f2" stroke-opacity="0.16" stroke-width="1.5"/>
       <!-- rivets -->
       ${Array.from({length: 8}, (_, i) => `<circle cx="40" cy="${60 + i * 70}" r="7" fill="#faf7f2" opacity="0.4"/>`).join('')}
       ${Array.from({length: 8}, (_, i) => `<circle cx="460" cy="${60 + i * 70}" r="7" fill="#faf7f2" opacity="0.4"/>`).join('')}
