@@ -3,60 +3,59 @@
    The shared design system for every OraDiscuss page.
    System of record: DESIGN.md.
 
-   Colour is Committed: navy carries the structure, the aurora field
-   carries the mood, Oracle red is the only thing that asks you to act.
+   Colour is Committed: navy carries the structure, the warm ground
+   carries the calm, Instrument Amber is the only thing that asks you to act.
 
    Everything below the token block is written against these names, so a
    page inherits the whole system by loading this one file. Page level
-   composition (the hero aurora, the artifact panel, the navy band) stays
+   composition (the artifact panel, the navy band) stays
    with the page that owns it.
    ===================================================================== */
 
 :root{
   /* ---- Instrument palette ---- */
-  --field:#FAFBFD;          /* page ground, cool near white tinted to navy */
-  --field-2:#F1F4FA;        /* recessed ground: strips, table heads, code chips */
+  --field:#F7F5F1;          /* page ground, warm near white */
+  --field-2:#EFEAE2;        /* recessed ground: strips, table heads, code chips */
   --surface:#FFFFFF;        /* cards, panels */
-  --ink:#0B1B34;            /* headlines, primary text */
-  --ink2:#4D5A74;           /* body */
-  --ink3:#626C80;           /* captions, muted */
-  --hair:#DFE5EE;           /* borders, rules */
-  --hair-2:#C6D0E0;         /* the heavier hairline */
-  --act:#C74634;            /* Oracle red: buttons, eyebrows, selected plan */
-  --act-2:#A83A2B;          /* action hover */
+  --ink:#1C1917;            /* headlines, primary text */
+  --ink2:#4A443D;           /* body */
+  --ink3:#6A6156;           /* captions, muted. Darkened from the email-ratified #787065 (4.07:1 on the warm panel) so 11px labels clear 4.5:1 on --field-2. See DESIGN.md web-floor note. */
+  --hair:#E0D9CD;           /* borders, rules */
+  --hair-2:#CDBFA8;         /* the heavier hairline */
+  --act:#8A4B12;            /* Instrument Amber: buttons, eyebrows, selected plan. 6.23:1 on --field, 5.66:1 on --field-2, white-on-act 6.78:1 */
+  --act-2:#6E3B0E;          /* action hover, a darker amber. 8.4:1 on --field */
   --blue:#1F5AA8;           /* the emphasised headline clause */
-  --ok:#1FA37A;             /* MARKS ONLY: the live dot, borders, fills */
-  --ok-text:#17785A;        /* the same signal as WORDS, at a legible weight */
+  --ok:#2A9160;             /* MARKS ONLY: the live dot, borders, fills */
+  --ok-text:#1F6B45;        /* the same signal as WORDS, at a legible weight. 5.94:1 on --field, 5.40:1 on --field-2 (ratified "done") */
   --on-deep:#9FB6D4;        /* body text sitting on the navy band */
-  /* The eyebrow on navy. Sized against the LIGHTEST band stop #0B4A6F, which is
-     the binding constraint here rather than the darkest: #FF8B76 measured
-     4.14:1 on that stop and failed. This clears 4.96:1 there. */
-  --eyebrow-deep:#FFA592;
+  /* The eyebrow on the navy band, in the amber family. The coral #FFA592 it
+     replaced was a tint of the dropped Oracle red, sitting right beside the band.
+     Sized against the LIGHTEST band stop #0B4A6F, the binding constraint: the gold
+     signal #E0A020 measures only 4.15:1 there and fails; this clears 5.17:1. */
+  --eyebrow-deep:#EBB84D;
 
-  /* ---- Brand lockup, Phase 2b ----
-     The mark and the wordmark are ONE object, so they land together: a new
-     mark beside a wordmark still accented in the dropped Oracle red would put
-     the retired colour right next to the thing that retires it.
-     This is the action colour ratified 8 Aug 2026, and it is SCOPED TO THE
-     LOCKUP on purpose. --act above still carries Oracle red for the rest of
-     the site. That is un-removed code rather than an open question, but
-     repainting every button, eyebrow and chip in the same commit as the logo
-     would put a whole-site look change inside a change the founder asked a
-     narrow question about. Measured on the rendered pixels, on each ground the
-     wordmark actually sits on:
-       --brand-act #8A4B12   6.55 on --field   6.16 on --field-2 (the footer)
-       the red it replaces   4.66 on --field   4.38 on --field-2, which fails
-     The mark's signal #E0A020 is NOT here and never carries a word: it
-     measures 2.09 on the ground, so it is only ever read against ink mass. */
+  /* The signal gold. MARKS ONLY: it measures 2.09:1 on the ground and never
+     carries a word. --signal-text is its legible variant (5.52:1 on --field) for
+     the rare design that needs the signal IN text. */
+  --signal:#E0A020;
+  --signal-text:#7E5E08;
+
+  /* ---- Brand lockup ----
+     The mark and the wordmark are ONE object. As of Phase 2b (the warm reground)
+     the whole site's action colour equals this, but the lockup keeps its OWN literal
+     so the brand guard can pin the mark's colour independently of --act: the lockup
+     must stay #8A4B12 even if --act is ever repointed. Measured on the warm grounds
+     it sits on: 6.23:1 on --field, 5.66:1 on --field-2 (the footer). The mark's
+     signal is --signal above and never carries a word. */
   --brand-act:#8A4B12;
 
   /* Every muted colour above is sized against the DARKEST ground it is ever
      painted on, not against white, because a token that only passes on
      #FFFFFF fails in the footer and the marquee where the ground is
-     --field-2. Measured on the rendered pixels, WCAG 2.1 non-large text:
-       --ink3   #626C80  4.79 on --field-2 / 5.10 on --field / 5.28 on white
-       --ok-text #17785A 4.80 on --field-2 / 5.10 on --field / 5.28 on white
-     --ok stays bright because a 7px dot and a border are not text and carry
+     --field-2 #EFEAE2. Measured on the rendered pixels, WCAG 2.1 non-large text:
+       --ink3   #6A6156  5.07 on --field-2 / 5.58 on --field / 6.07 on white
+       --ok-text #1F6B45 5.40 on --field-2 / 5.94 on --field
+     --ok stays bright because a dot and a border are not text and carry
      no ratio requirement. Never set --ok on a word. */
 
   /* ---- Type ---- */
@@ -75,8 +74,8 @@
   --ease:cubic-bezier(.16,1,.3,1);   /* ease out expo */
 
   /* ---- Elevation ---- */
-  --shadow-act:0 8px 22px rgba(199,70,52,.26);
-  --shadow-act-2:0 12px 26px rgba(199,70,52,.32);
+  --shadow-act:0 8px 22px rgba(138,75,18,.26);
+  --shadow-act-2:0 12px 26px rgba(138,75,18,.32);
 
   /* =============================================================
      Legacy aliases, repointed at the Instrument tokens above.
@@ -97,11 +96,14 @@
   --ink-4:var(--ink3);
   --border:var(--hair);
   --border-2:var(--hair-2);
+  /* --red* now carry Instrument Amber (Oracle red dropped entirely). Names are
+     retained as the seam for ~46 existing refs; slated for deletion, not rename,
+     in a mechanical pass after this lane promotes. */
   --red:var(--act);
   --red-dark:var(--act-2);
-  --red-light:#E0705E;
-  --red-faint:rgba(199,70,52,.07);
-  --red-faint-2:rgba(199,70,52,.16);
+  --red-light:#C97F35;
+  --red-faint:rgba(138,75,18,.07);
+  --red-faint-2:rgba(138,75,18,.16);
   --slate:#0B1B34;
   --slate-2:#173463;
   --warn:#B8730B;
@@ -229,7 +231,7 @@ a.PC, a.promo-card, a.glass-card { text-decoration: none; color: inherit }
    ===================================================================== */
 body > header{
   position:fixed;top:0;left:0;right:0;z-index:800;
-  background:rgba(250,251,253,.92);
+  background:rgba(247,245,241,.92);
   backdrop-filter:saturate(150%) blur(10px);-webkit-backdrop-filter:saturate(150%) blur(10px);
   border-bottom:1px solid var(--hair)
 }
@@ -363,7 +365,7 @@ h1.HT{font-family:var(--sora);font-size:clamp(40px,5.2vw,68px);font-weight:800;c
 .CV:has(img){padding:0;background:var(--field-2);display:block}
 
 .CS{font-family:var(--mono);font-size:12px;line-height:1.8;color:#DCE6F5;width:100%;position:relative;z-index:1;white-space:pre;overflow:hidden}
-.ck{color:#FF8B76;font-weight:600}
+.ck{color:#EBB84D;font-weight:600}
 .cf{color:#F1A74E}
 .cs{color:#7FD3B4}
 /* Deliberately a literal, not var(--ink3): this is a comment in the code art
@@ -447,7 +449,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--hair);background:v
 .art-prose a{color:var(--act);text-decoration:none;border-bottom:1px solid var(--red-faint-2);transition:border-color .15s}
 .art-prose a:hover{border-color:var(--act)}
 .art-prose pre{background:var(--slate);border:1px solid var(--slate-2);border-radius:var(--r-md);padding:20px 24px;font-family:var(--mono);font-size:13px;line-height:1.7;overflow-x:auto;margin:1.6rem 0;color:#DCE6F5}
-.art-prose code{font-family:var(--mono);font-size:.88em;font-weight:500;background:#EEF2F8;border:1px solid var(--hair);padding:1px 6px;border-radius:5px;color:var(--ink)}
+.art-prose code{font-family:var(--mono);font-size:.88em;font-weight:500;background:#EFEAE2;border:1px solid var(--hair);padding:1px 6px;border-radius:5px;color:var(--ink)}
 .art-prose pre code{background:none;border:none;padding:0;color:inherit}
 .art-prose ul,.art-prose ol{padding-left:1.5rem;margin-bottom:1.25rem;max-width:72ch}
 .art-prose li{margin-bottom:.45rem}
@@ -587,7 +589,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--hair);background:v
 .promo-icon{font-size:26px;margin-bottom:14px;line-height:1}
 .promo-title{font-family:var(--sora);font-size:26px;font-weight:700;font-style:normal;color:var(--ink);margin-top:4px;line-height:1.14;letter-spacing:-.03em}
 .promo-desc{margin-top:12px;color:var(--ink2);font-size:15px;line-height:1.66;position:relative;z-index:1;max-width:52ch}
-.promo-desc code{background:#EEF2F8;border:1px solid var(--hair);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:13px;color:var(--ink)}
+.promo-desc code{background:#EFEAE2;border:1px solid var(--hair);padding:1px 6px;border-radius:5px;font-family:var(--mono);font-size:13px;color:var(--ink)}
 .promo-cta{margin-top:18px;display:inline-flex;align-items:center;gap:6px;font-family:var(--jb);font-weight:600;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--act);position:relative;z-index:1}
 .promo-card.promo-alt .promo-cta{color:var(--act)}
 

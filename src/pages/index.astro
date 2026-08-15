@@ -46,7 +46,6 @@ const packs = [
 
   <!-- ===================== 1. HERO, WITH THE PROOF ===================== -->
   <section class="inst-hero-wrap">
-    <div class="inst-aurora" aria-hidden="true"><span></span></div>
     <div class="inst-grid-rule" aria-hidden="true"></div>
 
     <div class="i-shell inst-hero">
@@ -141,7 +140,7 @@ const packs = [
    The system itself (tokens, type, buttons, eyebrow, cards, mono labels,
    focus, the reveal contract) lives in src/styles/global.css and is shared
    by every page. What stays here is only what this page composes: the
-   aurora, the artifact panel, the navy band. See DESIGN.md.
+   artifact panel and the navy band. See DESIGN.md.
    ==================================================================== */
 .inst{background:var(--field);color:var(--ink2)}
 .inst h2{
@@ -151,14 +150,9 @@ const packs = [
 
 /* ---- hero ---- */
 .inst-hero-wrap{position:relative;overflow:clip;padding-bottom:24px}
-.inst-aurora{position:absolute;inset:-30% -12% auto -12%;height:1120px;pointer-events:none;z-index:0}
-.inst-aurora span{display:block;width:100%;height:100%;filter:blur(46px);
-  background:
-    radial-gradient(40% 48% at 16% 24%,rgba(31,90,168,.42),transparent 68%),
-    radial-gradient(36% 42% at 76% 14%,rgba(31,163,122,.36),transparent 70%),
-    radial-gradient(34% 40% at 54% 58%,rgba(199,70,52,.30),transparent 72%);
-  animation:inst-drift 28s ease-in-out infinite alternate}
-@keyframes inst-drift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(-3%,2%,0) scale(1.08)}}
+/* Aurora deleted entirely (Phase 2b, founder ruling 8 Aug): the red bloom was a
+   tint of the dropped Oracle red, and its 28s drift failed the eyebrow contrast
+   at 3.01:1. The hero now sits on the plain warm ground. */
 .inst-grid-rule{position:absolute;inset:0;z-index:0;pointer-events:none;
   background-image:linear-gradient(90deg,rgba(11,27,52,.045) 1px,transparent 1px);
   background-size:112px 100%;
@@ -303,7 +297,6 @@ const packs = [
 /* The mobile contract. The shared override in global.css already returns
    .rv to its final state; these are the page's own animations. */
 @media(prefers-reduced-motion:reduce),(max-width:767px){
-  .inst-aurora span{animation:none}
   .inst-live i{animation:none}
   .inst .plan:hover{transform:none}
   .inst-band{clip-path:polygon(0 2%,100% 0,100% 100%,0 100%)}
