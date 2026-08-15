@@ -10,9 +10,11 @@
     THE ACCENT IS #8A4B12, AND ORACLE RED IS DROPPED ENTIRELY. That is a closed
     founder decision, re-confirmed 8 Aug 2026: PRODUCT.md names Oracle's own
     marketing as an anti-reference and the Terms disclaim affiliation, so
-    borrowing Oracle's red contradicts both. Do not take the accent from
-    DESIGN.md, which still carries the old red and is stale against that
-    decision. Section 4 of Showcase/STANDARDS.md names the dropped value and
+    borrowing Oracle's red contradicts both. Do not re-derive the accent from
+    a token file; it is fixed here and pinned in the pixels by
+    check-chrome-colour.py. DESIGN.md was rewritten to the warm Instrument
+    Amber system on 15 Aug 2026 and no longer carries the old red.
+    Section 4 of Showcase/STANDARDS.md names the dropped value and
     the reason; it is deliberately not repeated here, because a guard in
     test/showcase.test.js reads this file looking for it. A second guard,
     scripts/showcase/check-chrome-colour.py, measures the shipped pixels, so
@@ -24,8 +26,8 @@
     invisible in markup and this page has no need of one.
   */
   :root{
-    --field:#FAFBFD; --surface:#FFFFFF; --ink:#0B1B34; --ink2:#4D5A74;
-    --ink3:#626C80; --hairline:#DFE5EE; --action:#8A4B12; --signal:#17785A;
+    --field:#F7F5F1; --surface:#FFFFFF; --ink:#1C1917; --ink2:#4A443D;
+    --ink3:#6A6156; --hairline:#E0D9CD; --action:#8A4B12; --signal:#E0A020;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--field)}
@@ -43,7 +45,7 @@
   }
   .shot{
     border:1px solid var(--hairline);border-radius:14px;overflow:hidden;
-    background:var(--surface);box-shadow:0 18px 44px rgba(11,27,52,.11);line-height:0;
+    background:var(--surface);box-shadow:0 18px 44px rgba(28,25,23,.11);line-height:0;
   }
   .shot img{display:block;width:{{IMG_W}}px;height:auto}
   footer{display:flex;align-items:flex-start;gap:12px;margin-top:22px}

@@ -1,5 +1,6 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
+  "kind": "state",
   "generator": {
     "vendor": "OraDiscuss",
     "source": "https://oradiscuss.com",
@@ -9,7 +10,7 @@
     "notice": "Generated locally by OraDiscuss tooling. Not produced by, affiliated with, or endorsed by Oracle Corporation."
   },
   "collection": {
-    "generated_at": "2026-08-08T23:37:14+0300",
+    "generated_at": "2026-08-15T16:46:27+0300",
     "oracle_sid": "ODCDEMO1",
     "read_only": true,
     "collector_exit_code": 2,

@@ -19,7 +19,7 @@
     }
   ],
   "capture": {
-    "chrome": "Chrome/151.0.7922.76",
+    "chrome": "Chrome/151.0.7922.138",
     "device_scale_factor": 2,
     "canvas_css_width": 1280,
     "frame_padding_css": 64,
@@ -42,7 +42,7 @@
   "assets": [
     {
       "path": "Showcase/samples/healthcheck/report.html",
-      "bytes": 6938,
+      "bytes": 6937,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "html",
       "pack": "healthcheck",
@@ -51,7 +51,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/briefing.json",
-      "bytes": 6443,
+      "bytes": 6462,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "json",
       "pack": "healthcheck",
@@ -87,7 +87,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-report-full@2x.png",
-      "bytes": 769138,
+      "bytes": 769091,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -100,7 +100,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-report-summary@2x.png",
-      "bytes": 348051,
+      "bytes": 347929,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -113,7 +113,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/images/healthcheck-briefing@2x.png",
-      "bytes": 324007,
+      "bytes": 326826,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "image",
       "pack": "healthcheck",
@@ -126,7 +126,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/video/healthcheck-run.mp4",
-      "bytes": 1417618,
+      "bytes": 1415665,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "video",
       "pack": "healthcheck",
@@ -137,7 +137,7 @@
     },
     {
       "path": "Showcase/samples/healthcheck/video/healthcheck-run.gif",
-      "bytes": 1791274,
+      "bytes": 1770192,
       "provenance": "Sample rendered from a synthetic lab collection. Not output from a real Oracle database.",
       "kind": "video",
       "pack": "healthcheck",
